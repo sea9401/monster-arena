@@ -137,7 +137,7 @@ function buildFighter(base) {
 
 // 회피 확률: 방어자의 속도 우위 + 전기 패시브, 상한 25%
 function evades(atkr, dfdr) {
-  const ev = clamp((dfdr.spd - atkr.spd) * 0.0020, -0.08, 0.22) + dfdr.pEva;
+  const ev = clamp((dfdr.spd - atkr.spd) * 0.0020, -0.08, 0.22) + dfdr.pEva + evEffect("evadeBonus", 0); // 폭풍의 날
   return Math.random() < Math.min(ev, 0.27);
 }
 
@@ -269,6 +269,8 @@ function generateQuests(n = 3) {
 let state = null;
 let activeHomeTab = "grow";
 let pendingRebirth = false; // true면 다음 hatch()가 환생(계정 진행도 유지)으로 동작
+let currentEvent = null;    // 오늘의 일일 이벤트(서버 제공, 오프라인이면 null)
+const evEffect = (key, dflt) => (currentEvent && currentEvent.effect && currentEvent.effect[key] != null ? currentEvent.effect[key] : dflt);
 let leaderboardReturn = "arena";
 
 // ---------- 유틸 ----------
@@ -625,20 +627,21 @@ function train(kind) {
   const streakBonus = 1 + Math.min(state.streak - 1, 14) * 0.03;          // 최대 +42%
   const mult = (0.6 + condition * 0.8) * streakBonus;
 
+  const careMult = evEffect("careMult", 1); // 잔치의 날: 포만·행복 회복 증가
   let text = "";
   if (kind === "feed") {
-    state.food = clamp(state.food + rand(22, 32), 0, 100);
+    state.food = clamp(state.food + Math.round(rand(22, 32) * careMult), 0, 100);
     state.hp += Math.round(rand(2, 4));
     gainExp(6);
     text = "냠냠! 포만감이 올랐어요.";
   } else if (kind === "play") {
-    state.happy = clamp(state.happy + rand(18, 28), 0, 100);
+    state.happy = clamp(state.happy + Math.round(rand(18, 28) * careMult), 0, 100);
     state.spd += Math.round(rand(0, 1) * mult);
     gainExp(8);
     text = "신난다! 행복도가 올랐어요.";
   } else {
     // 스탯 훈련 (배고프거나 우울하면 효율↓, 약간의 포만감/행복 소모)
-    const gain = Math.max(1, Math.round(rand(2, 4) * mult));
+    const gain = Math.max(1, Math.round(rand(2, 4) * mult)) + evEffect("statBonus", 0); // 수련의 날
     if (kind === "atk") { state.atk += gain; text = `근력 훈련! 공격 +${gain}`; }
     if (kind === "def") { state.def += gain; text = `방어 훈련! 방어 +${gain}`; }
     if (kind === "spd") { state.spd += gain; text = `민첩 훈련! 속도 +${gain}`; }
@@ -666,7 +669,7 @@ function train(kind) {
 }
 
 function gainExp(amount) {
-  state.exp += amount;
+  state.exp += Math.round(amount * evEffect("expMult", 1)); // 일일 이벤트(풍요의 날) 반영
   while (state.exp >= expToNext(state.level)) {
     const prevStage = stageIndex(state.level);
     state.exp -= expToNext(state.level);
@@ -920,6 +923,23 @@ function renderStatChart() {
   }
 }
 
+// ---------- 일일 이벤트 ----------
+async function refreshEvent() {
+  currentEvent = await Online.event();
+  renderEventBanner();
+}
+function renderEventBanner() {
+  const el = $("event-banner");
+  if (!el) return;
+  if (currentEvent) {
+    el.classList.remove("hidden");
+    el.innerHTML = `<span class="event-icon">${currentEvent.icon}</span><span class="event-text"><b>${currentEvent.name}</b> · ${currentEvent.desc}</span>`;
+  } else {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+  }
+}
+
 // ---------- 홈 렌더 ----------
 function renderHome() {
   const staminaChanged = renderStamina();
@@ -959,6 +979,7 @@ function renderHome() {
     b.setAttribute("aria-disabled", String(noActions));
   });
 
+  renderEventBanner();
   renderStatChart();
   renderAttendance();
   renderQuests();
@@ -1537,6 +1558,7 @@ async function init() {
   updateMuteButton();
   await Online.init();        // 토큰 복원 → 로그인 상태 결정
   updateOnlineStatus();
+  await refreshEvent();       // 오늘의 일일 이벤트(오프라인이면 null)
 
   if (Online.status.loggedIn) {
     const cloud = await Online.loadCloudSave();
@@ -1562,3 +1584,7 @@ setInterval(() => {
     });
   }
 }, 1000);
+
+// 일일 이벤트 stale 방지: 5분마다 + 탭 복귀 시 재확인(자정 KST 넘어가면 교체)
+setInterval(refreshEvent, 5 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshEvent(); });

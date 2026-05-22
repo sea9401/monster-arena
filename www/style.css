@@ -48,7 +48,7 @@ body {
   );
 }
 
-#app { max-width: 640px; margin: 0 auto; padding: 10px 16px 30px; }
+#app { max-width: 640px; margin: 0 auto; padding: 52px 16px 30px; }
 
 .mute-btn {
   position: fixed; top: 10px; right: 10px; z-index: 60;
@@ -69,7 +69,7 @@ body {
 .screen { animation: fade 0ms linear; }
 @keyframes fade { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
 
-#home-screen { padding-top: 42px; padding-bottom: 0; }
+#home-screen { padding-bottom: 0; }
 .home-tab-content { animation: fade 0ms linear; }
 .home-tabbar {
   position: sticky; top: 50px; z-index: 40;
@@ -303,6 +303,17 @@ button:disabled,
 .quest-bar > div { height: 100%; background: var(--accent); }
 .quest-reward { font-size: 11px; color: var(--gold); white-space: nowrap; }
 .quest-claim { padding: 8px 12px; font-size: 13px; white-space: nowrap; color: var(--good); }
+
+/* 일일 이벤트 배너 */
+.event-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; margin-bottom: 12px;
+  background: var(--panel); border: 2px solid var(--gold); border-radius: 0;
+  box-shadow: 3px 3px 0 #0f380f;
+}
+.event-banner .event-icon { font-size: 22px; line-height: 1; }
+.event-banner .event-text { font-size: 12px; color: var(--accent2); text-transform: none; letter-spacing: normal; }
+.event-banner .event-text b { color: var(--gold); }
 
 /* 성장 그래프 */
 .stat-chart-card { padding: 14px 16px; margin-top: 16px; }

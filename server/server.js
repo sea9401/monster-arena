@@ -79,6 +79,27 @@ function rolloverTournament() {
   db.tournament.weekId = weekId;
 }
 
+// ---------- 일일 랜덤 이벤트 (KST 날짜 시드로 결정적 선택, 무상태) ----------
+const EVENTS = [
+  { id: "harvest",  icon: "🌾", name: "풍요의 날",  desc: "훈련·보상 EXP +50%",   effect: { expMult: 1.5 } },
+  { id: "storm",    icon: "⛈️", name: "폭풍의 날",  desc: "전투 회피 +5%",        effect: { evadeBonus: 0.05 } },
+  { id: "training", icon: "💪", name: "수련의 날",  desc: "스탯 훈련 효과 +1",    effect: { statBonus: 1 } },
+  { id: "feast",    icon: "🍱", name: "잔치의 날",  desc: "먹이·놀이 회복 +50%",  effect: { careMult: 1.5 } },
+];
+function kstDateStr(ts) { return new Date(ts + KST).toISOString().slice(0, 10); }
+function djb2(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h; }
+// 오늘 이벤트. 14일 윈도우를 앞으로 walk하며 직전 "확정" 인덱스와 겹치면 +1로 밀어
+// 연속 중복을 완전히 방지(전날이 이미 밀린 경우까지 반영). 날짜 시드라 결정적.
+function eventFor(ts = Date.now()) {
+  const DAY = 86400000, n = EVENTS.length;
+  let idx = djb2(kstDateStr(ts - 14 * DAY)) % n;
+  for (let k = 13; k >= 0; k--) {
+    const cur = djb2(kstDateStr(ts - k * DAY)) % n;
+    idx = (n > 1 && cur === idx) ? (cur + 1) % n : cur;
+  }
+  return { ...EVENTS[idx], date: kstDateStr(ts) };
+}
+
 // ---------- Elo ----------
 function elo(myRating, oppRating, won, k = 32) {
   const expected = 1 / (1 + Math.pow(10, (oppRating - myRating) / 400));
@@ -276,6 +297,9 @@ const server = http.createServer(async (req, res) => {
     if (!p) return send(res, 404, { error: "not found" });
     return send(res, 200, p);
   }
+
+  // --- 일일 이벤트 ---
+  if (url === "/event" && method === "GET") return send(res, 200, eventFor());
 
   // --- 주간 토너먼트 ---
   if (url === "/tournament" && method === "GET") {

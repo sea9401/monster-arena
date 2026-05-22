@@ -113,7 +113,12 @@ const Online = (() => {
     const r = await call(`/tournament?playerId=${encodeURIComponent(status.playerId)}`);
     return r && !r._error ? r : null;
   }
+  async function event() {
+    if (!status.reachable) return null;
+    const r = await call("/event");
+    return r && !r._error ? r : null;
+  }
 
   return { status, init, register, login, logout, loadCloudSave, pushCloudSave,
-    uploadSnapshot, findMatch, submitResult, leaderboard, tournament };
+    uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event };
 })();
