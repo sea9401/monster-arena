@@ -12,8 +12,11 @@ const SPECIES = {
   ember: { type: "fire",     base: { atk: 12, def: 8,  spd: 9,  hp: 60 }, primary: "atk" },
   aqua:  { type: "water",    base: { atk: 8,  def: 13, spd: 7,  hp: 80 }, primary: "def" },
   spark: { type: "electric", base: { atk: 10, def: 7,  spd: 14, hp: 55 }, primary: "spd" },
+  wolf:  { type: "dark",     base: { atk: 13, def: 8,  spd: 9,  hp: 58 }, primary: "atk" },
+  arma:  { type: "earth",    base: { atk: 8,  def: 15, spd: 6,  hp: 78 }, primary: "def" },
 };
-const BEATS = { water: "fire", fire: "electric", electric: "water" };
+const ELEMENTS = { fire: 1, water: 1, electric: 1, dark: 1, earth: 1 };
+const BEATS = { water: "fire", fire: "electric", electric: "dark", dark: "earth", earth: "water" };
 const TYPE_ADV = 1.12, TYPE_DIS = 0.90;
 function typeMult(a, d) {
   if (BEATS[a] === d) return TYPE_ADV;
@@ -25,6 +28,8 @@ const PASSIVE = {
   fire:     { dmgDealt: 1.06 },
   water:    { dmgTaken: 0.92 },
   electric: { evaBonus: 0.10 },
+  dark:     { dmgDealt: 1.06 },
+  earth:    { dmgTaken: 0.92 },
 };
 const SKILL_KITS = {
   fire: [
@@ -41,6 +46,16 @@ const SKILL_KITS = {
     { id: "e_basic", type: "electric", power: 1.0, cd: 0 },
     { id: "e_thrust", type: "electric", power: 1.25, cd: 2, speedScale: 1.28 },
     { id: "e_chain", type: "electric", power: 1.0, cd: 3, extraHit: { chance: 0.4, power: 0.55 } },
+  ],
+  dark: [
+    { id: "d_basic", type: "dark", power: 1.0, cd: 0 },
+    { id: "d_strike", type: "dark", power: 1.28, cd: 2 },
+    { id: "d_curse", type: "dark", power: 1.1, cd: 3, buffAtk: { mult: 1.2, turns: 2 } },
+  ],
+  earth: [
+    { id: "g_basic", type: "earth", power: 1.0, cd: 0 },
+    { id: "g_shield", type: "earth", power: 0.85, cd: 3, shield: { reduce: 0.25, turns: 2 } },
+    { id: "g_mend", type: "earth", power: 0.8, cd: 4, heal: 0.12 },
   ],
 };
 const expToNext = (level) => 80 + level * 40;
@@ -160,9 +175,11 @@ let lastUnfav = false;
 function pickFoeType(myType, strong) {
   const iBeat = BEATS[myType];
   const beatsMe = Object.keys(BEATS).find((k) => BEATS[k] === myType);
+  const neutrals = Object.keys(ELEMENTS).filter((t) => t !== iBeat && t !== beatsMe);
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const r = Math.random();
-  let type = r < 0.40 ? iBeat : r < 0.75 ? myType : beatsMe;
-  if (type === beatsMe && (lastUnfav || strong)) type = Math.random() < 0.5 ? iBeat : myType;
+  let type = r < 0.40 ? iBeat : r < 0.75 ? pick(neutrals) : beatsMe;
+  if (type === beatsMe && (lastUnfav || strong)) type = Math.random() < 0.5 ? iBeat : pick(neutrals);
   lastUnfav = type === beatsMe;
   return type;
 }
@@ -178,8 +195,8 @@ function makeOpponent(myPower, myType) {
 }
 
 // ---- 리포트 ----
-const keys = ["ember", "aqua", "spark"];
-const label = { ember: "불(공격)", aqua: "물(방어)", spark: "전기(속도)" };
+const keys = ["ember", "aqua", "spark", "wolf", "arma"];
+const label = { ember: "불(공격)", aqua: "물(방어)", spark: "전기(속도)", wolf: "어둠(공격)", arma: "땅(방어)" };
 const days = 14;
 console.log(`(육성 정책: ${POLICY})\n`);
 

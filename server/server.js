@@ -38,7 +38,7 @@ const uid = () => crypto.randomBytes(8).toString("hex");
 const now = () => Date.now();
 
 // 클라이언트 SPECIES 키와 일치해야 함(스냅샷 검증용). 신규 종 추가 시 여기도 갱신.
-const VALID_SPECIES = ["ember", "aqua", "spark", "lion", "crab", "hare"];
+const VALID_SPECIES = ["ember", "aqua", "spark", "lion", "crab", "hare", "wolf", "bat", "armadillo", "bear"];
 
 // ---------- 매칭 풀 시드 (실제 플레이어가 적을 때 고스트 제공) ----------
 const SEED_SPECIES = ["ember", "aqua", "spark"];

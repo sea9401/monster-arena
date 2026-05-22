@@ -69,7 +69,7 @@ const PASSIVE = {
   fire:     { label: "🔥 맹공 (주는 피해 +6%)",  dmgDealt: 1.06 },
   water:    { label: "💧 견고 (받는 피해 -8%)",  dmgTaken: 0.92 },
   electric: { label: "⚡ 잔상 (회피 +10%)",      evaBonus: 0.10 },
-  dark:     { label: "🌑 은신 (회피 +10%)",      evaBonus: 0.10 },
+  dark:     { label: "🌑 흉포 (주는 피해 +6%)",  dmgDealt: 1.06 },
   earth:    { label: "🪨 단단 (받는 피해 -8%)",  dmgTaken: 0.92 },
 };
 
@@ -956,13 +956,15 @@ function mySnapshot() {
 function pickFoeType(myType, strong) {
   const iBeat = BEATS[myType];                                  // 내가 이기는 속성 → 유리
   const beatsMe = Object.keys(BEATS).find((k) => BEATS[k] === myType); // 나를 이기는 속성 → 불리
-  const mirror = myType;                                        // 동속성 → 중립
+  // 중립 = iBeat/beatsMe를 제외한 나머지(동속성 포함). 5속성이면 3개.
+  const neutrals = Object.keys(ELEMENTS).filter((t) => t !== iBeat && t !== beatsMe);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
   const roll = Math.random();
-  let type = roll < 0.40 ? iBeat : roll < 0.75 ? mirror : beatsMe;
+  let type = roll < 0.40 ? iBeat : roll < 0.75 ? pick(neutrals) : beatsMe;
 
   if (type === beatsMe && (lastFoeUnfavorable || strong)) {
-    type = Math.random() < 0.5 ? iBeat : mirror; // 좌절 방지: 유리/중립으로 교체
+    type = Math.random() < 0.5 ? iBeat : pick(neutrals); // 좌절 방지: 유리/중립으로 교체
   }
   lastFoeUnfavorable = type === beatsMe;
   return type;

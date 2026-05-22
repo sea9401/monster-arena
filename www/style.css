@@ -189,6 +189,8 @@ body {
 .elem-badge.fire { color: var(--fire); border-color: var(--fire); }
 .elem-badge.water { color: var(--water); border-color: var(--water); }
 .elem-badge.electric { color: var(--electric); border-color: var(--electric); }
+.elem-badge.dark { color: #b48ce0; border-color: #b48ce0; }
+.elem-badge.earth { color: #c79a5b; border-color: #c79a5b; }
 .matchup { margin-top: 8px; font-size: 13px; font-weight: 900; color: var(--accent2); }
 
 .bar-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
