@@ -1,0 +1,7 @@
+node_modules/
+server/data.json
+data.json
+*.log
+.env
+.codex/
+.agents/

@@ -1,0 +1,17 @@
+{
+  "name": "monster-arena",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "cap:sync": "npx cap sync"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  }
+}

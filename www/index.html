@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>몬스터 아레나</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="scanlines" aria-hidden="true"></div>
+  <div id="app">
+    <button id="mute-btn" class="mute-btn" type="button" aria-label="음소거 전환">🔊</button>
+
+    <!-- 1. 알 부화 / 시작 화면 -->
+    <section id="hatch-screen" class="screen">
+      <h2>알을 골라 부화시키세요</h2>
+      <p class="muted">한번 정하면 이 친구를 매일 키우게 됩니다.</p>
+      <div id="egg-roster" class="roster"></div>
+    </section>
+
+    <!-- 2. 홈(육성) 화면 -->
+    <section id="home-screen" class="screen hidden">
+      <nav class="home-tabbar" aria-label="홈 탭">
+        <button class="home-tab-btn active" data-tab="grow">🐲<span>육성</span></button>
+        <button class="home-tab-btn" data-tab="daily">📅<span>일일</span></button>
+        <button class="home-tab-btn" data-tab="arena">⚔️<span>아레나</span></button>
+      </nav>
+
+      <div class="home-tab-content active" data-home-tab="grow">
+        <div class="pet-panel">
+          <div class="pet-sprite" id="pet-sprite">🥚</div>
+          <div class="pet-head">
+            <h2 id="pet-name">이름</h2>
+            <span class="badge" id="pet-stage">아기</span>
+            <span class="elem-badge" id="pet-element">🔥 불</span>
+          </div>
+
+          <div class="bar-row">
+            <span>Lv <b id="pet-level">1</b></span>
+            <div class="minibar"><div class="minifill exp" id="exp-fill"></div></div>
+            <span id="exp-text">0/100</span>
+          </div>
+          <div class="bar-row" data-tip-title="포만감" data-tip="행복도와 함께 성장 배율을 올립니다. 스탯 훈련을 하면 8 감소하고, 날짜가 지나면 자연 감소합니다.">
+            <span>😋 포만감</span>
+            <div class="minibar"><div class="minifill food" id="food-fill"></div></div>
+          </div>
+          <div class="bar-row" data-tip-title="행복도" data-tip="포만감과 함께 성장 배율을 올립니다. 스탯 훈련을 하면 5 감소하고, 연속 접속을 놓치거나 날짜가 지나면 감소합니다.">
+            <span>💛 행복도</span>
+            <div class="minibar"><div class="minifill happy" id="happy-fill"></div></div>
+          </div>
+
+          <div class="stat-grid">
+            <div><span>🗡️ 공격</span><br><b id="stat-atk">0</b></div>
+            <div><span>🛡️ 방어</span><br><b id="stat-def">0</b></div>
+            <div><span>💨 속도</span><br><b id="stat-spd">0</b></div>
+            <div><span>❤️ 체력</span><br><b id="stat-hp">0</b></div>
+          </div>
+
+          <div class="streak-line">
+            <span>🔥 연속 출석 <b id="streak">1</b>일</span>
+            ·
+            <span>전투력 <b id="power">0</b></span>
+          </div>
+          <div class="skills-line" id="pet-skills"></div>
+        </div>
+
+        <div class="training">
+          <p class="muted">스태미너: <b id="stamina-left">10</b>/<b id="stamina-max">10</b> · 다음 충전 <b id="stamina-timer">15:00</b></p>
+          <div class="train-grid" id="train-grid">
+            <button data-train="feed">🍖 먹이주기</button>
+            <button data-train="atk">🗡️ 근력훈련</button>
+            <button data-train="def">🛡️ 방어훈련</button>
+            <button data-train="spd">💨 민첩훈련</button>
+            <button data-train="play">🎲 놀아주기</button>
+          </div>
+          <p class="train-msg" id="train-msg"></p>
+        </div>
+
+        <div class="nav">
+          <button id="time-plus-30" class="ghost">⏱️ +30분 (테스트)</button>
+          <button id="next-day" class="ghost">⏭️ 다음 날로 (테스트)</button>
+        </div>
+
+        <footer class="footer">
+          <button id="reset-save" class="tiny">⚠️ 저장 초기화</button>
+        </footer>
+      </div>
+
+      <div class="home-tab-content hidden" data-home-tab="daily">
+        <div class="attendance">
+          <div class="att-head">
+            <h3 class="att-title">📅 출석 보상</h3>
+            <span class="att-streak">🔥 <b id="att-streak">1</b>일째</span>
+          </div>
+          <div class="att-calendar" id="att-calendar"></div>
+          <button id="att-claim" class="att-claim">오늘의 출석 보상 받기</button>
+        </div>
+
+        <div class="quests">
+          <h3 class="quests-title">📋 데일리 퀘스트</h3>
+          <ul class="quest-list" id="quest-list"></ul>
+        </div>
+      </div>
+
+      <div class="home-tab-content hidden" data-home-tab="arena">
+        <div class="arena-lobby-card">
+          <div class="lobby-rank" id="lobby-rank">🥉 브론즈</div>
+          <div class="lobby-rating">레이팅 <b id="lobby-rating">1000</b></div>
+          <div class="lobby-record" id="lobby-record">0승 0패</div>
+          <div id="lobby-online-status" class="online-status off">⚪ 오프라인</div>
+        </div>
+
+        <div class="battle-history">
+          <h3 class="quests-title">최근 전투 기록</h3>
+          <ul class="history-list" id="history-list"></ul>
+        </div>
+
+        <div class="nav">
+          <button id="go-pvp" class="primary">⚔️ 아레나 입장</button>
+          <button id="home-leaderboard-btn" class="ghost">🏆 리더보드</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 3. PvP 아레나 화면 -->
+    <section id="arena-screen" class="screen hidden">
+      <div class="rank-banner">
+        <span id="rank-tier">🥉 브론즈</span>
+        <span>레이팅 <b id="rating">1000</b></span>
+        <span id="record">0승 0패</span>
+        <span id="online-status" class="online-status off">⚪ 오프라인</span>
+      </div>
+
+      <div id="match-find">
+        <h2>상대 매칭</h2>
+        <div class="opponent-card" id="opponent-card"></div>
+        <div class="nav">
+          <button id="fight-btn" class="primary">⚔️ 대전 시작</button>
+          <button id="rematch-btn" class="ghost">🔄 다른 상대</button>
+        </div>
+        <div class="nav">
+          <button id="leaderboard-btn" class="ghost">🏆 리더보드</button>
+          <button id="back-home" class="ghost">🏠 돌아가기</button>
+        </div>
+      </div>
+
+      <div id="match-battle" class="hidden">
+        <div class="arena-field">
+          <div class="fighter">
+            <div class="sprite" id="me-sprite">🐲</div>
+            <div class="name" id="me-name">나</div>
+            <div class="hpbar"><div class="hpfill" id="me-hp"></div></div>
+          </div>
+          <div class="vs">VS</div>
+          <div class="fighter">
+            <div class="sprite" id="foe-sprite">👹</div>
+            <div class="name" id="foe-name">상대</div>
+            <div class="hpbar"><div class="hpfill enemy" id="foe-hp"></div></div>
+          </div>
+        </div>
+        <div class="log" id="battle-log"></div>
+      </div>
+
+      <div id="match-result" class="hidden">
+        <h2 id="result-title">승리!</h2>
+        <p id="result-detail"></p>
+        <div class="nav">
+          <button id="again-btn" class="primary">다시 대전</button>
+          <button id="result-home" class="ghost">🏠 돌아가기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 리더보드 화면 -->
+    <section id="leaderboard-screen" class="screen hidden">
+      <h2>🏆 글로벌 리더보드</h2>
+      <ol class="leaderboard" id="leaderboard-list"></ol>
+      <div class="nav">
+        <button id="lb-back" class="ghost">← 아레나로</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="config.js"></script>
+  <script src="sound.js"></script>
+  <script src="online.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

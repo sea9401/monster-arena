@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: monster-arena
+    env: node
+    buildCommand: echo 'no build'
+    startCommand: node server/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # 무료 플랜: DATA_FILE 미설정 → server/data.json에 저장
+      # (인스턴스 동안 유지, 재시작/재배포 시 초기화 — 프로토타입 수용).
+      # 영속 저장(Hobby+): 아래 disk 블록과 이 DATA_FILE을 함께 주석 해제.
+      # - key: DATA_FILE
+      #   value: /var/data/data.json
+    # disk:
+    #   name: arena-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
