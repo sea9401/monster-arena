@@ -1119,33 +1119,10 @@ $("lb-back").addEventListener("click", () => {
   }
 });
 
-$("next-day").addEventListener("click", () => {
-  state.dayOffset += 1;
-  state.timeOffset += 86400000;
-  checkRollover();
-  renderHome();
-  msg(`다음 날로 넘어갔어요. (DAY ${state.dayCount}, 🔥${state.streak}일 연속)`, true);
-});
-
-$("time-plus-30").addEventListener("click", () => {
-  state.timeOffset += 30 * 60 * 1000;
-  regenStamina();
-  save();
-  renderHome();
-  msg("30분이 지났어요. 스태미너를 갱신했습니다.", true);
-});
-
 $("mute-btn").addEventListener("click", () => {
   if (SFX.toggleMute) SFX.toggleMute();
   updateMuteButton();
   playFx("playTick");
-});
-
-$("reset-save").addEventListener("click", () => {
-  if (confirm("정말 저장을 초기화할까요? 키우던 몬스터가 사라집니다.")) {
-    localStorage.removeItem(SAVE_KEY);
-    location.reload();
-  }
 });
 
 // ---------- 리더보드 ----------
