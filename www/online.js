@@ -118,7 +118,27 @@ const Online = (() => {
     const r = await call("/event");
     return r && !r._error ? r : null;
   }
+  async function claimChampion() {
+    if (!status.reachable || !status.playerId) return null;
+    const r = await call("/tournament/claim", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
+    return r && !r._error ? r.reward : null;
+  }
+  async function sendTaunt(toPlayerId, presetId) {
+    if (!status.reachable || !status.playerId) return false;
+    const r = await call("/messages", { method: "POST", body: JSON.stringify({ from: status.playerId, toPlayerId, presetId }) });
+    return !!(r && r.ok);
+  }
+  async function getMessages() {
+    if (!status.reachable || !status.playerId) return [];
+    const r = await call(`/messages?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && r.messages ? r.messages : [];
+  }
+  async function ackMessages() {
+    if (!status.reachable || !status.playerId) return;
+    await call("/messages/ack", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
+  }
 
   return { status, init, register, login, logout, loadCloudSave, pushCloudSave,
-    uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event };
+    uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event,
+    claimChampion, sendTaunt, getMessages, ackMessages };
 })();

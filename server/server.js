@@ -26,6 +26,8 @@ function load() {
   if (!db.sessions) db.sessions = {};   // token -> { username, playerId, exp }
   if (!db.saves) db.saves = {};         // playerId -> 게임 state(JSON)
   if (!db.tournament) db.tournament = { weekId: weekInfo().weekId, scores: {}, lastChampion: null };
+  if (!db.tournament.claimedBy) db.tournament.claimedBy = {}; // playerId -> 보상 받은 weekId
+  if (!db.messages) db.messages = {};   // toPlayerId -> [{from,fromName,text,at}]
 }
 let saveTimer = null;
 function save() {
@@ -39,7 +41,7 @@ const uid = () => crypto.randomBytes(8).toString("hex");
 const now = () => Date.now();
 
 // 클라이언트 SPECIES 키와 일치해야 함(스냅샷 검증용). 신규 종 추가 시 여기도 갱신.
-const VALID_SPECIES = ["ember", "aqua", "spark", "lion", "crab", "hare", "wolf", "bat", "armadillo", "bear"];
+const VALID_SPECIES = ["ember", "aqua", "spark", "lion", "crab", "hare", "wolf", "bat", "armadillo", "bear", "unicorn", "swan", "toad", "viper"];
 
 // ---------- 매칭 풀 시드 (실제 플레이어가 적을 때 고스트 제공) ----------
 const SEED_SPECIES = ["ember", "aqua", "spark"];
@@ -74,7 +76,7 @@ function rolloverTournament() {
   const { weekId } = weekInfo();
   if (db.tournament.weekId === weekId) return;
   const top = Object.values(db.tournament.scores).sort((a, b) => b.points - a.points)[0];
-  if (top) db.tournament.lastChampion = { name: top.name, species: top.species, points: top.points, weekId: db.tournament.weekId };
+  if (top) db.tournament.lastChampion = { playerId: top.playerId, name: top.name, species: top.species, points: top.points, weekId: db.tournament.weekId };
   db.tournament.scores = {};
   db.tournament.weekId = weekId;
 }
@@ -99,6 +101,19 @@ function eventFor(ts = Date.now()) {
   }
   return { ...EVENTS[idx], date: kstDateStr(ts) };
 }
+
+// ---------- 소셜: 프리셋 도발 메시지 ----------
+const TAUNTS = {
+  gg:      "GG! 좋은 승부였어 👏",
+  again:   "또 붙자! 다음엔 안 져 😤",
+  easy:    "이지 게임이었네 😏",
+  rematch: "재대결 신청한다! 🔥",
+  respect: "강하다… 인정 👍",
+  cute:    "네 몬스터 귀엽더라 🥰",
+};
+const CHAMPION_TITLE = "👑 챔피언";
+const CHAMPION_COINS = 200;
+const msgRate = {}; // from -> lastSentMs (간단 레이트리밋)
 
 // ---------- Elo ----------
 function elo(myRating, oppRating, won, k = 32) {
@@ -138,11 +153,12 @@ function sanitizeSnapshot(b) {
     hp: clampN(b.hp, 1, 999999, 50),
     dayCount: clampN(b.dayCount, 1, 99999, 1),
     rating: clampN(b.rating, 0, 5000, 1000),
+    title: String(b.title || "").slice(0, 16), // 코스메틱(보유검증 안 함, 표시용)
   };
 }
 function pub(p) {
   return { playerId: p.playerId, name: p.name, species: p.species, level: p.level,
-    atk: p.atk, def: p.def, spd: p.spd, hp: p.hp, rating: p.rating };
+    atk: p.atk, def: p.def, spd: p.spd, hp: p.hp, rating: p.rating, title: p.title || "" };
 }
 
 // ---------- 인증 (아이디/비밀번호, scrypt) ----------
@@ -277,7 +293,7 @@ const server = http.createServer(async (req, res) => {
     const sc = db.tournament.scores[match.playerId] || { playerId: match.playerId, points: 0, wins: 0 };
     sc.points += won ? 10 : 3;
     if (won) sc.wins += 1;
-    sc.name = me.name; sc.species = me.species;
+    sc.name = me.name; sc.species = me.species; sc.title = me.title || "";
     db.tournament.scores[match.playerId] = sc;
     save();
     return send(res, 200, { ok: true, oldRating, newRating: me.rating, delta: me.rating - oldRating, tp: won ? 10 : 3 });
@@ -288,7 +304,7 @@ const server = http.createServer(async (req, res) => {
     const rows = Object.values(db.players)
       .sort((a, b) => b.rating - a.rating)
       .slice(0, limit)
-      .map((p, i) => ({ rank: i + 1, playerId: p.playerId, name: p.name, species: p.species, rating: p.rating, wins: p.wins || 0, losses: p.losses || 0 }));
+      .map((p, i) => ({ rank: i + 1, playerId: p.playerId, name: p.name, species: p.species, rating: p.rating, wins: p.wins || 0, losses: p.losses || 0, title: p.title || "" }));
     return send(res, 200, { rows });
   }
 
@@ -306,11 +322,52 @@ const server = http.createServer(async (req, res) => {
     rolloverTournament();
     const { weekId, endsAt } = weekInfo();
     const all = Object.values(db.tournament.scores).sort((a, b) => b.points - a.points);
-    const rows = all.slice(0, 20).map((s, i) => ({ rank: i + 1, playerId: s.playerId, name: s.name, species: s.species, points: s.points, wins: s.wins || 0 }));
+    const rows = all.slice(0, 20).map((s, i) => ({ rank: i + 1, playerId: s.playerId, name: s.name, species: s.species, points: s.points, wins: s.wins || 0, title: s.title || "" }));
     let me2 = null;
     const pid = query.playerId;
     if (pid) { const idx = all.findIndex((s) => s.playerId === pid); if (idx >= 0) me2 = { rank: idx + 1, points: all[idx].points, wins: all[idx].wins || 0 }; }
     return send(res, 200, { weekId, endsAt, rows, me: me2, lastChampion: db.tournament.lastChampion || null });
+  }
+
+  // 지난주 챔피언 보상 수령(서버 멱등 — 멀티기기 중복 방지)
+  if (url === "/tournament/claim" && method === "POST") {
+    rolloverTournament();
+    const b = await readBody(req);
+    const ch = db.tournament.lastChampion;
+    if (!ch || ch.playerId !== b.playerId) return send(res, 200, { reward: null });
+    if (db.tournament.claimedBy[b.playerId] === ch.weekId) return send(res, 200, { reward: null }); // 이미 수령
+    db.tournament.claimedBy[b.playerId] = ch.weekId;
+    save();
+    return send(res, 200, { reward: { coins: CHAMPION_COINS, title: CHAMPION_TITLE, weekId: ch.weekId } });
+  }
+
+  // --- 소셜: 도발 메시지 ---
+  if (url === "/messages/presets" && method === "GET") {
+    return send(res, 200, { taunts: Object.entries(TAUNTS).map(([id, text]) => ({ id, text })) });
+  }
+  if (url === "/messages" && method === "POST") {
+    const b = await readBody(req);
+    const from = String(b.from || ""), to = String(b.toPlayerId || "");
+    const text = TAUNTS[b.presetId];
+    if (!from || !to || !text) return send(res, 400, { error: "BAD_MESSAGE" });
+    if (from === to) return send(res, 400, { error: "SELF" });
+    if (msgRate[from] && now() - msgRate[from] < 3000) return send(res, 429, { error: "TOO_FAST" });
+    msgRate[from] = now();
+    const fromName = (db.players[from] && db.players[from].name) || "익명";
+    if (!db.messages[to]) db.messages[to] = [];
+    db.messages[to].push({ from, fromName, text, at: now() });
+    if (db.messages[to].length > 20) db.messages[to] = db.messages[to].slice(-20); // 인박스 상한
+    save();
+    return send(res, 200, { ok: true });
+  }
+  if (url === "/messages" && method === "GET") {
+    const pid = query.playerId;
+    return send(res, 200, { messages: (pid && db.messages[pid]) || [] });
+  }
+  if (url === "/messages/ack" && method === "POST") {
+    const b = await readBody(req);
+    if (b.playerId && db.messages[b.playerId]) { db.messages[b.playerId] = []; save(); }
+    return send(res, 200, { ok: true });
   }
 
   // --- 인증 ---

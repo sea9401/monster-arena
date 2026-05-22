@@ -47,6 +47,7 @@
         <div id="event-banner" class="event-banner hidden"></div>
         <div class="pet-panel">
           <div class="pet-sprite" id="pet-sprite">🥚</div>
+          <div class="pet-title hidden" id="pet-title"></div>
           <div class="pet-head">
             <h2 id="pet-name">이름</h2>
             <span class="badge" id="pet-stage">아기</span>
@@ -107,6 +108,10 @@
       </div>
 
       <div class="home-tab-content hidden" data-home-tab="daily">
+        <div class="shop-bar">
+          <span class="shop-bar-coins">🪙 <b class="coin-balance">0</b></span>
+          <button id="shop-btn" class="primary">🛒 상점</button>
+        </div>
         <div class="attendance">
           <div class="att-head">
             <h3 class="att-title">📅 출석 보상</h3>
@@ -138,6 +143,9 @@
           <div id="lobby-online-status" class="online-status off">⚪ 오프라인</div>
           <div class="lobby-account" id="lobby-account"></div>
         </div>
+
+        <div id="inbox" class="inbox hidden"></div>
+        <div id="social-bar" class="social-bar hidden"></div>
 
         <div class="battle-history">
           <h3 class="quests-title">최근 전투 기록</h3>
@@ -223,6 +231,20 @@
       <p class="muted tourney-note">온라인 매치만 점수가 반영돼요 · 승리 +10점 · 패배 +3점 · 매주 월요일 0시(KST) 리셋</p>
       <div class="nav">
         <button id="tourney-back" class="ghost">← 아레나로</button>
+      </div>
+    </section>
+
+    <!-- 6. 상점 -->
+    <section id="shop-screen" class="screen hidden">
+      <h2>🛒 상점</h2>
+      <div class="shop-coins-bar">보유 코인 🪙 <b id="shop-coins">0</b></div>
+      <h3 class="quests-title">아이템</h3>
+      <ul class="shop-list" id="shop-items"></ul>
+      <h3 class="quests-title">칭호</h3>
+      <ul class="shop-list" id="shop-titles"></ul>
+      <p class="muted tourney-note">코인은 전투(승+20/패+5)·퀘스트(+10)·출석(+15)으로 모아요</p>
+      <div class="nav">
+        <button id="shop-back" class="ghost">← 돌아가기</button>
       </div>
     </section>
 

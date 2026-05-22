@@ -12,11 +12,13 @@ const SPECIES = {
   ember: { type: "fire",     base: { atk: 12, def: 8,  spd: 9,  hp: 60 }, primary: "atk" },
   aqua:  { type: "water",    base: { atk: 8,  def: 13, spd: 7,  hp: 80 }, primary: "def" },
   spark: { type: "electric", base: { atk: 10, def: 7,  spd: 14, hp: 55 }, primary: "spd" },
+  lux:   { type: "light",    base: { atk: 12, def: 8,  spd: 11, hp: 56 }, primary: "atk" },
   wolf:  { type: "dark",     base: { atk: 13, def: 8,  spd: 9,  hp: 58 }, primary: "atk" },
   arma:  { type: "earth",    base: { atk: 8,  def: 15, spd: 6,  hp: 78 }, primary: "def" },
+  toxin: { type: "poison",   base: { atk: 9,  def: 13, spd: 7,  hp: 76 }, primary: "def" },
 };
-const ELEMENTS = { fire: 1, water: 1, electric: 1, dark: 1, earth: 1 };
-const BEATS = { water: "fire", fire: "electric", electric: "dark", dark: "earth", earth: "water" };
+const ELEMENTS = { fire: 1, water: 1, electric: 1, light: 1, dark: 1, earth: 1, poison: 1 };
+const BEATS = { water: "fire", fire: "electric", electric: "light", light: "dark", dark: "earth", earth: "poison", poison: "water" };
 const TYPE_ADV = 1.12, TYPE_DIS = 0.90;
 function typeMult(a, d) {
   if (BEATS[a] === d) return TYPE_ADV;
@@ -28,8 +30,10 @@ const PASSIVE = {
   fire:     { dmgDealt: 1.06 },
   water:    { dmgTaken: 0.92 },
   electric: { evaBonus: 0.10 },
+  light:    { dmgDealt: 1.06 },
   dark:     { dmgDealt: 1.06 },
   earth:    { dmgTaken: 0.92 },
+  poison:   { evaBonus: 0.06 },
 };
 const SKILL_KITS = {
   fire: [
@@ -56,6 +60,16 @@ const SKILL_KITS = {
     { id: "g_basic", type: "earth", power: 1.0, cd: 0 },
     { id: "g_shield", type: "earth", power: 0.85, cd: 3, shield: { reduce: 0.25, turns: 2 } },
     { id: "g_mend", type: "earth", power: 0.8, cd: 4, heal: 0.12 },
+  ],
+  light: [
+    { id: "l_basic", type: "light", power: 1.0, cd: 0 },
+    { id: "l_flash", type: "light", power: 1.2, cd: 2, speedScale: 1.35 },
+    { id: "l_judge", type: "light", power: 1.1, cd: 3, buffAtk: { mult: 1.2, turns: 2 } },
+  ],
+  poison: [
+    { id: "p_basic", type: "poison", power: 1.0, cd: 0 },
+    { id: "p_venom", type: "poison", power: 0.6, cd: 3, dot: { frac: 0.035, turns: 3 } },
+    { id: "p_corrode", type: "poison", power: 1.22, cd: 2 },
   ],
 };
 const expToNext = (level) => 80 + level * 40;
@@ -107,6 +121,7 @@ function buildFighter(base) {
   const p = PASSIVE[base.type] || {};
   return Object.assign({}, base, {
     kit: SKILL_KITS[base.type], cd: {}, atkBuffTurns: 0, atkBuffMult: 1, shieldTurns: 0, shieldReduce: 0,
+    dotTurns: 0, dotDmg: 0,
     pDmgDealt: p.dmgDealt || 1, pDmgTaken: p.dmgTaken || 1, pEva: p.evaBonus || 0,
   });
 }
@@ -114,11 +129,14 @@ function upkeep(f) {
   for (const k in f.cd) if (f.cd[k] > 0) f.cd[k]--;
   if (f.atkBuffTurns > 0 && --f.atkBuffTurns === 0) f.atkBuffMult = 1;
   if (f.shieldTurns > 0 && --f.shieldTurns === 0) f.shieldReduce = 0;
+  if (f.dotTurns > 0) { f.hp -= f.dotDmg; f.dotTurns--; }
 }
-function chooseSkill(self) {
+function chooseSkill(self, foe) {
   const ready = self.kit.filter((s) => (self.cd[s.id] || 0) === 0);
   const heal = ready.find((s) => s.heal);
   if (heal && self.hp < self.maxHp * 0.4) return heal;
+  const dot = ready.find((s) => s.dot);
+  if (dot && foe && foe.dotTurns === 0 && foe.hp > foe.maxHp * 0.3) return dot;
   const shield = ready.find((s) => s.shield);
   if (shield && self.shieldTurns === 0 && Math.random() < 0.5) return shield;
   return ready.reduce((best, s) => (s.power > best.power ? s : best), ready[0]);
@@ -147,12 +165,14 @@ function runMatch(me, foe) {
   for (round = 1; round <= 80; round++) {
     const atkr = turn === "me" ? me : foe, dfdr = turn === "me" ? foe : me;
     upkeep(atkr);
-    const skill = chooseSkill(atkr);
+    if (atkr.hp <= 0) return { win: turn !== "me", round }; // 중독 사망
+    const skill = chooseSkill(atkr, dfdr);
     atkr.cd[skill.id] = skill.cd;
     if (!evades(atkr, dfdr)) {
       dfdr.hp -= skillDamage(atkr, dfdr, skill);
       if (skill.extraHit && dfdr.hp > 0 && Math.random() < skill.extraHit.chance && !evades(atkr, dfdr))
         dfdr.hp -= skillDamage(atkr, dfdr, { type: skill.type, power: skill.extraHit.power });
+      if (skill.dot && dfdr.hp > 0) { dfdr.dotTurns = skill.dot.turns; dfdr.dotDmg = Math.max(1, Math.round(dfdr.maxHp * skill.dot.frac)); }
     }
     if (skill.buffAtk) { atkr.atkBuffTurns = skill.buffAtk.turns; atkr.atkBuffMult = skill.buffAtk.mult; }
     if (skill.shield) { atkr.shieldTurns = skill.shield.turns; atkr.shieldReduce = skill.shield.reduce; }
@@ -195,8 +215,8 @@ function makeOpponent(myPower, myType) {
 }
 
 // ---- 리포트 ----
-const keys = ["ember", "aqua", "spark", "wolf", "arma"];
-const label = { ember: "불(공격)", aqua: "물(방어)", spark: "전기(속도)", wolf: "어둠(공격)", arma: "땅(방어)" };
+const keys = ["ember", "aqua", "spark", "lux", "wolf", "arma", "toxin"];
+const label = { ember: "불(공격)", aqua: "물(방어)", spark: "전기(속도)", lux: "빛(공격)", wolf: "어둠(공격)", arma: "땅(방어)", toxin: "독(지속)" };
 const days = 14;
 console.log(`(육성 정책: ${POLICY})\n`);
 
@@ -245,7 +265,7 @@ console.log("\n=== 전투 길이/타임아웃 (랜덤 매칭) ===");
 {
   let tt = 0, to = 0, M = 6000;
   for (let i = 0; i < M; i++) {
-    const a = keys[rand(0, 2)], b = keys[rand(0, 2)];
+    const a = keys[rand(0, keys.length - 1)], b = keys[rand(0, keys.length - 1)];
     const r = runMatch(fighterFrom(raise(a, days)), fighterFrom(raise(b, days)));
     tt += r.round; if (r.round > 80) to++;
   }

@@ -48,29 +48,49 @@ const SPECIES = {
     name: "대지 곰", egg: "🥚", stages: ["🐨", "🐻", "🦬"], type: "earth",
     base: { atk: 10, def: 13, spd: 6, hp: 82 }, bias: "방어형",
   },
+  unicorn: {
+    name: "광휘 유니콘", egg: "🥚", stages: ["🐴", "🦌", "🦄"], type: "light",
+    base: { atk: 12, def: 8, spd: 11, hp: 56 }, bias: "공격형",
+  },
+  swan: {
+    name: "성광 백조", egg: "🥚", stages: ["🐥", "🦩", "🦢"], type: "light",
+    base: { atk: 11, def: 8, spd: 13, hp: 54 }, bias: "속도형",
+  },
+  toad: {
+    name: "맹독 두꺼비", egg: "🥚", stages: ["🐛", "🦂", "🐸"], type: "poison",
+    base: { atk: 9, def: 13, spd: 7, hp: 76 }, bias: "방어형",
+  },
+  viper: {
+    name: "맹독 살무사", egg: "🥚", stages: ["🐛", "🐍", "🐉"], type: "poison",
+    base: { atk: 13, def: 8, spd: 11, hp: 58 }, bias: "공격형",
+  },
 };
 
-// 속성 메타 + 상성. 5각형 사이클: 물 > 불 > 전기 > 어둠 > 땅 > 물
+// 속성 메타 + 상성. 7각형 사이클: 물 > 불 > 전기 > 빛 > 어둠 > 땅 > 독 > 물
 const ELEMENTS = {
   fire:     { label: "불",   icon: "🔥" },
   water:    { label: "물",   icon: "💧" },
   electric: { label: "전기", icon: "⚡" },
+  light:    { label: "빛",   icon: "✨" },
   dark:     { label: "어둠", icon: "🌑" },
   earth:    { label: "땅",   icon: "🪨" },
+  poison:   { label: "독",   icon: "☠️" },
 };
-// key가 value를 이긴다. 각 속성은 1개를 이기고 1개에 지고 2개엔 중립.
-const BEATS = { water: "fire", fire: "electric", electric: "dark", dark: "earth", earth: "water" };
+// key가 value를 이긴다. 각 속성은 1개를 이기고 1개에 지고 4개엔 중립.
+const BEATS = { water: "fire", fire: "electric", electric: "light", light: "dark", dark: "earth", earth: "poison", poison: "water" };
 const TYPE_ADV = 1.12;  // 유리
 const TYPE_DIS = 0.90;  // 불리
 const DMG_K = 0.6;      // 전역 데미지 계수(전투 길이 조절)
 
-// 종 패시브 (속성별). 새 속성은 기존 역할 틀 재활용 — 어둠=공격형, 땅=방어형.
+// 종 패시브 (속성별). 새 속성은 기존 역할 틀 재활용 — 어둠/빛=공격형, 땅/독=방어형.
 const PASSIVE = {
   fire:     { label: "🔥 맹공 (주는 피해 +6%)",  dmgDealt: 1.06 },
   water:    { label: "💧 견고 (받는 피해 -8%)",  dmgTaken: 0.92 },
   electric: { label: "⚡ 잔상 (회피 +10%)",      evaBonus: 0.10 },
+  light:    { label: "✨ 광휘 (주는 피해 +6%)",  dmgDealt: 1.06 },
   dark:     { label: "🌑 흉포 (주는 피해 +6%)",  dmgDealt: 1.06 },
   earth:    { label: "🪨 단단 (받는 피해 -8%)",  dmgTaken: 0.92 },
+  poison:   { label: "☠️ 점액 (회피 +6%)",       evaBonus: 0.06 },
 };
 
 // 공격 속성 a가 방어 속성 d를 상대로 갖는 데미지 배율
@@ -117,6 +137,16 @@ const SKILL_KITS = {
     { id: "g_shield", name: "바위 방패",   type: "earth", power: 0.85, cd: 3, shield: { reduce: 0.25, turns: 2 } },
     { id: "g_mend",   name: "대지 치유",   type: "earth", power: 0.8,  cd: 4, heal: 0.12 },
   ],
+  light: [ // 공격/속도형: 화력 + 속도 비례 강타
+    { id: "l_basic", name: "기본 공격",   type: "light", power: 1.0,  cd: 0 },
+    { id: "l_flash", name: "섬광",       type: "light", power: 1.2,  cd: 2, speedScale: 1.35 },
+    { id: "l_judge", name: "심판의 빛",   type: "light", power: 1.1,  cd: 3, buffAtk: { mult: 1.2, turns: 2 } },
+  ],
+  poison: [ // 지속피해형: 중독 도트로 갉아먹고 부식으로 마무리
+    { id: "p_basic",   name: "기본 공격", type: "poison", power: 1.0,  cd: 0 },
+    { id: "p_venom",   name: "맹독",     type: "poison", power: 0.6,  cd: 3, dot: { frac: 0.035, turns: 3 } },
+    { id: "p_corrode", name: "부식",     type: "poison", power: 1.22, cd: 2 },
+  ],
 };
 
 let lastTypeMult = 1; // 직전 스킬의 상성 배율(로그용)
@@ -129,6 +159,7 @@ function buildFighter(base) {
     cd: {},                              // skillId -> 남은 쿨다운
     atkBuffTurns: 0, atkBuffMult: 1,     // 공격 버프
     shieldTurns: 0, shieldReduce: 0,     // 피해 감소
+    dotTurns: 0, dotDmg: 0,              // 중독: 남은 턴 / 턴당 피해(절대값)
     pDmgDealt: p.dmgDealt || 1,          // 패시브: 주는 피해 배율
     pDmgTaken: p.dmgTaken || 1,          // 패시브: 받는 피해 배율
     pEva: p.evaBonus || 0,               // 패시브: 회피 가산
@@ -141,18 +172,23 @@ function evades(atkr, dfdr) {
   return Math.random() < Math.min(ev, 0.27);
 }
 
-// 턴 시작 시 쿨다운/버프 시간 감소
+// 턴 시작 시 쿨다운/버프 시간 감소. 중독 중이면 도트 피해를 적용하고 그 값을 반환(로그용).
 function upkeep(f) {
   for (const k in f.cd) if (f.cd[k] > 0) f.cd[k]--;
   if (f.atkBuffTurns > 0 && --f.atkBuffTurns === 0) f.atkBuffMult = 1;
   if (f.shieldTurns > 0 && --f.shieldTurns === 0) f.shieldReduce = 0;
+  let dot = 0;
+  if (f.dotTurns > 0) { dot = f.dotDmg; f.hp -= dot; f.dotTurns--; }
+  return dot;
 }
 
-// AI 스킬 선택: 위급하면 회복, 가끔 방어, 그 외엔 최고 화력
-function chooseSkill(self) {
+// AI 스킬 선택: 위급하면 회복, 상대 미중독이면 맹독, 가끔 방어, 그 외엔 최고 화력
+function chooseSkill(self, foe) {
   const ready = self.kit.filter((s) => (self.cd[s.id] || 0) === 0);
   const heal = ready.find((s) => s.heal);
   if (heal && self.hp < self.maxHp * 0.4) return heal;
+  const dot = ready.find((s) => s.dot);
+  if (dot && foe && foe.dotTurns === 0 && foe.hp > foe.maxHp * 0.3) return dot;
   const shield = ready.find((s) => s.shield);
   if (shield && self.shieldTurns === 0 && Math.random() < 0.5) return shield;
   return ready.reduce((best, s) => (s.power > best.power ? s : best), ready[0]);
@@ -286,6 +322,7 @@ const screens = {
   arena: $("arena-screen"),
   leaderboard: $("leaderboard-screen"),
   tournament: $("tournament-screen"),
+  shop: $("shop-screen"),
 };
 let tooltipEl = null;
 
@@ -429,6 +466,11 @@ function migrateState() {
   if (!Number.isFinite(state.staminaAt)) state.staminaAt = gameNow();
   if (!Array.isArray(state.history)) state.history = [];
   if (!Array.isArray(state.statLog)) state.statLog = [];
+  if (!Number.isFinite(state.coins)) state.coins = 0;
+  if (!Array.isArray(state.titles)) state.titles = [];
+  if (typeof state.title !== "string") state.title = "";
+  if (state.title && !state.titles.includes(state.title)) state.title = ""; // 보유 안 한 칭호는 장착 해제
+  if (state.claimedChampionWeek === undefined) state.claimedChampionWeek = null;
   if (!state.achievements || typeof state.achievements !== "object") state.achievements = {};
   if (!state.lifetime || typeof state.lifetime !== "object") state.lifetime = {};
   for (const k of ["trains", "feeds", "plays", "pvp", "upsets"]) {
@@ -560,6 +602,10 @@ function hatch(speciesKey) {
     attendanceClaimedDate: carry ? carry.attendanceClaimedDate : null, // 오늘 출석 보상 수령 여부
     achievements: carry ? carry.achievements : {},  // { [업적id]: 해금 타임스탬프 }
     lifetime,                                        // 누적 카운터(업적/도감용)
+    coins: carry ? carry.coins : 0,                  // 상점 화폐
+    titles: carry ? carry.titles : [],               // 보유 칭호 id 배열
+    title: carry ? carry.title : "",                 // 장착 칭호(표시용)
+    claimedChampionWeek: carry ? carry.claimedChampionWeek : null, // 챔피언 보상 받은 weekId
   };
   pendingRebirth = false;
   checkAchievements(); // 도감 업적(N종 육성 등) 즉시 체크
@@ -727,6 +773,7 @@ function claimAttendance() {
   const day = attendanceCycleDay();
   const label = applyAttendanceReward(ATTENDANCE_REWARDS[day - 1].reward);
   state.attendanceClaimedDate = todayStr();
+  addCoins(15); // 출석 보상 코인
   checkAchievements();
   playFx("playReward");
   haptic(18);
@@ -859,6 +906,7 @@ function claimQuest(idx) {
   else if (type === "happy") state.happy = clamp(state.happy + amt, 0, 100);
   else if (type === "food") state.food = clamp(state.food + amt, 0, 100);
   q.claimed = true;
+  addCoins(10); // 퀘스트 보상 코인
   checkAchievements();
   playFx("playReward");
   haptic(18);
@@ -947,6 +995,9 @@ function renderHome() {
   const stage = stageIndex(state.level);
   $("pet-sprite").textContent = sp.stages[stage];
   $("pet-name").textContent = state.name;
+  const titleEl = $("pet-title");
+  if (titleEl) { titleEl.textContent = state.title || ""; titleEl.classList.toggle("hidden", !state.title); }
+  document.querySelectorAll(".coin-balance").forEach((el) => { el.textContent = state.coins || 0; });
   $("pet-stage").textContent = STAGE_NAMES[stage];
   const petEl = ELEMENTS[sp.type];
   const elBadge = $("pet-element");
@@ -991,6 +1042,8 @@ function renderHome() {
 function renderArenaLobby() {
   if (!state) return;
   renderAccount();
+  renderSocialBar();
+  refreshInbox();
   $("lobby-rank").textContent = rankOf(state.rating);
   $("lobby-rating").textContent = state.rating;
   $("lobby-record").textContent = `${state.wins}승 ${state.losses}패`;
@@ -1041,13 +1094,14 @@ function addBattleHistory(won, delta, newRating) {
 // ---------- PvP ----------
 let currentOpponent = null;
 let currentMatchId = null;      // 온라인 매치면 서버 matchId, AI면 null
+let friendlyMode = false;       // 친선 재대결(보상·기록 없음)
 let lastFoeUnfavorable = false; // 불리 매칭 2연속 방지용 (저장 안 함)
 
 // 내 현재 상태를 서버 스냅샷 형태로
 function mySnapshot() {
   return { name: state.name, species: state.species, level: state.level,
     atk: state.atk, def: state.def, spd: state.spd, hp: state.hp + state.level * 6,
-    dayCount: state.dayCount, rating: state.rating };
+    dayCount: state.dayCount, rating: state.rating, title: state.title || "" };
 }
 
 // 내 속성 대비 상대 속성을 가중 랜덤으로 선택.
@@ -1056,7 +1110,7 @@ function mySnapshot() {
 function pickFoeType(myType, strong) {
   const iBeat = BEATS[myType];                                  // 내가 이기는 속성 → 유리
   const beatsMe = Object.keys(BEATS).find((k) => BEATS[k] === myType); // 나를 이기는 속성 → 불리
-  // 중립 = iBeat/beatsMe를 제외한 나머지(동속성 포함). 5속성이면 3개.
+  // 중립 = iBeat/beatsMe를 제외한 나머지(동속성 포함). 7속성이면 4개.
   const neutrals = Object.keys(ELEMENTS).filter((t) => t !== iBeat && t !== beatsMe);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -1155,8 +1209,7 @@ async function findMatch() {
 }
 
 function startBattle() {
-  questProgress("pvp_play");
-  state.lifetime.pvp++;
+  if (!friendlyMode) { questProgress("pvp_play"); state.lifetime.pvp++; } // 친선전은 카운트 안 함
   $("match-find").classList.add("hidden");
   $("match-battle").classList.remove("hidden");
 
@@ -1186,9 +1239,16 @@ function runBattle(me, foe, turn) {
 
     const atkr = turn === "me" ? me : foe;
     const dfdr = turn === "me" ? foe : me;
-    upkeep(atkr);
+    const selfSide = turn === "me" ? "me" : "foe";
+    const dot = upkeep(atkr);
+    if (dot > 0) {
+      floatBattleText(selfSide, `-${dot}`, "dmg-float");
+      blog(`${atkr.name}이(가) 중독 피해 ${dot}을(를) 입었다!`, "system");
+      updateHp(me, foe);
+      if (atkr.hp <= 0) { setTimeout(() => resolve(turn !== "me"), 800); return; }
+    }
 
-    const skill = chooseSkill(atkr);
+    const skill = chooseSkill(atkr, dfdr);
     atkr.cd[skill.id] = skill.cd;
 
     if (evades(atkr, dfdr)) {
@@ -1221,6 +1281,13 @@ function runBattle(me, foe, turn) {
         playFx("playHit");
         floatBattleText(turn === "me" ? "foe" : "me", `-${extra}`, "dmg-float");
         blog(`연쇄 공격! 추가 ${extra} 피해.`, turn);
+      }
+
+      // 중독 부여 (명중 시에만)
+      if (skill.dot && dfdr.hp > 0) {
+        dfdr.dotTurns = skill.dot.turns;
+        dfdr.dotDmg = Math.max(1, Math.round(dfdr.maxHp * skill.dot.frac));
+        blog(`${dfdr.name}이(가) 중독되었다! (${skill.dot.turns}턴)`, "system");
       }
     }
     // 부가 효과
@@ -1266,6 +1333,17 @@ function blog(text, type) {
 }
 
 async function resolve(won) {
+  // 친선 재대결: 기록·보상·레이팅 없이 결과만 표시하고 로비로 복귀
+  if (friendlyMode) {
+    friendlyMode = false;
+    playFx(won ? "playWin" : "playLose");
+    resultOverlay(won);
+    msg(won ? "친선전 승리! (기록·보상 없음)" : "친선전 패배 (기록·보상 없음)", won);
+    renderHome();
+    showHomeTab("arena");
+    show("home");
+    return;
+  }
   if (won) {
     state.wins++;
     questProgress("pvp_win");
@@ -1292,6 +1370,8 @@ async function resolve(won) {
     newRating = Math.max(0, state.rating + delta);
   }
   state.rating = newRating;
+  const coinGain = won ? 20 : 5; // 전투 보상 코인
+  addCoins(coinGain);
   addBattleHistory(won, delta, newRating);
   checkAchievements();
   save();
@@ -1299,13 +1379,160 @@ async function resolve(won) {
 
   const sign = delta > 0 ? "+" : "";
   const tpText = tp ? ` · 🏅 +${tp}점` : "";
-  $("result-detail").textContent = `${sign}${delta} 레이팅 (현재 ${state.rating}, ${rankOf(state.rating)})${tpText}`;
+  $("result-detail").textContent = `${sign}${delta} 레이팅 (현재 ${state.rating}, ${rankOf(state.rating)})${tpText} · 🪙 +${coinGain}`;
   $("rating").textContent = state.rating;
   $("rank-tier").textContent = rankOf(state.rating);
   $("record").textContent = `${state.wins}승 ${state.losses}패`;
+  // 실제 플레이어 상대면 도발 가능(아레나 로비 소셜 바에서 표시)
+  tauntTarget = currentOpponent && currentOpponent.ghost ? { playerId: currentOpponent.playerId, name: currentOpponent.name } : null;
   renderHome();
   showHomeTab("arena");
   show("home");
+}
+
+// ---------- 코인 / 상점 / 칭호 ----------
+function addCoins(n) { if (state) state.coins = Math.max(0, (state.coins || 0) + n); }
+
+// 상점 품목(클라 전용 — QoL/코스메틱, 영구 스탯 판매 없음)
+const SHOP_ITEMS = [
+  { id: "stamina", icon: "⚡", name: "스태미너 충전", desc: "스태미너 +5", cost: 30, apply: () => addStamina(5) },
+  { id: "snack",   icon: "🍖", name: "고급 간식",     desc: "포만 +40 · 행복 +20", cost: 20, apply: () => { state.food = clamp(state.food + 40, 0, 100); state.happy = clamp(state.happy + 20, 0, 100); } },
+  { id: "exp",     icon: "⭐", name: "EXP 포션",       desc: "경험치 +60", cost: 40, apply: () => gainExp(60) },
+];
+const SHOP_TITLES = [
+  { text: "🔥 열정의 조련사", cost: 100 },
+  { text: "🛡️ 베테랑 조련사", cost: 300 },
+  { text: "🌟 전설의 조련사", cost: 800 },
+];
+
+function openShop() {
+  show("shop");
+  renderShop();
+}
+function renderShop() {
+  if (!state) return;
+  $("shop-coins").textContent = state.coins || 0;
+  // 소비 아이템
+  $("shop-items").innerHTML = SHOP_ITEMS.map((it) => `
+    <li class="shop-row">
+      <span class="shop-icon">${it.icon}</span>
+      <span class="shop-info"><b>${it.name}</b><br><span class="shop-desc">${it.desc}</span></span>
+      <button class="shop-buy" data-buy="${it.id}" ${state.coins < it.cost ? "disabled" : ""}>🪙${it.cost}</button>
+    </li>`).join("");
+  // 칭호
+  $("shop-titles").innerHTML = SHOP_TITLES.map((t) => {
+    const owned = (state.titles || []).includes(t.text);
+    const equipped = state.title === t.text;
+    let btn;
+    if (equipped) btn = `<button class="shop-buy" data-unequip="1">해제</button>`;
+    else if (owned) btn = `<button class="shop-buy" data-equip="${t.text}">장착</button>`;
+    else btn = `<button class="shop-buy" data-title="${t.text}" data-cost="${t.cost}" ${state.coins < t.cost ? "disabled" : ""}>🪙${t.cost}</button>`;
+    return `<li class="shop-row">
+      <span class="shop-icon">👑</span>
+      <span class="shop-info"><b>${t.text}</b>${owned ? ' <span class="shop-desc">(보유)</span>' : ""}</span>
+      ${btn}
+    </li>`;
+  }).join("");
+}
+function buyItem(id) {
+  const it = SHOP_ITEMS.find((x) => x.id === id);
+  if (!it || state.coins < it.cost) return;
+  addCoins(-it.cost);
+  it.apply();
+  save();
+  renderShop();
+  renderHome();
+  msg(`${it.name} 구매! (-🪙${it.cost})`, true);
+  playFx("playReward");
+}
+function buyTitle(text, cost) {
+  if (state.coins < cost || (state.titles || []).includes(text)) return;
+  addCoins(-cost);
+  state.titles.push(text);
+  state.title = text; // 구매 즉시 장착
+  save();
+  renderShop();
+  renderHome();
+  msg(`칭호 획득: ${text}`, true);
+  playFx("playReward");
+}
+function equipTitle(text) {
+  if (!(state.titles || []).includes(text) && text !== "") return;
+  state.title = text;
+  save();
+  renderShop();
+  renderHome();
+}
+
+// 지난주 챔피언 보상 수령(서버 멱등 + 클라 기록)
+async function tryClaimChampion() {
+  const reward = await Online.claimChampion();
+  if (!reward) return;
+  if (state.claimedChampionWeek === reward.weekId) return; // 클라 측 추가 가드
+  addCoins(reward.coins);
+  if (reward.title && !state.titles.includes(reward.title)) state.titles.push(reward.title);
+  state.title = reward.title || state.title;
+  state.claimedChampionWeek = reward.weekId;
+  checkAchievements();
+  save();
+  Online.uploadSnapshot(mySnapshot());
+  alert(`🏆 지난주 토너먼트 챔피언!\n보상: 🪙${reward.coins} + 칭호 "${reward.title}"`);
+}
+
+// ---------- 소셜: 도발 / 받은함 / 친선 재대결 ----------
+const TAUNTS = [
+  { id: "gg", text: "GG! 좋은 승부였어 👏" },
+  { id: "again", text: "또 붙자! 다음엔 안 져 😤" },
+  { id: "easy", text: "이지 게임이었네 😏" },
+  { id: "rematch", text: "재대결 신청한다! 🔥" },
+  { id: "respect", text: "강하다… 인정 👍" },
+  { id: "cute", text: "네 몬스터 귀엽더라 🥰" },
+];
+let tauntTarget = null; // 도발 보낼 상대 {playerId, name} (직전 매치가 실제 플레이어일 때)
+
+// 아레나 로비 소셜 바: 직전 상대와 친선 재대결 + (실제 플레이어면) 도발
+function renderSocialBar() {
+  const bar = $("social-bar");
+  if (!bar) return;
+  if (!currentOpponent) { bar.classList.add("hidden"); bar.innerHTML = ""; return; }
+  const canTaunt = Online.status.reachable && tauntTarget && tauntTarget.playerId && !String(tauntTarget.playerId).startsWith("ghost-");
+  bar.classList.remove("hidden");
+  let html = `<div class="social-title">직전 상대: ${currentOpponent.name}</div>`;
+  html += `<button id="friendly-rematch-btn" class="ghost">🔁 친선 재대결 (보상 없음)</button>`;
+  if (canTaunt) {
+    html += `<div class="taunt-title">💬 한마디 보내기</div><div class="taunt-btns">` +
+      TAUNTS.map((t) => `<button class="taunt-btn" data-taunt="${t.id}">${t.text}</button>`).join("") + `</div>`;
+  }
+  bar.innerHTML = html;
+}
+async function sendTaunt(presetId) {
+  if (!tauntTarget) return;
+  const ok = await Online.sendTaunt(tauntTarget.playerId, presetId);
+  if (ok) {
+    tauntTarget = null;
+    const t = $("social-bar") && $("social-bar").querySelector(".taunt-btns");
+    if (t) t.outerHTML = `<div class="social-title">메시지를 보냈어요! 📨</div>`;
+  }
+}
+
+async function refreshInbox() {
+  const box = $("inbox");
+  if (!box) return;
+  const msgs = await Online.getMessages();
+  if (!msgs.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="inbox-title">📨 받은 메시지 ${msgs.length}</div>` +
+    msgs.map((m) => `<div class="inbox-row"><b>${m.fromName}</b>: ${m.text}</div>`).join("");
+  Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
+}
+
+// 친선 재대결: 메모리의 직전 상대와 다시 싸움(보상·기록·레이팅 없음)
+function friendlyRematch() {
+  if (!currentOpponent) return;
+  friendlyMode = true;
+  currentMatchId = null;
+  show("arena");
+  startBattle();
 }
 
 // ---------- 이벤트 바인딩 ----------
@@ -1411,6 +1638,26 @@ $("tourney-back").addEventListener("click", () => {
   showHomeTab("arena");
   show("home");
 });
+
+// 상점
+$("shop-btn").addEventListener("click", openShop);
+$("shop-back").addEventListener("click", () => { renderHome(); showHomeTab("daily"); show("home"); });
+$("shop-screen").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.buy) buyItem(b.dataset.buy);
+  else if (b.dataset.title) buyTitle(b.dataset.title, Number(b.dataset.cost));
+  else if (b.dataset.equip) equipTitle(b.dataset.equip);
+  else if (b.dataset.unequip) equipTitle("");
+});
+
+// 소셜 바(아레나 로비): 친선 재대결 + 도발
+$("social-bar").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.id === "friendly-rematch-btn") friendlyRematch();
+  else if (b.dataset.taunt) sendTaunt(b.dataset.taunt);
+});
 $("lb-back").addEventListener("click", () => {
   if (leaderboardReturn === "home-arena") {
     renderHome();
@@ -1455,6 +1702,7 @@ let tourneyTimer = null;
 
 async function openTournament() {
   show("tournament");
+  await tryClaimChampion(); // 지난주 챔피언이면 보상 수령
   const list = $("tournament-list");
   list.innerHTML = `<li class="muted">불러오는 중...</li>`;
   $("tourney-me").textContent = "";

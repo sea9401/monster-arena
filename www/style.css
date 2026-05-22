@@ -199,6 +199,8 @@ body {
 .elem-badge.electric { color: var(--electric); border-color: var(--electric); }
 .elem-badge.dark { color: #b48ce0; border-color: #b48ce0; }
 .elem-badge.earth { color: #c79a5b; border-color: #c79a5b; }
+.elem-badge.light { color: #ffe96b; border-color: #ffe96b; }
+.elem-badge.poison { color: #c95fd8; border-color: #c95fd8; }
 .matchup { margin-top: 8px; font-size: 13px; font-weight: 900; color: var(--accent2); }
 
 .bar-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
@@ -410,6 +412,42 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .tourney-me { color: var(--accent2); font-size: 13px; margin-top: 6px; }
 .tourney-champion { color: var(--accent); font-size: 12px; margin-top: 6px; text-transform: none; letter-spacing: normal; }
 .tourney-note { font-size: 11px; margin-top: 8px; text-align: center; text-transform: none; letter-spacing: normal; }
+
+/* 칭호 */
+.pet-title { color: var(--gold); font-size: 12px; font-weight: 900; margin-bottom: 4px; }
+
+/* 코인/상점 진입 바 */
+.shop-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.shop-bar-coins { color: var(--gold); font-weight: 900; }
+.shop-bar button { flex: 0 0 auto; padding: 10px 16px; }
+
+/* 상점 화면 */
+.shop-coins-bar { text-align: center; color: var(--gold); font-weight: 900; margin: 8px 0 14px; }
+.shop-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.shop-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px;
+  background: var(--panel); border: 2px solid var(--accent); border-radius: 0; box-shadow: 3px 3px 0 #0f380f;
+}
+.shop-icon { font-size: 22px; flex: 0 0 auto; }
+.shop-info { flex: 1; font-size: 13px; color: var(--accent2); text-transform: none; letter-spacing: normal; }
+.shop-desc { color: var(--accent); font-size: 11px; }
+.shop-buy { flex: 0 0 auto; padding: 8px 12px; font-size: 13px; color: var(--gold); white-space: nowrap; }
+
+/* 소셜: 받은함 + 도발 */
+.inbox, .social-bar {
+  margin-top: 12px; padding: 12px 14px;
+  background: var(--panel); border: 2px solid var(--accent); border-radius: 0; box-shadow: 3px 3px 0 #0f380f;
+}
+.inbox-title, .social-title, .taunt-title { color: var(--accent2); font-size: 13px; font-weight: 900; margin-bottom: 6px; }
+.inbox-row { font-size: 12px; color: var(--accent); text-transform: none; letter-spacing: normal; margin: 4px 0; }
+.social-bar button { width: 100%; margin: 6px 0; }
+.taunt-title { margin-top: 10px; }
+.taunt-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.taunt-btn {
+  flex: 1 1 45%; padding: 8px; font-size: 11px; text-transform: none; letter-spacing: normal;
+  border: 2px solid var(--accent); border-radius: 0; background: var(--bg); color: var(--accent2);
+  box-shadow: 2px 2px 0 #0f380f; cursor: pointer;
+}
 
 .opponent-card { padding: 20px; text-align: center; margin: 14px 0; }
 .opponent-card .emoji { font-size: 64px; }
