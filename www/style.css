@@ -106,6 +106,7 @@ body {
 .pet-panel,
 .attendance,
 .quests,
+.achievements,
 .arena-lobby-card,
 .battle-history,
 .opponent-card,
@@ -292,6 +293,37 @@ button:disabled,
 .quest-bar > div { height: 100%; background: var(--accent); }
 .quest-reward { font-size: 11px; color: var(--gold); white-space: nowrap; }
 .quest-claim { padding: 8px 12px; font-size: 13px; white-space: nowrap; color: var(--good); }
+
+/* 업적 */
+.achievements { padding: 14px 16px; margin-top: 16px; }
+.achievements .att-head { margin-bottom: 8px; }
+.ach-list { list-style: none; margin: 0; padding: 0; }
+.ach-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 2px solid var(--bg); }
+.ach-item:first-child { border-top: none; }
+.ach-icon { font-size: 24px; width: 30px; text-align: center; flex-shrink: 0; filter: grayscale(1) opacity(.55); }
+.ach-item.unlocked .ach-icon { filter: none; }
+.ach-body { flex: 1; min-width: 0; }
+.ach-name { font-size: 14px; color: var(--accent); }
+.ach-item.unlocked .ach-name { color: var(--accent2); }
+.ach-desc { font-size: 11px; color: var(--accent); margin-top: 2px; text-transform: none; letter-spacing: normal; opacity: .8; }
+.ach-bar { height: 6px; margin-top: 5px; background: var(--panel); border: 2px solid var(--accent); border-radius: 0; overflow: hidden; }
+.ach-bar > div { height: 100%; background: var(--accent); }
+.ach-frac { font-size: 11px; color: var(--accent); white-space: nowrap; }
+.ach-check { font-size: 16px; color: var(--gold); }
+
+/* 업적 해금 토스트 */
+.ach-toast {
+  position: fixed; left: 12px; right: 12px; bottom: 16px; z-index: 80;
+  max-width: 616px; margin: 0 auto;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: var(--panel); color: var(--accent2);
+  border: 3px solid var(--gold); border-radius: 0;
+  box-shadow: 4px 4px 0 #0f380f;
+}
+.ach-toast-icon { font-size: 30px; line-height: 1; flex-shrink: 0; }
+.ach-toast-head { font-size: 11px; color: var(--gold); }
+.ach-toast-name { font-size: 14px; color: var(--accent2); margin-top: 2px; }
 
 .nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 button.primary { flex: 1; padding: 14px; font-size: 16px; color: var(--accent2); }

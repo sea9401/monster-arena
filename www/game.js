@@ -21,7 +21,7 @@ const SPECIES = {
     base: { atk: 10, def: 7, spd: 14, hp: 55 }, bias: "속도형",
   },
   lion: {
-    name: "맹수 사자", egg: "🥚", stages: ["🐱", "🐯", "🦁"], type: "fire",
+    name: "맹수 사자", egg: "🥚", stages: ["🐱", "🦁", "🐯"], type: "fire",
     base: { atk: 12, def: 9, spd: 8, hp: 62 }, bias: "공격형",
   },
   crab: {
@@ -32,24 +32,45 @@ const SPECIES = {
     name: "질풍 토끼", egg: "🥚", stages: ["🐰", "🐇", "🦘"], type: "electric",
     base: { atk: 9, def: 7, spd: 15, hp: 54 }, bias: "속도형",
   },
+  wolf: {
+    name: "그림자 늑대", egg: "🥚", stages: ["🐶", "🦊", "🐺"], type: "dark",
+    base: { atk: 13, def: 8, spd: 9, hp: 58 }, bias: "공격형",
+  },
+  bat: {
+    name: "심연 박쥐", egg: "🥚", stages: ["🐭", "🦇", "🐲"], type: "dark",
+    base: { atk: 12, def: 7, spd: 12, hp: 55 }, bias: "공격형",
+  },
+  armadillo: {
+    name: "바위 아르마딜로", egg: "🥚", stages: ["🐹", "🦔", "🦏"], type: "earth",
+    base: { atk: 8, def: 15, spd: 6, hp: 78 }, bias: "방어형",
+  },
+  bear: {
+    name: "대지 곰", egg: "🥚", stages: ["🐨", "🐻", "🦬"], type: "earth",
+    base: { atk: 10, def: 13, spd: 6, hp: 82 }, bias: "방어형",
+  },
 };
 
-// 속성 메타 + 상성. 사이클: 물 > 불 > 전기 > 물
+// 속성 메타 + 상성. 5각형 사이클: 물 > 불 > 전기 > 어둠 > 땅 > 물
 const ELEMENTS = {
   fire:     { label: "불",   icon: "🔥" },
   water:    { label: "물",   icon: "💧" },
   electric: { label: "전기", icon: "⚡" },
+  dark:     { label: "어둠", icon: "🌑" },
+  earth:    { label: "땅",   icon: "🪨" },
 };
-const BEATS = { water: "fire", fire: "electric", electric: "water" }; // key가 value를 이긴다
+// key가 value를 이긴다. 각 속성은 1개를 이기고 1개에 지고 2개엔 중립.
+const BEATS = { water: "fire", fire: "electric", electric: "dark", dark: "earth", earth: "water" };
 const TYPE_ADV = 1.12;  // 유리
 const TYPE_DIS = 0.90;  // 불리
 const DMG_K = 0.6;      // 전역 데미지 계수(전투 길이 조절)
 
-// 종 패시브: 불=주는 피해+8%, 물=받는 피해-8%, 전기=회피+9%
+// 종 패시브 (속성별). 새 속성은 기존 역할 틀 재활용 — 어둠=공격형, 땅=방어형.
 const PASSIVE = {
   fire:     { label: "🔥 맹공 (주는 피해 +6%)",  dmgDealt: 1.06 },
   water:    { label: "💧 견고 (받는 피해 -8%)",  dmgTaken: 0.92 },
   electric: { label: "⚡ 잔상 (회피 +10%)",      evaBonus: 0.10 },
+  dark:     { label: "🌑 은신 (회피 +10%)",      evaBonus: 0.10 },
+  earth:    { label: "🪨 단단 (받는 피해 -8%)",  dmgTaken: 0.92 },
 };
 
 // 공격 속성 a가 방어 속성 d를 상대로 갖는 데미지 배율
@@ -85,6 +106,16 @@ const SKILL_KITS = {
     { id: "e_basic",  name: "기본 공격",   type: "electric", power: 1.0,  cd: 0 },
     { id: "e_thrust", name: "번개 찌르기", type: "electric", power: 1.25, cd: 2, speedScale: 1.28 },
     { id: "e_chain",  name: "연쇄 스파크", type: "electric", power: 1.0,  cd: 3, extraHit: { chance: 0.4, power: 0.55 } },
+  ],
+  dark: [ // 공격형(불 틀 재활용): 화력 + 공격 버프
+    { id: "d_basic",  name: "기본 공격",   type: "dark", power: 1.0,  cd: 0 },
+    { id: "d_strike", name: "그림자 일격", type: "dark", power: 1.28, cd: 2 },
+    { id: "d_curse",  name: "저주",       type: "dark", power: 1.1,  cd: 3, buffAtk: { mult: 1.2, turns: 2 } },
+  ],
+  earth: [ // 방어형(물 틀 재활용): 피해 감소 + 회복
+    { id: "g_basic",  name: "기본 공격",   type: "earth", power: 1.0,  cd: 0 },
+    { id: "g_shield", name: "바위 방패",   type: "earth", power: 0.85, cd: 3, shield: { reduce: 0.25, turns: 2 } },
+    { id: "g_mend",   name: "대지 치유",   type: "earth", power: 0.8,  cd: 4, heal: 0.12 },
   ],
 };
 
@@ -192,6 +223,32 @@ const REWARD_LABEL = {
   happy: (a) => `행복 +${a}`,
   food: (a) => `포만 +${a}`,
 };
+
+// 업적: 평생 1회 해금되는 마일스톤. cur(state)가 goal 이상이면 달성.
+// reward는 옵셔널(있으면 1회성 지급). check는 cur>=goal로 파생되며 state를 변경하지 않는다.
+const ACHIEVEMENTS = [
+  // 육성
+  { id: "first_step",   icon: "🐣", name: "첫 걸음",       desc: "처음으로 몬스터를 돌봤다",      cur: (s) => s.lifetime.trains + s.lifetime.feeds + s.lifetime.plays, goal: 1 },
+  { id: "teen",         icon: "🐊", name: "쑥쑥 성장",     desc: "청소년기로 진화 (Lv.5)",        cur: (s) => s.level, goal: 5,  reward: { type: "exp",    amt: 30 } },
+  { id: "adult",        icon: "🦖", name: "완전체",         desc: "성체로 진화 (Lv.10)",           cur: (s) => s.level, goal: 10, reward: { type: "action", amt: 2 } },
+  { id: "level20",      icon: "🌟", name: "정점",           desc: "레벨 20 달성",                  cur: (s) => s.level, goal: 20, reward: { type: "exp",    amt: 60 } },
+  { id: "buff",         icon: "💪", name: "강철 몸",         desc: "공·방·속 스탯 합계 200",        cur: (s) => s.atk + s.def + s.spd, goal: 200 },
+  { id: "train_master", icon: "🏋️", name: "훈련의 달인",     desc: "스탯 훈련 100회",               cur: (s) => s.lifetime.trains, goal: 100, reward: { type: "action", amt: 3 } },
+  // 꾸준함
+  { id: "streak3",      icon: "📗", name: "작심삼일 극복",   desc: "3일 연속 출석",                 cur: (s) => s.streak, goal: 3 },
+  { id: "streak7",      icon: "📅", name: "개근상",           desc: "7일 연속 출석",                 cur: (s) => s.streak, goal: 7,  reward: { type: "exp",    amt: 50 } },
+  { id: "streak30",     icon: "🗓️", name: "한 달 정착",       desc: "30일 연속 출석",                cur: (s) => s.streak, goal: 30, reward: { type: "action", amt: 5 } },
+  // 전투
+  { id: "first_win",    icon: "🥇", name: "데뷔전 승리",     desc: "아레나에서 첫 승리",            cur: (s) => s.wins, goal: 1,  reward: { type: "food",   amt: 20 } },
+  { id: "win10",        icon: "⚔️", name: "베테랑",           desc: "통산 10승",                     cur: (s) => s.wins, goal: 10, reward: { type: "exp",    amt: 40 } },
+  { id: "win50",        icon: "🛡️", name: "백전노장",         desc: "통산 50승",                     cur: (s) => s.wins, goal: 50, reward: { type: "action", amt: 3 } },
+  { id: "gold",         icon: "🏅", name: "골드 입성",       desc: "레이팅 1300 도달",              cur: (s) => s.rating, goal: 1300, reward: { type: "exp", amt: 50 } },
+  { id: "champion",     icon: "👑", name: "챔피언",           desc: "레이팅 1800 도달",              cur: (s) => s.rating, goal: 1800, reward: { type: "action", amt: 5 } },
+  { id: "upset",        icon: "🗡️", name: "자이언트 킬링",   desc: "더 강한 상대를 처치",           cur: (s) => s.lifetime.upsets, goal: 1, reward: { type: "exp", amt: 40 } },
+  { id: "arena_fan",    icon: "🎟️", name: "단골 도전자",     desc: "아레나 25회 출전",              cur: (s) => s.lifetime.pvp, goal: 25 },
+  // 관리
+  { id: "care_max",     icon: "😻", name: "최상의 컨디션",   desc: "포만·행복 동시 80 이상",        cur: (s) => (s.food >= 80 && s.happy >= 80 ? 1 : 0), goal: 1 },
+];
 
 // 풀에서 n개를 뽑아 진행 상태가 담긴 퀘스트 객체로 생성
 function generateQuests(n = 3) {
@@ -349,6 +406,11 @@ function migrateState() {
   if (!Number.isFinite(state.stamina)) state.stamina = STAMINA_MAX;
   if (!Number.isFinite(state.staminaAt)) state.staminaAt = gameNow();
   if (!Array.isArray(state.history)) state.history = [];
+  if (!state.achievements || typeof state.achievements !== "object") state.achievements = {};
+  if (!state.lifetime || typeof state.lifetime !== "object") state.lifetime = {};
+  for (const k of ["trains", "feeds", "plays", "pvp", "upsets"]) {
+    if (!Number.isFinite(state.lifetime[k])) state.lifetime[k] = 0;
+  }
   delete state.actionsLeft;
   delete state.form; // 분기 진화 제거 — 구버전 저장 정리
 }
@@ -461,6 +523,8 @@ function hatch(speciesKey) {
     history: [],
     quests: generateQuests(),
     attendanceClaimedDate: null, // 오늘 출석 보상 수령 여부(=todayStr이면 수령함)
+    achievements: {},            // { [업적id]: 해금 타임스탬프 }
+    lifetime: { trains: 0, feeds: 0, plays: 0, pvp: 0, upsets: 0 }, // 누적 카운터(업적용)
   };
   save();
   renderHome();
@@ -492,6 +556,7 @@ function checkRollover() {
   state.dayCount += diff;
   state.quests = generateQuests(); // 새 날, 새 퀘스트
   state.lastDate = today;
+  checkAchievements();
   save();
 }
 
@@ -537,15 +602,16 @@ function train(kind) {
 
   // 퀘스트 진행도 반영
   questProgress("train_any");
-  if (kind === "feed") questProgress("feed");
-  else if (kind === "play") questProgress("play");
-  else { questProgress("train_stat"); questProgress("train_" + kind); }
+  if (kind === "feed") { questProgress("feed"); state.lifetime.feeds++; }
+  else if (kind === "play") { questProgress("play"); state.lifetime.plays++; }
+  else { questProgress("train_stat"); questProgress("train_" + kind); state.lifetime.trains++; }
   if (state.food >= 80 && state.happy >= 80) questProgress("care_max");
 
   // 가득 찬 상태에서 처음 소모할 때만 충전 타이머 시작 (충전 중이면 진행도 유지)
   const wasFull = state.stamina >= STAMINA_MAX;
   state.stamina -= 1;
   if (wasFull) state.staminaAt = gameNow();
+  checkAchievements();
   bounce();
   save();
   renderHome();
@@ -611,6 +677,7 @@ function claimAttendance() {
   const day = attendanceCycleDay();
   const label = applyAttendanceReward(ATTENDANCE_REWARDS[day - 1].reward);
   state.attendanceClaimedDate = todayStr();
+  checkAchievements();
   playFx("playReward");
   haptic(18);
   bounce();
@@ -662,6 +729,77 @@ function questProgress(track, amount = 1) {
   if (advanced) save();
 }
 
+// ---------- 업적 ----------
+let achToastQueue = [];
+
+function applyAchievementReward(r) {
+  if (r.type === "exp") gainExp(r.amt);
+  else if (r.type === "action") addStamina(r.amt);
+  else if (r.type === "happy") state.happy = clamp(state.happy + r.amt, 0, 100);
+  else if (r.type === "food") state.food = clamp(state.food + r.amt, 0, 100);
+}
+
+// 미해금 업적을 순회하며 조건을 만족한 것을 해금한다.
+// retro=true(최초 로드 시): 보상/토스트 없이 조용히 해금만(소급 적용).
+// 저장은 호출 측 기존 save() 흐름에 맡긴다(이중 저장 방지).
+function checkAchievements(retro) {
+  if (!state || !state.achievements) return;
+  ACHIEVEMENTS.forEach((a) => {
+    if (state.achievements[a.id]) return;       // 이미 해금
+    if (a.cur(state) < a.goal) return;          // 조건 미달
+    state.achievements[a.id] = gameNow();        // 해금
+    if (!retro) {
+      if (a.reward) applyAchievementReward(a.reward);
+      achToastQueue.push(a);
+    }
+  });
+  if (!retro && achToastQueue.length) flushAchToasts();
+}
+
+// 해금 토스트를 큐에서 하나씩 순차 표시(한 액션에 여러 개 터질 수 있으므로).
+function flushAchToasts() {
+  if (typeof document === "undefined") { achToastQueue = []; return; }
+  if (document.querySelector(".ach-toast")) return; // 이미 표시 중이면 대기
+  const a = achToastQueue.shift();
+  if (!a) return;
+  const el = document.createElement("div");
+  el.className = "ach-toast";
+  const rewardText = a.reward ? ` · 🎁 ${REWARD_LABEL[a.reward.type](a.reward.amt)}` : "";
+  el.innerHTML = `<span class="ach-toast-icon">${a.icon}</span>
+    <div><div class="ach-toast-head">🏆 업적 달성!</div>
+    <div class="ach-toast-name">${a.name}${rewardText}</div></div>`;
+  document.body.appendChild(el);
+  playFx("playReward");
+  haptic([20, 30, 40]);
+  setTimeout(() => {
+    el.remove();
+    if (achToastQueue.length) flushAchToasts();
+    if (state) renderHome();
+  }, 2400);
+}
+
+function renderAchievements() {
+  const list = $("achievement-list");
+  if (!list || !state) return;
+  const unlocked = ACHIEVEMENTS.filter((a) => state.achievements[a.id]).length;
+  const countEl = $("ach-count");
+  if (countEl) countEl.textContent = `${unlocked}/${ACHIEVEMENTS.length}`;
+  list.innerHTML = ACHIEVEMENTS.map((a) => {
+    const got = !!state.achievements[a.id];
+    const cur = Math.min(a.cur(state), a.goal);
+    const pct = Math.round((cur / a.goal) * 100);
+    return `<li class="ach-item ${got ? "unlocked" : ""}">
+      <span class="ach-icon">${got ? a.icon : "🔒"}</span>
+      <div class="ach-body">
+        <div class="ach-name">${a.name}</div>
+        <div class="ach-desc">${a.desc}</div>
+        ${got ? "" : `<div class="ach-bar"><div style="width:${pct}%"></div></div>`}
+      </div>
+      ${got ? `<span class="ach-check">✔</span>` : `<span class="ach-frac">${cur}/${a.goal}</span>`}
+    </li>`;
+  }).join("");
+}
+
 function claimQuest(idx) {
   const q = state.quests[idx];
   if (!q || q.claimed || q.progress < q.target) return;
@@ -671,6 +809,7 @@ function claimQuest(idx) {
   else if (type === "happy") state.happy = clamp(state.happy + amt, 0, 100);
   else if (type === "food") state.food = clamp(state.food + amt, 0, 100);
   q.claimed = true;
+  checkAchievements();
   playFx("playReward");
   haptic(18);
   bounce();
@@ -744,6 +883,7 @@ function renderHome() {
 
   renderAttendance();
   renderQuests();
+  renderAchievements();
   if (activeHomeTab === "arena") renderArenaLobby();
   if (staminaChanged) save();
 }
@@ -914,6 +1054,7 @@ async function findMatch() {
 
 function startBattle() {
   questProgress("pvp_play");
+  state.lifetime.pvp++;
   $("match-find").classList.add("hidden");
   $("match-battle").classList.remove("hidden");
 
@@ -1026,7 +1167,7 @@ async function resolve(won) {
   if (won) {
     state.wins++;
     questProgress("pvp_win");
-    if (currentOpponent && power(currentOpponent) > power(state)) questProgress("pvp_upset");
+    if (currentOpponent && power(currentOpponent) > power(state)) { questProgress("pvp_upset"); state.lifetime.upsets++; }
   } else state.losses++;
   playFx(won ? "playWin" : "playLose");
   haptic(won ? [45, 35, 80] : 55);
@@ -1050,6 +1191,7 @@ async function resolve(won) {
   }
   state.rating = newRating;
   addBattleHistory(won, delta, newRating);
+  checkAchievements();
   save();
   Online.uploadSnapshot(mySnapshot()); // 갱신된 레이팅으로 내 고스트 업데이트
 
@@ -1223,6 +1365,7 @@ function enterGameFromState() {
     migrateState();
     if (!state.quests) state.quests = generateQuests();
     if (state.attendanceClaimedDate === undefined) state.attendanceClaimedDate = null;
+    checkAchievements(true); // 기존 세이브의 이미 달성한 업적은 보상/토스트 없이 소급 해금
     save();
     checkRollover();
     renderHome();
