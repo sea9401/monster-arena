@@ -391,7 +391,19 @@ function gameNow() {
 
 // ---------- 저장/로드 ----------
 let cloudSaveTimer = null;
+// 성장 그래프용: 오늘의 전투력을 statLog에 기록(같은 날은 덮어쓰기, 최근 14일 유지).
+function upsertStatLog() {
+  if (!state) return;
+  if (!Array.isArray(state.statLog)) state.statLog = [];
+  const entry = { d: todayStr(), power: power(state), level: state.level };
+  const last = state.statLog[state.statLog.length - 1];
+  if (last && last.d === entry.d) state.statLog[state.statLog.length - 1] = entry;
+  else state.statLog.push(entry);
+  if (state.statLog.length > 14) state.statLog = state.statLog.slice(-14);
+}
+
 function save() {
+  upsertStatLog();
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   // 로그인 상태면 클라우드에도 동기화(디바운스)
   if (Online.status.loggedIn) {
@@ -414,6 +426,7 @@ function migrateState() {
   if (!Number.isFinite(state.stamina)) state.stamina = STAMINA_MAX;
   if (!Number.isFinite(state.staminaAt)) state.staminaAt = gameNow();
   if (!Array.isArray(state.history)) state.history = [];
+  if (!Array.isArray(state.statLog)) state.statLog = [];
   if (!state.achievements || typeof state.achievements !== "object") state.achievements = {};
   if (!state.lifetime || typeof state.lifetime !== "object") state.lifetime = {};
   for (const k of ["trains", "feeds", "plays", "pvp", "upsets"]) {
@@ -876,6 +889,37 @@ function renderQuests() {
   });
 }
 
+// ---------- 성장 그래프 (의존성 없는 인라인 SVG) ----------
+function renderStatChart() {
+  const el = $("stat-chart");
+  if (!el || !state) return;
+  const note = $("stat-chart-note");
+  const log = state.statLog || [];
+  if (log.length === 0) {
+    el.innerHTML = "";
+    if (note) note.textContent = "훈련하면 전투력 추이가 쌓여요";
+    return;
+  }
+  const W = 300, H = 110, padX = 8, padY = 14;
+  const vals = log.map((e) => e.power);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = max - min || 1;
+  const n = log.length;
+  const xAt = (i) => (n === 1 ? W / 2 : padX + (i / (n - 1)) * (W - 2 * padX));
+  const yAt = (v) => H - padY - ((v - min) / span) * (H - 2 * padY);
+  const pts = log.map((e, i) => [xAt(i), yAt(e.power)]);
+  const line = n > 1
+    ? `<polyline points="${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" />`
+    : "";
+  const dots = pts.map(([x, y]) => `<rect x="${(x - 2).toFixed(1)}" y="${(y - 2).toFixed(1)}" width="4" height="4" fill="var(--accent2)" />`).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" shape-rendering="crispEdges">${line}${dots}</svg>`;
+  if (note) {
+    note.textContent = n === 1
+      ? `전투력 ${vals[0]} · 내일부터 추이가 그려져요`
+      : `최근 ${n}일 · 전투력 ${vals[0]} → ${vals[n - 1]}`;
+  }
+}
+
 // ---------- 홈 렌더 ----------
 function renderHome() {
   const staminaChanged = renderStamina();
@@ -915,6 +959,7 @@ function renderHome() {
     b.setAttribute("aria-disabled", String(noActions));
   });
 
+  renderStatChart();
   renderAttendance();
   renderQuests();
   renderAchievements();

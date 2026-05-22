@@ -114,6 +114,7 @@ body {
 .attendance,
 .quests,
 .achievements,
+.stat-chart-card,
 .arena-lobby-card,
 .battle-history,
 .opponent-card,
@@ -302,6 +303,12 @@ button:disabled,
 .quest-bar > div { height: 100%; background: var(--accent); }
 .quest-reward { font-size: 11px; color: var(--gold); white-space: nowrap; }
 .quest-claim { padding: 8px 12px; font-size: 13px; white-space: nowrap; color: var(--good); }
+
+/* 성장 그래프 */
+.stat-chart-card { padding: 14px 16px; margin-top: 16px; }
+.stat-chart { width: 100%; }
+.stat-chart svg { display: block; }
+.stat-chart-note { font-size: 11px; margin-top: 6px; text-align: center; text-transform: none; letter-spacing: normal; }
 
 /* 환생 버튼 */
 .rebirth-bar { text-align: center; margin-top: 16px; }
