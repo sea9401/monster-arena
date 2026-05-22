@@ -11,8 +11,24 @@
   <div id="app">
     <button id="mute-btn" class="mute-btn" type="button" aria-label="음소거 전환">🔊</button>
 
+    <!-- 0. 로그인 / 회원가입 -->
+    <section id="auth-screen" class="screen hidden">
+      <h2>몬스터 아레나</h2>
+      <p class="muted">로그인하면 어느 기기에서든 내 몬스터를 이어서 키울 수 있어요.</p>
+      <div class="auth-box">
+        <input id="auth-username" type="text" placeholder="아이디 (영문/숫자 3~16)" autocomplete="username" autocapitalize="off" />
+        <input id="auth-password" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" />
+        <p class="auth-msg" id="auth-msg"></p>
+        <div class="nav">
+          <button id="auth-login" class="primary">로그인</button>
+          <button id="auth-register" class="primary">회원가입</button>
+        </div>
+        <button id="auth-guest" class="ghost">게스트로 계속 (이 기기에만 저장)</button>
+      </div>
+    </section>
+
     <!-- 1. 알 부화 / 시작 화면 -->
-    <section id="hatch-screen" class="screen">
+    <section id="hatch-screen" class="screen hidden">
       <h2>알을 골라 부화시키세요</h2>
       <p class="muted">한번 정하면 이 친구를 매일 키우게 됩니다.</p>
       <div id="egg-roster" class="roster"></div>
@@ -100,6 +116,7 @@
           <div class="lobby-rating">레이팅 <b id="lobby-rating">1000</b></div>
           <div class="lobby-record" id="lobby-record">0승 0패</div>
           <div id="lobby-online-status" class="online-status off">⚪ 오프라인</div>
+          <div class="lobby-account" id="lobby-account"></div>
         </div>
 
         <div class="battle-history">

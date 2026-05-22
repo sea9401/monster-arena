@@ -19,9 +19,12 @@ let db = { players: {}, matches: {} };
 try { fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true }); } catch {}
 function load() {
   try { db = JSON.parse(fs.readFileSync(DATA_FILE, "utf8")); }
-  catch { db = { players: {}, matches: {} }; }
+  catch { db = {}; }
   if (!db.players) db.players = {};
   if (!db.matches) db.matches = {};
+  if (!db.accounts) db.accounts = {};   // username -> { username, pass, playerId, createdAt }
+  if (!db.sessions) db.sessions = {};   // token -> { username, playerId, exp }
+  if (!db.saves) db.saves = {};         // playerId -> 게임 state(JSON)
 }
 let saveTimer = null;
 function save() {
@@ -99,6 +102,49 @@ function sanitizeSnapshot(b) {
 function pub(p) {
   return { playerId: p.playerId, name: p.name, species: p.species, level: p.level,
     atk: p.atk, def: p.def, spd: p.spd, hp: p.hp, rating: p.rating };
+}
+
+// ---------- 인증 (아이디/비밀번호, scrypt) ----------
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(pw, salt, 64).toString("hex");
+  return salt + ":" + hash;
+}
+function verifyPassword(pw, stored) {
+  if (typeof stored !== "string" || !stored.includes(":")) return false;
+  const [salt, hash] = stored.split(":");
+  const ref = Buffer.from(hash, "hex");
+  let test;
+  try { test = crypto.scryptSync(pw, salt, 64); } catch { return false; }
+  return ref.length === test.length && crypto.timingSafeEqual(ref, test);
+}
+const TOKEN_TTL = 30 * 24 * 3600 * 1000; // 30일
+function bearer(req) {
+  const h = req.headers["authorization"] || "";
+  return h.startsWith("Bearer ") ? h.slice(7) : "";
+}
+function newSession(username, playerId) {
+  const token = crypto.randomBytes(32).toString("hex");
+  db.sessions[token] = { username, playerId, exp: now() + TOKEN_TTL };
+  return token;
+}
+function authFrom(req) {
+  const s = db.sessions[bearer(req)];
+  if (!s) return null;
+  if (s.exp < now()) { delete db.sessions[bearer(req)]; return null; }
+  return s; // { username, playerId, exp }
+}
+const validUsername = (u) => typeof u === "string" && /^[A-Za-z0-9_]{3,16}$/.test(u);
+// 로그인 시도 제한 (username별, 10분 내 8회)
+const loginFails = {};
+function tooManyFails(u) {
+  const f = loginFails[u];
+  return f && f.count >= 8 && now() - f.first < 6e5;
+}
+function noteFail(u) {
+  const f = loginFails[u] || (loginFails[u] = { count: 0, first: now() });
+  if (now() - f.first > 6e5) { f.count = 0; f.first = now(); }
+  f.count++;
 }
 
 // ---------- 정적 파일 ----------
@@ -202,6 +248,68 @@ const server = http.createServer(async (req, res) => {
     const p = db.players[m[1]];
     if (!p) return send(res, 404, { error: "not found" });
     return send(res, 200, p);
+  }
+
+  // --- 인증 ---
+  if (url === "/auth/register" && method === "POST") {
+    const b = await readBody(req);
+    const username = String(b.username || "").trim();
+    const password = String(b.password || "");
+    if (!validUsername(username)) return send(res, 400, { error: "BAD_USERNAME" });
+    if (password.length < 6) return send(res, 400, { error: "BAD_PASSWORD" });
+    const key = username.toLowerCase();
+    if (db.accounts[key]) return send(res, 409, { error: "TAKEN" });
+    // 익명 playerId 승계(있고 미연결이면), 아니면 새로 발급
+    let playerId = (typeof b.playerId === "string" && b.playerId) || uid();
+    if (Object.values(db.accounts).some((a) => a.playerId === playerId)) playerId = uid();
+    db.accounts[key] = { username, pass: hashPassword(password), playerId, createdAt: now() };
+    if (!db.players[playerId]) {
+      db.players[playerId] = { playerId, name: username.slice(0, 12), species: "ember", level: 1, atk: 10, def: 10, spd: 10, hp: 50, rating: 1000, dayCount: 1, wins: 0, losses: 0, updatedAt: now() };
+    }
+    const token = newSession(username, playerId);
+    save();
+    return send(res, 200, { token, playerId, username });
+  }
+
+  if (url === "/auth/login" && method === "POST") {
+    const b = await readBody(req);
+    const key = String(b.username || "").trim().toLowerCase();
+    if (tooManyFails(key)) return send(res, 429, { error: "TOO_MANY" });
+    const acc = db.accounts[key];
+    if (!acc || !verifyPassword(String(b.password || ""), acc.pass)) {
+      noteFail(key);
+      return send(res, 401, { error: "BAD_CREDENTIALS" });
+    }
+    delete loginFails[key];
+    const token = newSession(acc.username, acc.playerId);
+    save();
+    return send(res, 200, { token, playerId: acc.playerId, username: acc.username });
+  }
+
+  if (url === "/auth/logout" && method === "POST") {
+    const t = bearer(req);
+    if (t && db.sessions[t]) { delete db.sessions[t]; save(); }
+    return send(res, 200, { ok: true });
+  }
+
+  if (url === "/auth/me" && method === "GET") {
+    const s = authFrom(req);
+    if (!s) return send(res, 401, { error: "UNAUTH" });
+    return send(res, 200, { username: s.username, playerId: s.playerId });
+  }
+
+  // --- 클라우드 세이브 ---
+  if (url === "/save" && method === "GET") {
+    const s = authFrom(req);
+    if (!s) return send(res, 401, { error: "UNAUTH" });
+    return send(res, 200, { state: db.saves[s.playerId] || null });
+  }
+  if (url === "/save" && method === "PUT") {
+    const s = authFrom(req);
+    if (!s) return send(res, 401, { error: "UNAUTH" });
+    const b = await readBody(req);
+    if (b && b.state && typeof b.state === "object") { db.saves[s.playerId] = b.state; save(); }
+    return send(res, 200, { ok: true });
   }
 
   // --- 정적 파일 (그 외 GET) ---

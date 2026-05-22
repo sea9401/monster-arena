@@ -214,6 +214,7 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const SFX = window.SoundFX || {};
 
 const screens = {
+  auth: $("auth-screen"),
   hatch: $("hatch-screen"),
   home: $("home-screen"),
   arena: $("arena-screen"),
@@ -324,7 +325,15 @@ function gameNow() {
 }
 
 // ---------- 저장/로드 ----------
-function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+let cloudSaveTimer = null;
+function save() {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  // 로그인 상태면 클라우드에도 동기화(디바운스)
+  if (Online.status.loggedIn) {
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(() => Online.pushCloudSave(state), 1500);
+  }
+}
 function load() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
 }
@@ -741,6 +750,7 @@ function renderHome() {
 
 function renderArenaLobby() {
   if (!state) return;
+  renderAccount();
   $("lobby-rank").textContent = rankOf(state.rating);
   $("lobby-rating").textContent = state.rating;
   $("lobby-record").textContent = `${state.wins}승 ${state.losses}패`;
@@ -1101,6 +1111,41 @@ $("home-screen").addEventListener("click", (e) => {
   if (btn) showHomeTab(btn.dataset.tab);
 });
 
+// ----- 인증 -----
+async function doAuth(kind) {
+  const u = $("auth-username").value.trim();
+  const p = $("auth-password").value;
+  if (!u || !p) { authMsg("아이디와 비밀번호를 입력하세요.", false); return; }
+  authMsg(kind === "login" ? "로그인 중..." : "가입 중...", true);
+  const r = kind === "login" ? await Online.login(u, p) : await Online.register(u, p);
+  if (!r.ok) { authMsg(AUTH_ERR[r.error] || "오류: " + r.error, false); return; }
+  // 로그인: 클라우드 세이브로 이어하기 / 회원가입: 현재 로컬 진행을 클라우드로 승계
+  if (kind === "login") {
+    const cloud = await Online.loadCloudSave();
+    if (cloud) state = cloud;
+  } else if (state) {
+    Online.pushCloudSave(state);
+  }
+  $("auth-password").value = "";
+  enterGameFromState();
+}
+$("auth-login").addEventListener("click", () => doAuth("login"));
+$("auth-register").addEventListener("click", () => doAuth("register"));
+$("auth-guest").addEventListener("click", () => enterGameFromState());
+$("auth-password").addEventListener("keydown", (e) => { if (e.key === "Enter") doAuth("login"); });
+
+$("lobby-account").addEventListener("click", async (e) => {
+  const b = e.target.closest(".acct-link");
+  if (!b) return;
+  if (b.dataset.act === "login") { authMsg("", true); show("auth"); }
+  else if (b.dataset.act === "logout") {
+    if (!confirm("로그아웃할까요? (이 기기의 진행은 남고, 다시 로그인하면 이어집니다)")) return;
+    await Online.logout();
+    renderAccount();
+    show("auth");
+  }
+});
+
 $("go-pvp").addEventListener("click", enterArena);
 $("back-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
 $("result-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
@@ -1148,12 +1193,35 @@ async function openLeaderboard() {
   }).join("");
 }
 
-// ---------- 시작 ----------
-async function init() {
-  state = load();
+// ---------- 계정 UI ----------
+function renderAccount() {
+  const el = $("lobby-account");
+  if (!el) return;
+  if (Online.status.loggedIn) {
+    el.innerHTML = `👤 ${Online.status.username} <button class="acct-link" data-act="logout">로그아웃</button>`;
+  } else {
+    el.innerHTML = `게스트 <button class="acct-link" data-act="login">로그인/회원가입</button>`;
+  }
+}
+function authMsg(text, ok) {
+  const el = $("auth-msg");
+  el.textContent = text;
+  el.style.color = ok ? "var(--good)" : "var(--bad)";
+}
+const AUTH_ERR = {
+  BAD_USERNAME: "아이디는 영문/숫자 3~16자여야 해요.",
+  BAD_PASSWORD: "비밀번호는 6자 이상이어야 해요.",
+  TAKEN: "이미 있는 아이디예요.",
+  BAD_CREDENTIALS: "아이디 또는 비밀번호가 틀렸어요.",
+  TOO_MANY: "로그인 시도가 너무 많아요. 잠시 후 다시.",
+  NETWORK: "서버에 연결할 수 없어요.",
+};
+
+// state(클라우드/로컬)로 게임 진입. state 있으면 홈, 없으면 부화.
+function enterGameFromState() {
   if (state) {
     migrateState();
-    if (!state.quests) state.quests = generateQuests(); // 구버전 저장 호환
+    if (!state.quests) state.quests = generateQuests();
     if (state.attendanceClaimedDate === undefined) state.attendanceClaimedDate = null;
     save();
     checkRollover();
@@ -1164,11 +1232,27 @@ async function init() {
     renderEggs();
     show("hatch");
   }
-  // 온라인 레이어 (실패해도 게임은 정상 동작)
-  await Online.init();
-  updateOnlineStatus();
-  updateMuteButton();
+  renderAccount();
   if (state) Online.uploadSnapshot(mySnapshot());
+}
+
+// ---------- 시작 ----------
+async function init() {
+  state = load();
+  updateMuteButton();
+  await Online.init();        // 토큰 복원 → 로그인 상태 결정
+  updateOnlineStatus();
+
+  if (Online.status.loggedIn) {
+    const cloud = await Online.loadCloudSave();
+    if (cloud) state = cloud; // 클라우드 세이브로 이어하기(다른 기기 포함)
+    enterGameFromState();
+  } else if (state) {
+    enterGameFromState();     // 게스트 + 로컬 세이브 → 바로 게임
+  } else {
+    renderAccount();
+    show("auth");             // 신규 + 미로그인 → 로그인/회원가입/게스트 선택
+  }
 }
 init();
 
