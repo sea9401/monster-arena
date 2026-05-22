@@ -108,7 +108,12 @@ const Online = (() => {
     const r = await call(`/leaderboard?limit=${limit}`);
     return r && r.rows ? r.rows : null;
   }
+  async function tournament() {
+    if (!status.reachable) return null;
+    const r = await call(`/tournament?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && !r._error ? r : null;
+  }
 
   return { status, init, register, login, logout, loadCloudSave, pushCloudSave,
-    uploadSnapshot, findMatch, submitResult, leaderboard };
+    uploadSnapshot, findMatch, submitResult, leaderboard, tournament };
 })();

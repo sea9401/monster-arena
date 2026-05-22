@@ -139,6 +139,7 @@
 
         <div class="nav">
           <button id="go-pvp" class="primary">⚔️ 아레나 입장</button>
+          <button id="home-tournament-btn" class="ghost">🏅 주간 토너먼트</button>
           <button id="home-leaderboard-btn" class="ghost">🏆 리더보드</button>
         </div>
       </div>
@@ -200,6 +201,21 @@
       <ol class="leaderboard" id="leaderboard-list"></ol>
       <div class="nav">
         <button id="lb-back" class="ghost">← 아레나로</button>
+      </div>
+    </section>
+
+    <!-- 5. 주간 토너먼트 -->
+    <section id="tournament-screen" class="screen hidden">
+      <h2>🏅 주간 토너먼트</h2>
+      <div class="tourney-head">
+        <div id="tourney-countdown" class="tourney-countdown">남은 시간 --</div>
+        <div id="tourney-me" class="tourney-me"></div>
+        <div id="tourney-champion" class="tourney-champion"></div>
+      </div>
+      <ol class="leaderboard" id="tournament-list"></ol>
+      <p class="muted tourney-note">온라인 매치만 점수가 반영돼요 · 승리 +10점 · 패배 +3점 · 매주 월요일 0시(KST) 리셋</p>
+      <div class="nav">
+        <button id="tourney-back" class="ghost">← 아레나로</button>
       </div>
     </section>
 

@@ -386,6 +386,13 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .lb-name { flex: 1; font-weight: 900; color: var(--accent2); }
 .lb-rating { color: var(--accent); font-size: 12px; }
 
+/* 주간 토너먼트 */
+.tourney-head { text-align: center; margin: 14px 0 6px; }
+.tourney-countdown { color: var(--gold); font-weight: 900; font-size: 15px; }
+.tourney-me { color: var(--accent2); font-size: 13px; margin-top: 6px; }
+.tourney-champion { color: var(--accent); font-size: 12px; margin-top: 6px; text-transform: none; letter-spacing: normal; }
+.tourney-note { font-size: 11px; margin-top: 8px; text-align: center; text-transform: none; letter-spacing: normal; }
+
 .opponent-card { padding: 20px; text-align: center; margin: 14px 0; }
 .opponent-card .emoji { font-size: 64px; }
 .opponent-card h3 { margin: 8px 0 6px; color: var(--accent2); }
@@ -427,7 +434,8 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .hpfill { height: 100%; width: 100%; background: var(--accent); }
 .hpfill.enemy { background: var(--fire); }
 
-.log { padding: 12px 14px; height: 160px; overflow-y: auto; font-size: 14px; line-height: 1.7; margin-top: 14px; }
+.log { padding: 12px 14px; height: 160px; overflow-y: auto; font-size: 14px; line-height: 1.7; margin-top: 14px; scrollbar-width: none; -ms-overflow-style: none; }
+.log::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .log .entry { margin: 0; }
 .log .entry.me { color: var(--accent2); }
 .log .entry.foe { color: var(--fire); }

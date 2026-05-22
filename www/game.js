@@ -283,6 +283,7 @@ const screens = {
   home: $("home-screen"),
   arena: $("arena-screen"),
   leaderboard: $("leaderboard-screen"),
+  tournament: $("tournament-screen"),
 };
 let tooltipEl = null;
 
@@ -1214,10 +1215,10 @@ async function resolve(won) {
   $("result-detail").textContent = "레이팅 반영 중...";
 
   // 온라인 매치면 서버가 Elo 계산 → 서버 레이팅 신뢰. 아니면 로컬 계산.
-  let delta = null, newRating = null;
+  let delta = null, newRating = null, tp = null;
   if (currentMatchId) {
     const r = await Online.submitResult(currentMatchId, won, 0);
-    if (r) { newRating = r.newRating; delta = r.delta; }
+    if (r) { newRating = r.newRating; delta = r.delta; tp = r.tp; }
   }
   currentMatchId = null;
   if (newRating == null) {
@@ -1231,7 +1232,8 @@ async function resolve(won) {
   Online.uploadSnapshot(mySnapshot()); // 갱신된 레이팅으로 내 고스트 업데이트
 
   const sign = delta > 0 ? "+" : "";
-  $("result-detail").textContent = `${sign}${delta} 레이팅 (현재 ${state.rating}, ${rankOf(state.rating)})`;
+  const tpText = tp ? ` · 🏅 +${tp}점` : "";
+  $("result-detail").textContent = `${sign}${delta} 레이팅 (현재 ${state.rating}, ${rankOf(state.rating)})${tpText}`;
   $("rating").textContent = state.rating;
   $("rank-tier").textContent = rankOf(state.rating);
   $("record").textContent = `${state.wins}승 ${state.losses}패`;
@@ -1336,6 +1338,13 @@ $("again-btn").addEventListener("click", findMatch);
 $("rematch-btn").addEventListener("click", findMatch);
 $("leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "arena"; openLeaderboard(); });
 $("home-leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "home-arena"; openLeaderboard(); });
+$("home-tournament-btn").addEventListener("click", openTournament);
+$("tourney-back").addEventListener("click", () => {
+  clearInterval(tourneyTimer);
+  renderHome();
+  showHomeTab("arena");
+  show("home");
+});
 $("lb-back").addEventListener("click", () => {
   if (leaderboardReturn === "home-arena") {
     renderHome();
@@ -1373,6 +1382,62 @@ async function openLeaderboard() {
       <span class="lb-rating">${r.rating} · ${r.wins}승 ${r.losses}패</span>
     </li>`;
   }).join("");
+}
+
+// ---------- 주간 토너먼트 ----------
+let tourneyTimer = null;
+
+async function openTournament() {
+  show("tournament");
+  const list = $("tournament-list");
+  list.innerHTML = `<li class="muted">불러오는 중...</li>`;
+  $("tourney-me").textContent = "";
+  $("tourney-champion").innerHTML = "";
+  $("tourney-countdown").textContent = "";
+  const data = await Online.tournament();
+  if (!data) {
+    list.innerHTML = `<li class="muted">서버에 연결할 수 없어요. (오프라인 매치는 점수가 적립되지 않아요)</li>`;
+    return;
+  }
+  startTourneyCountdown(data.endsAt);
+  if (data.lastChampion) {
+    const sp = SPECIES[data.lastChampion.species] || SPECIES.ember;
+    $("tourney-champion").innerHTML = `👑 지난주 챔피언 — ${ELEMENTS[sp.type].icon} ${data.lastChampion.name} (${data.lastChampion.points}점)`;
+  }
+  $("tourney-me").textContent = data.me
+    ? `내 순위 ${data.me.rank}위 · ${data.me.points}점 (${data.me.wins}승)`
+    : "이번 주 기록 없음 — 아레나에서 이기면 점수가 쌓여요!";
+  const myId = Online.status.playerId;
+  if (!data.rows.length) {
+    list.innerHTML = `<li class="muted">아직 참가자가 없어요. 첫 주자가 되어보세요!</li>`;
+    return;
+  }
+  list.innerHTML = data.rows.map((r) => {
+    const sp = SPECIES[r.species] || SPECIES.ember;
+    const me = r.playerId === myId ? " me" : "";
+    const rank = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : r.rank;
+    return `<li class="lb-row${me}">
+      <span class="lb-rank">${rank}</span>
+      <span class="lb-emoji">${ELEMENTS[sp.type].icon}</span>
+      <span class="lb-name">${r.name}</span>
+      <span class="lb-rating">${r.points}점 · ${r.wins}승</span>
+    </li>`;
+  }).join("");
+}
+
+function startTourneyCountdown(endsAt) {
+  clearInterval(tourneyTimer);
+  const el = $("tourney-countdown");
+  const tick = () => {
+    const ms = endsAt - Date.now();
+    if (ms <= 0) { el.textContent = "⏰ 곧 새로운 주가 시작돼요!"; clearInterval(tourneyTimer); return; }
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    const mn = Math.floor((ms % 3600000) / 60000);
+    el.textContent = `⏳ 리셋까지 ${d}일 ${h}시간 ${mn}분`;
+  };
+  tick();
+  tourneyTimer = setInterval(tick, 60000);
 }
 
 // ---------- 계정 UI ----------

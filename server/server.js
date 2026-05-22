@@ -25,6 +25,7 @@ function load() {
   if (!db.accounts) db.accounts = {};   // username -> { username, pass, playerId, createdAt }
   if (!db.sessions) db.sessions = {};   // token -> { username, playerId, exp }
   if (!db.saves) db.saves = {};         // playerId -> 게임 state(JSON)
+  if (!db.tournament) db.tournament = { weekId: weekInfo().weekId, scores: {}, lastChampion: null };
 }
 let saveTimer = null;
 function save() {
@@ -57,6 +58,25 @@ function seedGhosts() {
     };
   });
   save();
+}
+
+// ---------- 주간 토너먼트 (KST 기준 월~일, 승점 누적) ----------
+const KST = 9 * 3600 * 1000; // EC2 타임존과 무관하게 한국 시간 고정 사용
+// 주어진 시각이 속한 KST 주의 월요일 날짜(weekId)와 다음 월요일 0시(KST)의 실제 UTC ms.
+function weekInfo(ts = Date.now()) {
+  const sh = new Date(ts + KST);                 // UTC 필드 = KST 벽시계
+  const day = (sh.getUTCDay() + 6) % 7;          // 0=월 ... 6=일
+  const monWall = Date.UTC(sh.getUTCFullYear(), sh.getUTCMonth(), sh.getUTCDate() - day);
+  return { weekId: new Date(monWall).toISOString().slice(0, 10), endsAt: (monWall - KST) + 7 * 86400000 };
+}
+// 동기 함수 — 주가 바뀌면 직전 1위를 챔피언으로 보관하고 점수 초기화. (Node 단일스레드 → 원자적)
+function rolloverTournament() {
+  const { weekId } = weekInfo();
+  if (db.tournament.weekId === weekId) return;
+  const top = Object.values(db.tournament.scores).sort((a, b) => b.points - a.points)[0];
+  if (top) db.tournament.lastChampion = { name: top.name, species: top.species, points: top.points, weekId: db.tournament.weekId };
+  db.tournament.scores = {};
+  db.tournament.weekId = weekId;
 }
 
 // ---------- Elo ----------
@@ -231,8 +251,15 @@ const server = http.createServer(async (req, res) => {
     if (won) opp.losses++; else opp.wins++;
     opp.updatedAt = now();
     match.done = true;
+    // 주간 토너먼트 승점(제출자 본인만): 승 +10, 패 +3(참가 보상)
+    rolloverTournament();
+    const sc = db.tournament.scores[match.playerId] || { playerId: match.playerId, points: 0, wins: 0 };
+    sc.points += won ? 10 : 3;
+    if (won) sc.wins += 1;
+    sc.name = me.name; sc.species = me.species;
+    db.tournament.scores[match.playerId] = sc;
     save();
-    return send(res, 200, { ok: true, oldRating, newRating: me.rating, delta: me.rating - oldRating });
+    return send(res, 200, { ok: true, oldRating, newRating: me.rating, delta: me.rating - oldRating, tp: won ? 10 : 3 });
   }
 
   if (url === "/leaderboard" && method === "GET") {
@@ -248,6 +275,18 @@ const server = http.createServer(async (req, res) => {
     const p = db.players[m[1]];
     if (!p) return send(res, 404, { error: "not found" });
     return send(res, 200, p);
+  }
+
+  // --- 주간 토너먼트 ---
+  if (url === "/tournament" && method === "GET") {
+    rolloverTournament();
+    const { weekId, endsAt } = weekInfo();
+    const all = Object.values(db.tournament.scores).sort((a, b) => b.points - a.points);
+    const rows = all.slice(0, 20).map((s, i) => ({ rank: i + 1, playerId: s.playerId, name: s.name, species: s.species, points: s.points, wins: s.wins || 0 }));
+    let me2 = null;
+    const pid = query.playerId;
+    if (pid) { const idx = all.findIndex((s) => s.playerId === pid); if (idx >= 0) me2 = { rank: idx + 1, points: all[idx].points, wins: all[idx].wins || 0 }; }
+    return send(res, 200, { weekId, endsAt, rows, me: me2, lastChampion: db.tournament.lastChampion || null });
   }
 
   // --- 인증 ---
