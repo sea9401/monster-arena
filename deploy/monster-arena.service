@@ -1,0 +1,27 @@
+# 몬스터 아레나 — systemd 유닛 (EC2 상시 구동)
+# 설치:
+#   sudo cp deploy/monster-arena.service /etc/systemd/system/
+#   (아래 <USER>/경로/포트를 본인 환경에 맞게 수정)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now monster-arena
+# 로그: journalctl -u monster-arena -f
+# 노드 경로 확인: which node  (nodesource=/usr/bin/node, nvm면 경로 다름)
+
+[Unit]
+Description=Monster Arena PvP server
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/monster-arena
+ExecStart=/usr/bin/node server/server.js
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+# 다른 게임과 포트 충돌 피하려 3001 사용 (nginx가 이 포트로 프록시)
+Environment=PORT=3001
+# git 체크아웃 밖의 영속 경로 (git pull이 건드리지 않음). 디렉터리는 서버가 자동 생성.
+Environment=DATA_FILE=/home/ec2-user/monster-arena-data/data.json
+
+[Install]
+WantedBy=multi-user.target

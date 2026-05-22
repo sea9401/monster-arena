@@ -1,6 +1,49 @@
 # Monster Arena 서버 배포 가이드
 
-## 플랫폼 추천: Render
+> 두 가지 경로: **(A) 기존 EC2에 직접 배포(추천 — 상시 가동·디스크 영속)** / (B) Render(아래 별도 섹션).
+
+## EC2 배포 (JSON 저장, systemd + nginx) — 추천
+
+이미 다른 게임이 도는 EC2에 **별도 포트 + 서브도메인**으로 얹는다. 무의존성 Node라 빌드 불필요, EBS 디스크라 JSON 데이터가 재시작에도 보존된다.
+
+준비 파일: `deploy/monster-arena.service`(systemd), `deploy/nginx-monster-arena.conf`(nginx). 두 파일 안의 `<USER>`/경로/포트(3001)/도메인을 본인 환경에 맞게 수정.
+
+```bash
+# 1) 코드 가져오기 (예: ec2-user 홈)
+cd ~ && git clone https://github.com/<본인>/monster-arena.git
+cd monster-arena
+
+# 2) Node 20 설치 (없으면) — Amazon Linux/Ubuntu 예시 (nodesource)
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -   # Ubuntu면 deb.nodesource.com
+sudo yum install -y nodejs   # Ubuntu: sudo apt install -y nodejs
+which node                    # 경로를 .service의 ExecStart에 반영
+
+# 3) systemd 서비스 등록 (.service 안의 User/경로/PORT/DATA_FILE 확인)
+sudo cp deploy/monster-arena.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now monster-arena
+journalctl -u monster-arena -f   # 로그 확인 (포트 3001 가동 확인)
+
+# 4) nginx 프록시 + TLS (server_name을 본인 서브도메인으로, DNS A레코드는 EC2 IP)
+sudo cp deploy/nginx-monster-arena.conf /etc/nginx/conf.d/monster-arena.conf
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d arena.example.com   # 443/TLS 자동 구성
+
+# 5) 확인
+curl https://arena.example.com/health
+```
+
+**보안그룹**: 80/443만 외부 개방. 노드 포트(3001)는 SG에서 막아 외부 비공개(요청은 nginx만 거쳐 들어옴). CORS `*`는 웹 same-origin + 모바일 앱 접근 위해 유지.
+
+**데이터**: `DATA_FILE=/home/ec2-user/monster-arena-data/data.json`(체크아웃 밖). 서버가 디렉터리 자동 생성. EBS라 재시작에도 보존. 백업하려면 이 파일만 주기적으로 복사.
+
+**업데이트**: `git pull && sudo systemctl restart monster-arena` (DATA_FILE이 체크아웃 밖이라 데이터 안전).
+
+**모바일 연결**: `www/config.js`의 `API_BASE`를 `https://arena.example.com`으로.
+
+---
+
+## (대안) 플랫폼: Render
 
 | 항목 | Render | Fly.io | Railway |
 | --- | --- | --- | --- |
