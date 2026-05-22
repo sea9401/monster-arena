@@ -323,6 +323,7 @@ const screens = {
   leaderboard: $("leaderboard-screen"),
   tournament: $("tournament-screen"),
   shop: $("shop-screen"),
+  season: $("season-screen"),
 };
 let tooltipEl = null;
 
@@ -471,6 +472,8 @@ function migrateState() {
   if (typeof state.title !== "string") state.title = "";
   if (state.title && !state.titles.includes(state.title)) state.title = ""; // 보유 안 한 칭호는 장착 해제
   if (state.claimedChampionWeek === undefined) state.claimedChampionWeek = null;
+  if (state.onboarded === undefined) state.onboarded = true; // 기존 유저는 이미 익숙 → 스킵
+  if (state.claimedSeasonMonth === undefined) state.claimedSeasonMonth = null;
   if (!state.achievements || typeof state.achievements !== "object") state.achievements = {};
   if (!state.lifetime || typeof state.lifetime !== "object") state.lifetime = {};
   for (const k of ["trains", "feeds", "plays", "pvp", "upsets"]) {
@@ -606,6 +609,8 @@ function hatch(speciesKey) {
     titles: carry ? carry.titles : [],               // 보유 칭호 id 배열
     title: carry ? carry.title : "",                 // 장착 칭호(표시용)
     claimedChampionWeek: carry ? carry.claimedChampionWeek : null, // 챔피언 보상 받은 weekId
+    claimedSeasonMonth: carry ? carry.claimedSeasonMonth : null,   // 시즌 보상 받은 monthId
+    onboarded: carry ? carry.onboarded : false,                    // 첫 부화면 false → 환영 모달 노출
   };
   pendingRebirth = false;
   checkAchievements(); // 도감 업적(N종 육성 등) 즉시 체크
@@ -613,6 +618,7 @@ function hatch(speciesKey) {
   renderHome();
   showHomeTab("grow");
   show("home");
+  if (!state.onboarded) setTimeout(showWelcome, 250); // 첫 부화면 환영 모달
 }
 
 // 환생: 현재 몬스터를 졸업시키고 새 종으로 다시 시작(계정성 진행도는 유지).
@@ -1042,7 +1048,6 @@ function renderHome() {
 function renderArenaLobby() {
   if (!state) return;
   renderAccount();
-  renderSocialBar();
   refreshInbox();
   $("lobby-rank").textContent = rankOf(state.rating);
   $("lobby-rating").textContent = state.rating;
@@ -1095,6 +1100,8 @@ function addBattleHistory(won, delta, newRating) {
 let currentOpponent = null;
 let currentMatchId = null;      // 온라인 매치면 서버 matchId, AI면 null
 let friendlyMode = false;       // 친선 재대결(보상·기록 없음)
+let rerolls = 0;                // "다른 상대" 사용 횟수(매칭 세션당 최대 2회, 전투 후 리셋)
+const REROLL_MAX = 2;
 let lastFoeUnfavorable = false; // 불리 매칭 2연속 방지용 (저장 안 함)
 
 // 내 현재 상태를 서버 스냅샷 형태로
@@ -1150,8 +1157,32 @@ function enterArena() {
   $("rank-tier").textContent = rankOf(state.rating);
   $("record").textContent = `${state.wins}승 ${state.losses}패`;
   Online.uploadSnapshot(mySnapshot()); // 내 고스트를 최신으로
-  findMatch();
+  freshMatch(); // 첫 매칭 = 리롤 리셋
   show("arena");
+}
+
+// 새 매칭 세션: 리롤 카운터 리셋 후 첫 상대 매칭
+function freshMatch() {
+  rerolls = 0;
+  updateRerollBtn();
+  // 결과화면을 닫고 매칭화면 노출
+  $("match-result").classList.add("hidden");
+  $("match-find").classList.remove("hidden");
+  findMatch();
+}
+// "다른 상대": 세션당 최대 REROLL_MAX회만 허용
+function rerollMatch() {
+  if (rerolls >= REROLL_MAX) return;
+  rerolls += 1;
+  updateRerollBtn();
+  findMatch();
+}
+function updateRerollBtn() {
+  const b = $("rematch-btn");
+  if (!b) return;
+  const left = REROLL_MAX - rerolls;
+  b.disabled = left <= 0;
+  b.textContent = left > 0 ? `🔄 다른 상대 (${left}회 남음)` : "🚫 다른 상대 (소진)";
 }
 
 function updateOnlineStatus() {
@@ -1333,15 +1364,17 @@ function blog(text, type) {
 }
 
 async function resolve(won) {
-  // 친선 재대결: 기록·보상·레이팅 없이 결과만 표시하고 로비로 복귀
+  // 친선 재대결: 기록·보상·레이팅 없이 결과화면만 표시
   if (friendlyMode) {
     friendlyMode = false;
     playFx(won ? "playWin" : "playLose");
     resultOverlay(won);
-    msg(won ? "친선전 승리! (기록·보상 없음)" : "친선전 패배 (기록·보상 없음)", won);
-    renderHome();
-    showHomeTab("arena");
-    show("home");
+    $("match-battle").classList.add("hidden");
+    $("match-result").classList.remove("hidden");
+    $("result-title").textContent = won ? "🏆 친선 승리!" : "💪 친선 패배";
+    $("result-detail").textContent = "친선전 — 기록·보상 없음";
+    tauntTarget = currentOpponent && currentOpponent.ghost ? { playerId: currentOpponent.playerId, name: currentOpponent.name } : null;
+    renderResultSocial();
     return;
   }
   if (won) {
@@ -1383,11 +1416,17 @@ async function resolve(won) {
   $("rating").textContent = state.rating;
   $("rank-tier").textContent = rankOf(state.rating);
   $("record").textContent = `${state.wins}승 ${state.losses}패`;
-  // 실제 플레이어 상대면 도발 가능(아레나 로비 소셜 바에서 표시)
+  // 결과화면 유지 — 실제 플레이어 상대면 도발/친선 재대결 노출
   tauntTarget = currentOpponent && currentOpponent.ghost ? { playerId: currentOpponent.playerId, name: currentOpponent.name } : null;
-  renderHome();
-  showHomeTab("arena");
-  show("home");
+  renderResultSocial();
+}
+
+// ---------- 환영 / 도움말 모달 ----------
+function showWelcome() { const b = $("welcome-backdrop"); if (b) b.classList.remove("hidden"); }
+function dismissWelcome() {
+  const b = $("welcome-backdrop");
+  if (b) b.classList.add("hidden");
+  if (state && !state.onboarded) { state.onboarded = true; save(); }
 }
 
 // ---------- 코인 / 상점 / 칭호 ----------
@@ -1491,16 +1530,15 @@ const TAUNTS = [
 let tauntTarget = null; // 도발 보낼 상대 {playerId, name} (직전 매치가 실제 플레이어일 때)
 
 // 아레나 로비 소셜 바: 직전 상대와 친선 재대결 + (실제 플레이어면) 도발
-function renderSocialBar() {
-  const bar = $("social-bar");
+function renderResultSocial() {
+  const bar = $("result-social");
   if (!bar) return;
   if (!currentOpponent) { bar.classList.add("hidden"); bar.innerHTML = ""; return; }
   const canTaunt = Online.status.reachable && tauntTarget && tauntTarget.playerId && !String(tauntTarget.playerId).startsWith("ghost-");
   bar.classList.remove("hidden");
-  let html = `<div class="social-title">직전 상대: ${currentOpponent.name}</div>`;
-  html += `<button id="friendly-rematch-btn" class="ghost">🔁 친선 재대결 (보상 없음)</button>`;
+  let html = `<button id="friendly-rematch-btn" class="ghost">🔁 친선 재대결 (보상 없음)</button>`;
   if (canTaunt) {
-    html += `<div class="taunt-title">💬 한마디 보내기</div><div class="taunt-btns">` +
+    html += `<div class="taunt-title">💬 ${currentOpponent.name}에게 한마디</div><div class="taunt-btns">` +
       TAUNTS.map((t) => `<button class="taunt-btn" data-taunt="${t.id}">${t.text}</button>`).join("") + `</div>`;
   }
   bar.innerHTML = html;
@@ -1510,8 +1548,9 @@ async function sendTaunt(presetId) {
   const ok = await Online.sendTaunt(tauntTarget.playerId, presetId);
   if (ok) {
     tauntTarget = null;
-    const t = $("social-bar") && $("social-bar").querySelector(".taunt-btns");
-    if (t) t.outerHTML = `<div class="social-title">메시지를 보냈어요! 📨</div>`;
+    const bar = $("result-social");
+    const t = bar && bar.querySelector(".taunt-btns");
+    if (t) t.outerHTML = `<div class="taunt-title">메시지를 보냈어요! 📨</div>`;
   }
 }
 
@@ -1627,8 +1666,8 @@ $("go-pvp").addEventListener("click", enterArena);
 $("back-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
 $("result-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
 $("fight-btn").addEventListener("click", startBattle);
-$("again-btn").addEventListener("click", findMatch);
-$("rematch-btn").addEventListener("click", findMatch);
+$("again-btn").addEventListener("click", freshMatch);   // 다시 대전 = 새 매칭 세션(리롤 리셋)
+$("rematch-btn").addEventListener("click", rerollMatch); // 다른 상대 = 리롤(최대 2회)
 $("leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "arena"; openLeaderboard(); });
 $("home-leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "home-arena"; openLeaderboard(); });
 $("home-tournament-btn").addEventListener("click", openTournament);
@@ -1638,6 +1677,18 @@ $("tourney-back").addEventListener("click", () => {
   showHomeTab("arena");
   show("home");
 });
+$("home-season-btn").addEventListener("click", openSeason);
+$("season-back").addEventListener("click", () => {
+  clearInterval(seasonTimer);
+  renderHome();
+  showHomeTab("arena");
+  show("home");
+});
+
+// 도움말 / 환영 모달
+$("help-btn").addEventListener("click", showWelcome);
+$("welcome-close").addEventListener("click", dismissWelcome);
+$("welcome-backdrop").addEventListener("click", (e) => { if (e.target.id === "welcome-backdrop") dismissWelcome(); });
 
 // 상점
 $("shop-btn").addEventListener("click", openShop);
@@ -1651,8 +1702,8 @@ $("shop-screen").addEventListener("click", (e) => {
   else if (b.dataset.unequip) equipTitle("");
 });
 
-// 소셜 바(아레나 로비): 친선 재대결 + 도발
-$("social-bar").addEventListener("click", (e) => {
+// 소셜(결과화면): 친선 재대결 + 도발
+$("result-social").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.id === "friendly-rematch-btn") friendlyRematch();
@@ -1752,6 +1803,63 @@ function startTourneyCountdown(endsAt) {
   };
   tick();
   tourneyTimer = setInterval(tick, 60000);
+}
+
+// ---------- 월간 시즌 ----------
+let seasonTimer = null;
+
+async function tryClaimSeason() {
+  const reward = await Online.claimSeason();
+  if (!reward) return;
+  if (state.claimedSeasonMonth === reward.monthId) return; // 클라 측 추가 가드
+  addCoins(reward.coins);
+  if (reward.title && !state.titles.includes(reward.title)) state.titles.push(reward.title);
+  if (reward.title) state.title = reward.title; // 새로 받은 시즌 칭호 자동 장착
+  state.claimedSeasonMonth = reward.monthId;
+  save();
+  Online.uploadSnapshot(mySnapshot());
+  alert(`🏅 ${reward.monthId} 시즌 ${reward.tier} 보상!\n🪙 +${reward.coins}` + (reward.title ? `\n칭호: ${reward.title}` : ""));
+}
+
+async function openSeason() {
+  show("season");
+  await tryClaimSeason();
+  $("season-monthid").textContent = "...";
+  $("season-mytier").textContent = "...";
+  $("season-lastresult").innerHTML = "";
+  const data = await Online.season();
+  if (!data) {
+    $("season-monthid").textContent = "오프라인";
+    $("season-mytier").textContent = "";
+    return;
+  }
+  startSeasonCountdown(data.endsAt);
+  $("season-monthid").textContent = `${data.monthId} 시즌`;
+  $("season-mytier").textContent = `현재 등급: ${data.myTier} (레이팅 ${data.myRating})`;
+  if (data.lastResult) {
+    const lr = data.lastResult;
+    const claimedNote = data.claimed ? " (수령 완료)" : "";
+    $("season-lastresult").innerHTML =
+      `<div class="season-result-title">📦 직전 시즌(${lr.monthId}) 결과</div>` +
+      `<div class="season-result-row">${lr.tier} · 레이팅 ${lr.rating}</div>` +
+      `<div class="season-result-row">보상: 🪙 ${lr.coins}${lr.title ? " · 칭호 " + lr.title : ""}${claimedNote}</div>`;
+  } else {
+    $("season-lastresult").innerHTML = `<div class="muted">직전 시즌 기록 없음</div>`;
+  }
+}
+
+function startSeasonCountdown(endsAt) {
+  clearInterval(seasonTimer);
+  const el = $("season-countdown");
+  const tick = () => {
+    const ms = endsAt - Date.now();
+    if (ms <= 0) { el.textContent = "⏰ 곧 다음 시즌이 시작돼요!"; clearInterval(seasonTimer); return; }
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    el.textContent = `⏳ 시즌 종료까지 ${d}일 ${h}시간`;
+  };
+  tick();
+  seasonTimer = setInterval(tick, 60000);
 }
 
 // ---------- 계정 UI ----------

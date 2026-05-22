@@ -79,6 +79,8 @@
             <span>🔥 연속 출석 <b id="streak">1</b>일</span>
             ·
             <span>전투력 <b id="power">0</b></span>
+            ·
+            <span>🪙 <b class="coin-balance">0</b></span>
           </div>
           <div class="skills-line" id="pet-skills"></div>
         </div>
@@ -110,6 +112,7 @@
       <div class="home-tab-content hidden" data-home-tab="daily">
         <div class="shop-bar">
           <span class="shop-bar-coins">🪙 <b class="coin-balance">0</b></span>
+          <button id="help-btn" class="ghost">ℹ️ 도움말</button>
           <button id="shop-btn" class="primary">🛒 상점</button>
         </div>
         <div class="attendance">
@@ -145,7 +148,6 @@
         </div>
 
         <div id="inbox" class="inbox hidden"></div>
-        <div id="social-bar" class="social-bar hidden"></div>
 
         <div class="battle-history">
           <h3 class="quests-title">최근 전투 기록</h3>
@@ -155,6 +157,7 @@
         <div class="nav">
           <button id="go-pvp" class="primary">⚔️ 아레나 입장</button>
           <button id="home-tournament-btn" class="ghost">🏅 주간 토너먼트</button>
+          <button id="home-season-btn" class="ghost">🗓️ 월간 시즌</button>
           <button id="home-leaderboard-btn" class="ghost">🏆 리더보드</button>
         </div>
       </div>
@@ -203,6 +206,7 @@
       <div id="match-result" class="hidden">
         <h2 id="result-title">승리!</h2>
         <p id="result-detail"></p>
+        <div id="result-social" class="social-bar hidden"></div>
         <div class="nav">
           <button id="again-btn" class="primary">다시 대전</button>
           <button id="result-home" class="ghost">🏠 돌아가기</button>
@@ -248,6 +252,35 @@
       </div>
     </section>
 
+    <!-- 7. 월간 시즌 -->
+    <section id="season-screen" class="screen hidden">
+      <h2>🗓️ <span id="season-monthid">시즌</span></h2>
+      <div class="tourney-head">
+        <div id="season-countdown" class="tourney-countdown">--</div>
+        <div id="season-mytier" class="tourney-me"></div>
+      </div>
+      <div id="season-lastresult" class="season-lastresult"></div>
+      <p class="muted tourney-note">매월 1일 0시(KST) 시즌 종료 시 레이팅에 따른 티어 보상 — 브론즈🪙50 / 실버🪙100 / 골드🪙200+칭호 / 플래티넘🪙350+칭호 / 챔피언🪙600+칭호</p>
+      <div class="nav">
+        <button id="season-back" class="ghost">← 아레나로</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 환영 / 도움말 모달 -->
+  <div id="welcome-backdrop" class="welcome-backdrop hidden">
+    <div class="welcome-sheet">
+      <h2>🎮 환영합니다!</h2>
+      <ul class="welcome-list">
+        <li><b>🐲 육성</b> — 먹이/훈련으로 키워요. 스태미너는 15분당 1씩 회복.</li>
+        <li><b>📅 일일</b> — 출석·퀘스트·업적·상점. 매일 들러서 보상 받기.</li>
+        <li><b>⚔️ 아레나</b> — 다른 플레이어 고스트와 비동기 PvP. 매주 토너먼트·매월 시즌.</li>
+        <li><b>🏅 일일 이벤트</b> — 매일 다른 보너스 효과(EXP/회피/회복 등).</li>
+        <li><b>🪙 코인</b> — 전투·퀘스트·출석으로 모아 상점에서 사용.</li>
+      </ul>
+      <button id="welcome-close" class="primary">시작하기</button>
+    </div>
   </div>
 
   <script src="config.js"></script>

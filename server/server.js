@@ -28,6 +28,9 @@ function load() {
   if (!db.tournament) db.tournament = { weekId: weekInfo().weekId, scores: {}, lastChampion: null };
   if (!db.tournament.claimedBy) db.tournament.claimedBy = {}; // playerId -> 보상 받은 weekId
   if (!db.messages) db.messages = {};   // toPlayerId -> [{from,fromName,text,at}]
+  if (!db.season) db.season = { monthId: monthInfo().monthId, lastResults: {}, claimedBy: {} };
+  if (!db.season.lastResults) db.season.lastResults = {};
+  if (!db.season.claimedBy) db.season.claimedBy = {};
 }
 let saveTimer = null;
 function save() {
@@ -100,6 +103,35 @@ function eventFor(ts = Date.now()) {
     idx = (n > 1 && cur === idx) ? (cur + 1) % n : cur;
   }
   return { ...EVENTS[idx], date: kstDateStr(ts) };
+}
+
+// ---------- 월간 시즌 (KST 기준 월말 티어 스냅샷 + 멱등 claim) ----------
+function monthInfo(ts = Date.now()) {
+  const sh = new Date(ts + KST);
+  const y = sh.getUTCFullYear(), m = sh.getUTCMonth();
+  return { monthId: `${y}-${String(m + 1).padStart(2, "0")}`, endsAt: Date.UTC(y, m + 1, 1) - KST };
+}
+const SEASON_TIERS = [ // min rating ascending — RANKS와 일치
+  { name: "브론즈",   min: 0,    coins: 50,  hasTitle: false },
+  { name: "실버",     min: 1100, coins: 100, hasTitle: false },
+  { name: "골드",     min: 1300, coins: 200, hasTitle: true  },
+  { name: "플래티넘", min: 1550, coins: 350, hasTitle: true  },
+  { name: "챔피언",   min: 1800, coins: 600, hasTitle: true  },
+];
+function tierOf(rating) { let t = SEASON_TIERS[0]; for (const x of SEASON_TIERS) if (rating >= x.min) t = x; return t; }
+function seasonReward(rating, monthId) {
+  const t = tierOf(rating);
+  return { monthId, tier: t.name, rating, coins: t.coins, title: t.hasTitle ? `🏅 ${monthId} ${t.name}` : "" };
+}
+// 동기 — 월이 바뀌면 직전 월의 모든 비시드 플레이어 보상을 스냅샷(claimedBy는 monthId 비교로 자연 만료)
+function rolloverSeason() {
+  const { monthId } = monthInfo();
+  if (db.season.monthId === monthId) return;
+  for (const p of Object.values(db.players)) {
+    if (p.seeded) continue;
+    db.season.lastResults[p.playerId] = seasonReward(p.rating || 1000, db.season.monthId);
+  }
+  db.season.monthId = monthId;
 }
 
 // ---------- 소셜: 프리셋 도발 메시지 ----------
@@ -339,6 +371,28 @@ const server = http.createServer(async (req, res) => {
     db.tournament.claimedBy[b.playerId] = ch.weekId;
     save();
     return send(res, 200, { reward: { coins: CHAMPION_COINS, title: CHAMPION_TITLE, weekId: ch.weekId } });
+  }
+
+  // --- 월간 시즌 ---
+  if (url === "/season" && method === "GET") {
+    rolloverSeason();
+    const { monthId, endsAt } = monthInfo();
+    const pid = query.playerId;
+    const me = pid ? db.players[pid] : null;
+    const myRating = me ? (me.rating || 1000) : 0;
+    const myTier = me ? tierOf(myRating).name : "";
+    const lr = pid ? db.season.lastResults[pid] : null;
+    const claimed = !!(pid && lr && db.season.claimedBy[pid] === lr.monthId);
+    return send(res, 200, { monthId, endsAt, myRating, myTier, lastResult: lr || null, claimed });
+  }
+  if (url === "/season/claim" && method === "POST") {
+    rolloverSeason();
+    const b = await readBody(req);
+    const lr = db.season.lastResults[b.playerId];
+    if (!lr || db.season.claimedBy[b.playerId] === lr.monthId) return send(res, 200, { reward: null });
+    db.season.claimedBy[b.playerId] = lr.monthId;
+    save();
+    return send(res, 200, { reward: { coins: lr.coins, title: lr.title, monthId: lr.monthId, tier: lr.tier } });
   }
 
   // --- 소셜: 도발 메시지 ---
