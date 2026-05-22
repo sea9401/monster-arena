@@ -104,8 +104,8 @@ const SKILL_KITS = {
   ],
   electric: [ // 속도형: 속도 우위 강타 + 연쇄 추가타
     { id: "e_basic",  name: "기본 공격",   type: "electric", power: 1.0,  cd: 0 },
-    { id: "e_thrust", name: "번개 찌르기", type: "electric", power: 1.25, cd: 2, speedScale: 1.28 },
-    { id: "e_chain",  name: "연쇄 스파크", type: "electric", power: 1.0,  cd: 3, extraHit: { chance: 0.4, power: 0.55 } },
+    { id: "e_thrust", name: "번개 찌르기", type: "electric", power: 1.4, cd: 2, speedScale: 1.4 },
+    { id: "e_chain",  name: "연쇄 스파크", type: "electric", power: 1.0,  cd: 3, extraHit: { chance: 0.5, power: 0.55 } },
   ],
   dark: [ // 공격형(불 틀 재활용): 화력 + 공격 버프
     { id: "d_basic",  name: "기본 공격",   type: "dark", power: 1.0,  cd: 0 },
@@ -248,6 +248,12 @@ const ACHIEVEMENTS = [
   { id: "arena_fan",    icon: "🎟️", name: "단골 도전자",     desc: "아레나 25회 출전",              cur: (s) => s.lifetime.pvp, goal: 25 },
   // 관리
   { id: "care_max",     icon: "😻", name: "최상의 컨디션",   desc: "포만·행복 동시 80 이상",        cur: (s) => (s.food >= 80 && s.happy >= 80 ? 1 : 0), goal: 1 },
+  // 도감 (환생으로 여러 종을 키워야 달성)
+  { id: "rebirth1",     icon: "🔄", name: "두 번째 인생",     desc: "환생해서 다른 종을 키워봤다",   cur: (s) => (s.lifetime.speciesSeen || []).length, goal: 2,  reward: { type: "exp",    amt: 40 } },
+  { id: "collect3",     icon: "📒", name: "수집의 시작",       desc: "서로 다른 3종 육성",            cur: (s) => (s.lifetime.speciesSeen || []).length, goal: 3,  reward: { type: "action", amt: 3 } },
+  { id: "collect5",     icon: "📚", name: "베테랑 사육사",     desc: "서로 다른 5종 육성",            cur: (s) => (s.lifetime.speciesSeen || []).length, goal: 5,  reward: { type: "exp",    amt: 80 } },
+  { id: "all_elements", icon: "🌈", name: "오속성 정복",       desc: "5속성을 모두 경험",             cur: (s) => new Set((s.lifetime.speciesSeen || []).map((k) => SPECIES[k] && SPECIES[k].type).filter(Boolean)).size, goal: 5, reward: { type: "action", amt: 5 } },
+  { id: "dex_complete", icon: "🏆", name: "도감 완성",         desc: "모든 종을 육성",                cur: (s) => (s.lifetime.speciesSeen || []).length, goal: Object.keys(SPECIES).length, reward: { type: "action", amt: 10 } },
 ];
 
 // 풀에서 n개를 뽑아 진행 상태가 담긴 퀘스트 객체로 생성
@@ -262,6 +268,7 @@ function generateQuests(n = 3) {
 
 let state = null;
 let activeHomeTab = "grow";
+let pendingRebirth = false; // true면 다음 hatch()가 환생(계정 진행도 유지)으로 동작
 let leaderboardReturn = "arena";
 
 // ---------- 유틸 ----------
@@ -411,6 +418,11 @@ function migrateState() {
   for (const k of ["trains", "feeds", "plays", "pvp", "upsets"]) {
     if (!Number.isFinite(state.lifetime[k])) state.lifetime[k] = 0;
   }
+  // 도감: 현재 키우는 종을 기록에 소급 반영(기존 세이브는 자기 종이 1개 채워짐)
+  if (!Array.isArray(state.lifetime.speciesSeen)) state.lifetime.speciesSeen = [];
+  if (state.species && !state.lifetime.speciesSeen.includes(state.species)) {
+    state.lifetime.speciesSeen.push(state.species);
+  }
   delete state.actionsLeft;
   delete state.form; // 분기 진화 제거 — 구버전 저장 정리
 }
@@ -506,30 +518,51 @@ function renderEggs() {
 function hatch(speciesKey) {
   const sp = SPECIES[speciesKey];
   const name = prompt(`${sp.name}이(가) 부화했어요!\n이름을 지어주세요:`, sp.name) || sp.name;
+  // 환생이면 계정성 진행도(레이팅·전적·업적·누적·출석)는 이어받고, 몬스터만 새로 시작.
+  const carry = pendingRebirth && state ? state : null;
+  const lifetime = carry ? carry.lifetime : { trains: 0, feeds: 0, plays: 0, pvp: 0, upsets: 0, speciesSeen: [] };
+  if (!Array.isArray(lifetime.speciesSeen)) lifetime.speciesSeen = [];
+  if (!lifetime.speciesSeen.includes(speciesKey)) lifetime.speciesSeen.push(speciesKey); // 도감 기록
   state = {
     species: speciesKey,
     name: name.slice(0, 12),
     level: 1, exp: 0,
     atk: sp.base.atk, def: sp.base.def, spd: sp.base.spd, hp: sp.base.hp,
     food: 70, happy: 70,
-    streak: 1,
-    dayCount: 1,
-    lastDate: todayStr(),
+    streak: carry ? carry.streak : 1,
+    dayCount: carry ? carry.dayCount : 1,
+    lastDate: carry ? carry.lastDate : todayStr(),
     stamina: STAMINA_MAX,
     staminaAt: Date.now(),
-    rating: 1000, wins: 0, losses: 0,
-    dayOffset: 0,
-    timeOffset: 0,
-    history: [],
+    rating: carry ? carry.rating : 1000,
+    wins: carry ? carry.wins : 0,
+    losses: carry ? carry.losses : 0,
+    dayOffset: carry ? carry.dayOffset : 0,
+    timeOffset: carry ? carry.timeOffset : 0,
+    history: carry ? carry.history : [],
     quests: generateQuests(),
-    attendanceClaimedDate: null, // 오늘 출석 보상 수령 여부(=todayStr이면 수령함)
-    achievements: {},            // { [업적id]: 해금 타임스탬프 }
-    lifetime: { trains: 0, feeds: 0, plays: 0, pvp: 0, upsets: 0 }, // 누적 카운터(업적용)
+    attendanceClaimedDate: carry ? carry.attendanceClaimedDate : null, // 오늘 출석 보상 수령 여부
+    achievements: carry ? carry.achievements : {},  // { [업적id]: 해금 타임스탬프 }
+    lifetime,                                        // 누적 카운터(업적/도감용)
   };
+  pendingRebirth = false;
+  checkAchievements(); // 도감 업적(N종 육성 등) 즉시 체크
   save();
   renderHome();
   showHomeTab("grow");
   show("home");
+}
+
+// 환생: 현재 몬스터를 졸업시키고 새 종으로 다시 시작(계정성 진행도는 유지).
+function startRebirth() {
+  if (!state) return;
+  const ok = confirm(
+    `정말 환생할까요?\n\n지금 몬스터 "${state.name}"(Lv.${state.level})는 떠나고 새 종으로 다시 시작합니다.\n레이팅·전적·업적·도감은 그대로 유지돼요.`
+  );
+  if (!ok) return;
+  pendingRebirth = true;
+  renderEggs();
+  show("hatch");
 }
 
 // ---------- 날짜 경과 처리 ----------
@@ -1249,6 +1282,7 @@ $("quest-list").addEventListener("click", (e) => {
 });
 
 $("att-claim").addEventListener("click", claimAttendance);
+$("rebirth-btn").addEventListener("click", startRebirth);
 
 $("home-screen").addEventListener("click", (e) => {
   const btn = e.target.closest(".home-tab-btn");
@@ -1278,17 +1312,21 @@ $("auth-register").addEventListener("click", () => doAuth("register"));
 $("auth-guest").addEventListener("click", () => enterGameFromState());
 $("auth-password").addEventListener("keydown", (e) => { if (e.key === "Enter") doAuth("login"); });
 
-$("lobby-account").addEventListener("click", async (e) => {
+async function doLogout() {
+  if (!Online.status.loggedIn) return;
+  if (!confirm("로그아웃할까요? (이 기기의 진행은 남고, 다시 로그인하면 이어집니다)")) return;
+  await Online.logout();
+  renderAccount();
+  authMsg("", true);
+  show("auth");
+}
+$("lobby-account").addEventListener("click", (e) => {
   const b = e.target.closest(".acct-link");
   if (!b) return;
   if (b.dataset.act === "login") { authMsg("", true); show("auth"); }
-  else if (b.dataset.act === "logout") {
-    if (!confirm("로그아웃할까요? (이 기기의 진행은 남고, 다시 로그인하면 이어집니다)")) return;
-    await Online.logout();
-    renderAccount();
-    show("auth");
-  }
+  else if (b.dataset.act === "logout") doLogout();
 });
+$("logout-btn").addEventListener("click", doLogout);
 
 $("go-pvp").addEventListener("click", enterArena);
 $("back-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
@@ -1339,6 +1377,8 @@ async function openLeaderboard() {
 
 // ---------- 계정 UI ----------
 function renderAccount() {
+  const logoutBtn = $("logout-btn");
+  if (logoutBtn) logoutBtn.classList.toggle("hidden", !Online.status.loggedIn);
   const el = $("lobby-account");
   if (!el) return;
   if (Online.status.loggedIn) {

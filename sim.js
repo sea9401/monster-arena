@@ -44,8 +44,8 @@ const SKILL_KITS = {
   ],
   electric: [
     { id: "e_basic", type: "electric", power: 1.0, cd: 0 },
-    { id: "e_thrust", type: "electric", power: 1.25, cd: 2, speedScale: 1.28 },
-    { id: "e_chain", type: "electric", power: 1.0, cd: 3, extraHit: { chance: 0.4, power: 0.55 } },
+    { id: "e_thrust", type: "electric", power: 1.4, cd: 2, speedScale: 1.4 },
+    { id: "e_chain", type: "electric", power: 1.0, cd: 3, extraHit: { chance: 0.5, power: 0.55 } },
   ],
   dark: [
     { id: "d_basic", type: "dark", power: 1.0, cd: 0 },

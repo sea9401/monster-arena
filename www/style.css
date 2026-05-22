@@ -56,6 +56,13 @@ body {
   background: var(--panel); color: var(--accent2); font-size: 17px;
   cursor: pointer; box-shadow: 3px 3px 0 #0f380f;
 }
+.logout-btn {
+  position: fixed; top: 10px; left: 10px; z-index: 60;
+  height: 36px; padding: 0 10px; border: 2px solid var(--accent); border-radius: 0;
+  background: var(--panel); color: var(--accent2); font: inherit; font-size: 11px; font-weight: 900;
+  cursor: pointer; box-shadow: 3px 3px 0 #0f380f;
+}
+.logout-btn:active { transform: translate(3px, 3px); box-shadow: none; }
 
 .muted { color: var(--accent); }
 .hidden { display: none !important; }
@@ -295,6 +302,10 @@ button:disabled,
 .quest-bar > div { height: 100%; background: var(--accent); }
 .quest-reward { font-size: 11px; color: var(--gold); white-space: nowrap; }
 .quest-claim { padding: 8px 12px; font-size: 13px; white-space: nowrap; color: var(--good); }
+
+/* 환생 버튼 */
+.rebirth-bar { text-align: center; margin-top: 16px; }
+.rebirth-bar button { width: 100%; padding: 12px; font-size: 14px; color: var(--accent); }
 
 /* 업적 */
 .achievements { padding: 14px 16px; margin-top: 16px; }
