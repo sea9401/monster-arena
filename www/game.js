@@ -468,6 +468,8 @@ function migrateState() {
   if (!Array.isArray(state.history)) state.history = [];
   if (!Array.isArray(state.statLog)) state.statLog = [];
   if (!Number.isFinite(state.coins)) state.coins = 0;
+  if (state.staminaBuyDate === undefined) state.staminaBuyDate = null;
+  if (!Number.isFinite(state.staminaBuyCount)) state.staminaBuyCount = 0;
   if (!Array.isArray(state.titles)) state.titles = [];
   if (typeof state.title !== "string") state.title = "";
   if (state.title && !state.titles.includes(state.title)) state.title = ""; // 보유 안 한 칭호는 장착 해제
@@ -553,6 +555,22 @@ function power(p) {
   return Math.round(p.hp * PW.hp + p.atk * PW.atk + p.def * PW.def + p.spd * PW.spd);
 }
 
+// 후발주자 catch-up: 강해질수록 훈련 효율 점진 감소 (hard cap 아님 — 최소 0.25 유지).
+function growthMult(pw) {
+  if (pw < 600) return 1.0;
+  if (pw < 1000) return 0.70;
+  if (pw < 1500) return 0.45;
+  return 0.25;
+}
+// 후발주자 catch-up: 낮은 레이팅 구간은 코인을 더 많이, 상위는 덜 받음.
+function ratingCoinMult(rating) {
+  if (rating < 900)  return 1.5;
+  if (rating < 1200) return 1.2;
+  if (rating < 1500) return 1.0;
+  if (rating < 1800) return 0.8;
+  return 0.6;
+}
+
 function rankOf(rating) {
   let r = RANKS[0];
   for (const t of RANKS) if (rating >= t.min) r = t;
@@ -611,6 +629,8 @@ function hatch(speciesKey) {
     claimedChampionWeek: carry ? carry.claimedChampionWeek : null, // 챔피언 보상 받은 weekId
     claimedSeasonMonth: carry ? carry.claimedSeasonMonth : null,   // 시즌 보상 받은 monthId
     onboarded: carry ? carry.onboarded : false,                    // 첫 부화면 false → 환영 모달 노출
+    staminaBuyDate: carry ? carry.staminaBuyDate : null,           // 마지막 스태미너 구매 날짜(KST yyyy-mm-dd)
+    staminaBuyCount: carry ? carry.staminaBuyCount : 0,            // 해당 날짜 누적 구매 횟수
   };
   pendingRebirth = false;
   checkAchievements(); // 도감 업적(N종 육성 등) 즉시 체크
@@ -677,19 +697,21 @@ function train(kind) {
   // 성장 배율: 행복도/포만감/스트릭이 높을수록 잘 큰다
   const condition = (state.food / 100) * 0.5 + (state.happy / 100) * 0.5; // 0~1
   const streakBonus = 1 + Math.min(state.streak - 1, 14) * 0.03;          // 최대 +42%
-  const mult = (0.6 + condition * 0.8) * streakBonus;
+  // 수확체감(catch-up): power 임계마다 훈련 효율 감소 → 신규 추격 여지
+  const soft = growthMult(power(state));
+  const mult = (0.6 + condition * 0.8) * streakBonus * soft;
 
   const careMult = evEffect("careMult", 1); // 잔치의 날: 포만·행복 회복 증가
   let text = "";
   if (kind === "feed") {
     state.food = clamp(state.food + Math.round(rand(22, 32) * careMult), 0, 100);
-    state.hp += Math.round(rand(2, 4));
-    gainExp(6);
+    state.hp += Math.max(1, Math.round(rand(2, 4) * soft));
+    gainExp(Math.max(1, Math.round(6 * soft)));
     text = "냠냠! 포만감이 올랐어요.";
   } else if (kind === "play") {
     state.happy = clamp(state.happy + Math.round(rand(18, 28) * careMult), 0, 100);
     state.spd += Math.round(rand(0, 1) * mult);
-    gainExp(8);
+    gainExp(Math.max(1, Math.round(8 * soft)));
     text = "신난다! 행복도가 올랐어요.";
   } else {
     // 스탯 훈련 (배고프거나 우울하면 효율↓, 약간의 포만감/행복 소모)
@@ -699,7 +721,7 @@ function train(kind) {
     if (kind === "spd") { state.spd += gain; text = `민첩 훈련! 속도 +${gain}`; }
     state.food = clamp(state.food - 8, 0, 100);
     state.happy = clamp(state.happy - 5, 0, 100);
-    gainExp(14);
+    gainExp(Math.max(1, Math.round(14 * soft)));
   }
 
   // 퀘스트 진행도 반영
@@ -1403,7 +1425,8 @@ async function resolve(won) {
     newRating = Math.max(0, state.rating + delta);
   }
   state.rating = newRating;
-  const coinGain = won ? 20 : 5; // 전투 보상 코인
+  const base = won ? 8 : 1;
+  const coinGain = Math.max(1, Math.round(base * ratingCoinMult(state.rating))); // 후발주자 catch-up: 낮은 레이팅이 더 많이 벌도록
   addCoins(coinGain);
   addBattleHistory(won, delta, newRating);
   checkAchievements();
@@ -1433,11 +1456,19 @@ function dismissWelcome() {
 function addCoins(n) { if (state) state.coins = Math.max(0, (state.coins || 0) + n); }
 
 // 상점 품목(클라 전용 — QoL/코스메틱, 영구 스탯 판매 없음)
+// 스태미너는 무한 펌프 방지를 위해 가격↑ + 하루 5회 캡(STAMINA_BUY_DAILY_MAX).
+const STAMINA_BUY_DAILY_MAX = 5;
 const SHOP_ITEMS = [
-  { id: "stamina", icon: "⚡", name: "스태미너 충전", desc: "스태미너 +5", cost: 30, apply: () => addStamina(5) },
+  { id: "stamina", icon: "⚡", name: "스태미너 충전", desc: "스태미너 +5 (하루 5회 한정)", cost: 60, apply: () => addStamina(5) },
   { id: "snack",   icon: "🍖", name: "고급 간식",     desc: "포만 +40 · 행복 +20", cost: 20, apply: () => { state.food = clamp(state.food + 40, 0, 100); state.happy = clamp(state.happy + 20, 0, 100); } },
   { id: "exp",     icon: "⭐", name: "EXP 포션",       desc: "경험치 +60", cost: 40, apply: () => gainExp(60) },
 ];
+function staminaBuysToday() {
+  return state.staminaBuyDate === todayStr() ? (state.staminaBuyCount || 0) : 0;
+}
+function staminaBuysRemaining() {
+  return Math.max(0, STAMINA_BUY_DAILY_MAX - staminaBuysToday());
+}
 const SHOP_TITLES = [
   { text: "🔥 열정의 조련사", cost: 100 },
   { text: "🛡️ 베테랑 조련사", cost: 300 },
@@ -1452,12 +1483,19 @@ function renderShop() {
   if (!state) return;
   $("shop-coins").textContent = state.coins || 0;
   // 소비 아이템
-  $("shop-items").innerHTML = SHOP_ITEMS.map((it) => `
-    <li class="shop-row">
+  $("shop-items").innerHTML = SHOP_ITEMS.map((it) => {
+    const capped = it.id === "stamina" && staminaBuysRemaining() <= 0;
+    const disabled = state.coins < it.cost || capped;
+    const label = capped ? "오늘 한도 ⛔" : `🪙${it.cost}`;
+    const desc = it.id === "stamina"
+      ? `${it.desc} · 오늘 ${staminaBuysToday()}/${STAMINA_BUY_DAILY_MAX}회`
+      : it.desc;
+    return `<li class="shop-row">
       <span class="shop-icon">${it.icon}</span>
-      <span class="shop-info"><b>${it.name}</b><br><span class="shop-desc">${it.desc}</span></span>
-      <button class="shop-buy" data-buy="${it.id}" ${state.coins < it.cost ? "disabled" : ""}>🪙${it.cost}</button>
-    </li>`).join("");
+      <span class="shop-info"><b>${it.name}</b><br><span class="shop-desc">${desc}</span></span>
+      <button class="shop-buy" data-buy="${it.id}" ${disabled ? "disabled" : ""}>${label}</button>
+    </li>`;
+  }).join("");
   // 칭호
   $("shop-titles").innerHTML = SHOP_TITLES.map((t) => {
     const owned = (state.titles || []).includes(t.text);
@@ -1476,6 +1514,15 @@ function renderShop() {
 function buyItem(id) {
   const it = SHOP_ITEMS.find((x) => x.id === id);
   if (!it || state.coins < it.cost) return;
+  if (it.id === "stamina") {
+    if (staminaBuysRemaining() <= 0) {
+      msg(`스태미너는 하루 ${STAMINA_BUY_DAILY_MAX}회까지만 구매할 수 있어요.`, false);
+      renderShop();
+      return;
+    }
+    state.staminaBuyDate = todayStr();
+    state.staminaBuyCount = staminaBuysToday() + 1;
+  }
   addCoins(-it.cost);
   it.apply();
   save();
