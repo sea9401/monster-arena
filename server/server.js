@@ -245,7 +245,11 @@ function serveStatic(req, res) {
   if (!filePath.startsWith(ROOT)) return send(res, 403, { error: "forbidden" });
   fs.readFile(filePath, (err, buf) => {
     if (err) return send(res, 404, { error: "not found" });
-    res.writeHead(200, { "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream" });
+    // 패치가 즉시 적용되도록 정적 파일은 매 요청 재검증(304 또는 200). ETag/Last-Modified는 노드 기본값에 의존하지 않으므로 no-cache로 단순화.
+    res.writeHead(200, {
+      "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream",
+      "Cache-Control": "no-cache, max-age=0, must-revalidate",
+    });
     res.end(buf);
   });
 }
