@@ -314,6 +314,25 @@ const ACHIEVEMENTS = [
   { id: "collect5",     icon: "📚", name: "베테랑 사육사",     desc: "서로 다른 5종 육성",            cur: (s) => (s.lifetime.speciesSeen || []).length, goal: 5,  reward: { type: "exp",    amt: 80 } },
   { id: "all_elements", icon: "🌈", name: "오속성 정복",       desc: "5속성을 모두 경험",             cur: (s) => new Set((s.lifetime.speciesSeen || []).map((k) => SPECIES[k] && SPECIES[k].type).filter(Boolean)).size, goal: 5, reward: { type: "action", amt: 5 } },
   { id: "dex_complete", icon: "🏆", name: "도감 완성",         desc: "모든 종을 육성",                cur: (s) => (s.lifetime.speciesSeen || []).length, goal: Object.keys(SPECIES).length, reward: { type: "action", amt: 10 } },
+  // 사이드 컨텐츠 (산책/룰렛)
+  { id: "walker3",      icon: "🥾", name: "첫 걸음 떼기",     desc: "산책 3회 완료",                  cur: (s) => s.lifetime.walks, goal: 3,  reward: { type: "exp",    amt: 20 } },
+  { id: "walker25",     icon: "🗺️", name: "여행자",            desc: "산책 25회 완료",                 cur: (s) => s.lifetime.walks, goal: 25, reward: { type: "action", amt: 2 } },
+  { id: "spin7",        icon: "🎰", name: "행운의 손",        desc: "행운의 룰렛 7회 사용",           cur: (s) => s.lifetime.luckySpins, goal: 7,  reward: { type: "exp", amt: 30 } },
+  // 멀티펫 로스터
+  { id: "two_pets",     icon: "🐲", name: "이중주",            desc: "펫 2마리 동시 보유",              cur: (s) => (s.pets || []).length, goal: 2, reward: { type: "exp", amt: 30 } },
+  { id: "three_pets",   icon: "🐉", name: "삼총사",            desc: "펫 3마리 동시 보유",              cur: (s) => (s.pets || []).length, goal: 3, reward: { type: "action", amt: 3 } },
+  // 친구 / 소셜
+  { id: "first_friend", icon: "🤝", name: "친구 시작",         desc: "친구 1명 추가",                   cur: (s) => s.lifetime.friendsAdded, goal: 1, reward: { type: "food", amt: 30 } },
+  { id: "friend5",      icon: "👥", name: "사교가",            desc: "친구 5명 추가",                   cur: (s) => s.lifetime.friendsAdded, goal: 5, reward: { type: "exp", amt: 50 } },
+  { id: "gift_first",   icon: "🎁", name: "마음 전하기",       desc: "친구에게 선물 1회",               cur: (s) => s.lifetime.gifts, goal: 1, reward: { type: "happy", amt: 30 } },
+  { id: "pat25",        icon: "🤲", name: "다정한 손길",       desc: "친구 펫 25회 쓰다듬기",           cur: (s) => s.lifetime.pats, goal: 25, reward: { type: "exp", amt: 30 } },
+  // 모자 컬렉션
+  { id: "first_hat",    icon: "🎩", name: "패션의 시작",       desc: "모자 1개 보유",                   cur: (s) => (s.cosmetics && s.cosmetics.owned || []).length, goal: 1, reward: { type: "happy", amt: 30 } },
+  { id: "hat5",         icon: "👒", name: "옷장 정리",         desc: "모자 5종 보유",                   cur: (s) => (s.cosmetics && s.cosmetics.owned || []).length, goal: 5, reward: { type: "exp", amt: 40 } },
+  { id: "hat_all",      icon: "👑", name: "패셔니스타",        desc: "모자 전종 13개 보유",             cur: (s) => (s.cosmetics && s.cosmetics.owned || []).length, goal: 13, reward: { type: "action", amt: 5 } },
+  // 보스 PvE
+  { id: "boss_first",   icon: "🐲", name: "보스 도전",         desc: "보스 첫 공격",                    cur: (s) => s.lifetime.bossDamage > 0 ? 1 : 0, goal: 1, reward: { type: "exp", amt: 20 } },
+  { id: "boss_10k",     icon: "🔥", name: "보스 헌터",         desc: "보스 누적 1만 데미지",            cur: (s) => s.lifetime.bossDamage, goal: 10000, reward: { type: "action", amt: 3 } },
 ];
 
 // 풀에서 n개를 뽑아 진행 상태가 담긴 퀘스트 객체로 생성
@@ -638,7 +657,7 @@ function migrateState() {
   if (state.claimedSeasonMonth === undefined) state.claimedSeasonMonth = null;
   if (!state.achievements || typeof state.achievements !== "object") state.achievements = {};
   if (!state.lifetime || typeof state.lifetime !== "object") state.lifetime = {};
-  for (const k of ["trains", "feeds", "plays", "pvp", "upsets"]) {
+  for (const k of ["trains", "feeds", "plays", "pvp", "upsets", "walks", "pats", "gifts", "luckySpins", "bossDamage", "friendsAdded"]) {
     if (!Number.isFinite(state.lifetime[k])) state.lifetime[k] = 0;
   }
   // 도감: 현재 키우는 종을 기록에 소급 반영(기존 세이브는 자기 종이 1개 채워짐)
@@ -1941,6 +1960,7 @@ function buyCosmetic(id) {
   addCoins(-c.cost);
   state.cosmetics.owned.push(id);
   state.cosmetics.equipped[c.slot] = id; // 구매 즉시 장착
+  checkAchievements();
   save();
   renderShop();
   renderHome();
@@ -2327,6 +2347,8 @@ function claimWalk() {
   state.happy = clamp(state.happy + opt.happy, 0, 100);
   state.walkStart = null;
   state.walkDur = 0;
+  state.lifetime.walks++;
+  checkAchievements();
   save();
   renderHome();
   msg(`${opt.label} 완료! +🪙${opt.coins} 🍖+${opt.food} 💛+${opt.happy}`, true);
@@ -2407,6 +2429,7 @@ function spinLucky() {
   const arrow = $("lucky-arrow");
   arrow.style.transform = `rotate(${_luckyRotation}deg)`;
   state.luckyRollDate = todayStr();
+  state.lifetime.luckySpins++;
   playFx("playSpin");
   setTimeout(() => {
     const r = LUCKY_REWARDS[idx];
@@ -2985,6 +3008,9 @@ async function attackBoss() {
     spawnBossHit(res.damage);
     // 낙관적 카운터 업데이트(서버 응답 그대로 반영)
     if (typeof res.totalDamage === "number") $("boss-my-dmg").textContent = res.totalDamage.toLocaleString();
+    state.lifetime.bossDamage = (state.lifetime.bossDamage || 0) + (res.damage || 0);
+    checkAchievements();
+    save();
   }
   bossBusy = false;
   await refreshBoss();
@@ -3096,7 +3122,12 @@ async function tryAddFriend() {
   }
   input.value = "";
   if (r.already) msg("이미 친구입니다", true);
-  else msg(`${r.friend ? r.friend.name : "친구"} 추가 완료!`, true);
+  else {
+    msg(`${r.friend ? r.friend.name : "친구"} 추가 완료!`, true);
+    state.lifetime.friendsAdded = (state.lifetime.friendsAdded || 0) + 1;
+    checkAchievements();
+    save();
+  }
   await refreshFriends();
 }
 async function removeFriendClick(friendId, name) {
@@ -3146,6 +3177,8 @@ async function patVisit() {
     return;
   }
   addCoins(r.coins || 5);
+  state.lifetime.pats = (state.lifetime.pats || 0) + 1;
+  checkAchievements();
   save();
   msg(`🤲 +🪙${r.coins || 5}`, true);
   haptic(15);
@@ -3166,6 +3199,9 @@ async function giftFriend(friendId, name) {
   }
   msg(`${name}에게 🎁 선물 보냄!`, true);
   haptic(10);
+  state.lifetime.gifts = (state.lifetime.gifts || 0) + 1;
+  checkAchievements();
+  save();
   await refreshFriends();
 }
 async function tauntFriend(friendId, name) {
