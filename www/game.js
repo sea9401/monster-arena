@@ -587,6 +587,7 @@ function migrateState() {
   if (state.luckyRollDate === undefined) state.luckyRollDate = null;
   if (state.walkStart === undefined) state.walkStart = null;
   if (state.walkDur === undefined) state.walkDur = 0;
+  if (state.welcomedV2 === undefined) state.welcomedV2 = false;
   // 다중 펫 로스터 마이그레이션 — 기존 단일 펫을 pets[0]으로 추출
   if (!Array.isArray(state.pets) || !state.pets.length) {
     state.pets = [{
@@ -2136,6 +2137,7 @@ function startWalk(min) {
   save();
   renderWalk();
   msg(`🥾 ${state.name}이(가) ${min}분 산책 출발`, true);
+  playFx("playWalk");
   haptic(10);
 }
 function claimWalk() {
@@ -2227,6 +2229,7 @@ function spinLucky() {
   const arrow = $("lucky-arrow");
   arrow.style.transform = `rotate(${_luckyRotation}deg)`;
   state.luckyRollDate = todayStr();
+  playFx("playSpin");
   setTimeout(() => {
     const r = LUCKY_REWARDS[idx];
     if (r.type === "coin") addCoins(r.amt);
@@ -2934,7 +2937,7 @@ async function patVisit() {
   save();
   msg(`🤲 +🪙${r.coins || 5}`, true);
   haptic(15);
-  playFx("playTick");
+  playFx("playPat");
   const btn = $("visit-pat");
   btn.disabled = true;
   btn.textContent = "오늘 이미 쓰다듬음";
@@ -3030,6 +3033,12 @@ async function enterGameFromState() {
       const more = gifts.length > 3 ? ` 외 ${gifts.length - 3}명` : "";
       setTimeout(() => msg(`🎁 ${names}${more}님이 보낸 선물 +🪙${total}`, true), 300);
     }
+  }
+  // 기존 유저 신규 피처 안내 (1회) — onboarded 됐는데 V2 안내 못 본 경우
+  if (state && state.onboarded && !state.welcomedV2) {
+    state.welcomedV2 = true;
+    save();
+    setTimeout(showWelcome, 600);
   }
   // 폐기 코스메틱(등/꼬리) 환불 알림 — 1회성
   if (state && state.cosmeticRefundPending) {

@@ -83,6 +83,20 @@ window.SoundFX = (() => {
     playWin: () => { tone(523, 0.10, "triangle", 0.045); tone(659, 0.10, "triangle", 0.045, 0.1); tone(784, 0.16, "triangle", 0.05, 0.2); },
     playLose: () => sweep(420, 120, 0.32, "sine", 0.045),
     playReward: () => { tone(880, 0.07, "triangle", 0.04); tone(1175, 0.09, "triangle", 0.04, 0.08); },
+    // 룰렛 돌리기 — 빠른 틱들이 점점 느려지는 느낌
+    playSpin: () => {
+      for (let i = 0; i < 10; i++) {
+        tone(440 + i * 30, 0.04, "square", 0.03, i * 0.18);
+      }
+    },
+    // 산책 출발 — 경쾌한 상승 아르페지오
+    playWalk: () => {
+      tone(523, 0.08, "triangle", 0.04);          // C5
+      tone(659, 0.08, "triangle", 0.04, 0.08);    // E5
+      tone(784, 0.12, "triangle", 0.04, 0.16);    // G5
+    },
+    // 쓰다듬기 — 부드러운 따뜻한 톤
+    playPat: () => { tone(660, 0.10, "sine", 0.04); tone(880, 0.14, "sine", 0.03, 0.05); },
   };
 
   ["pointerdown", "touchstart", "keydown"].forEach((ev) => {
