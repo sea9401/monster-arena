@@ -482,15 +482,28 @@ function migrateState() {
   if (!Array.isArray(state.titles)) state.titles = [];
   if (typeof state.title !== "string") state.title = "";
   if (state.title && !state.titles.includes(state.title)) state.title = ""; // 보유 안 한 칭호는 장착 해제
-  // 코스메틱 장비 — 외형 전용
-  if (!state.cosmetics || typeof state.cosmetics !== "object") state.cosmetics = { owned: [], equipped: { head: null, back: null, tail: null } };
+  // 코스메틱 장비 — 머리 슬롯만(외형 전용)
+  if (!state.cosmetics || typeof state.cosmetics !== "object") state.cosmetics = { owned: [], equipped: { head: null } };
   if (!Array.isArray(state.cosmetics.owned)) state.cosmetics.owned = [];
-  if (!state.cosmetics.equipped || typeof state.cosmetics.equipped !== "object") state.cosmetics.equipped = { head: null, back: null, tail: null };
-  for (const slot of ["head", "back", "tail"]) {
-    if (state.cosmetics.equipped[slot] === undefined) state.cosmetics.equipped[slot] = null;
-    const cur = state.cosmetics.equipped[slot];
-    if (cur && !state.cosmetics.owned.includes(cur)) state.cosmetics.equipped[slot] = null; // 미보유 장착 해제
+  if (!state.cosmetics.equipped || typeof state.cosmetics.equipped !== "object") state.cosmetics.equipped = { head: null };
+  // 폐기된 등/꼬리 슬롯 정리 + 코인 환불(1회성)
+  if (!state.cosmeticSlotCleanupV1) {
+    let refund = 0;
+    state.cosmetics.owned = state.cosmetics.owned.filter((id) => {
+      if (OBSOLETE_COSMETICS[id] !== undefined) { refund += OBSOLETE_COSMETICS[id]; return false; }
+      return true;
+    });
+    delete state.cosmetics.equipped.back;
+    delete state.cosmetics.equipped.tail;
+    if (refund > 0) {
+      state.coins = (state.coins || 0) + refund;
+      state.cosmeticRefundPending = refund; // 게임 진입 후 알림 표시용
+    }
+    state.cosmeticSlotCleanupV1 = true;
   }
+  if (state.cosmetics.equipped.head === undefined) state.cosmetics.equipped.head = null;
+  const curHead = state.cosmetics.equipped.head;
+  if (curHead && !state.cosmetics.owned.includes(curHead)) state.cosmetics.equipped.head = null;
   if (state.claimedChampionWeek === undefined) state.claimedChampionWeek = null;
   if (state.onboarded === undefined) state.onboarded = true; // 기존 유저는 이미 익숙 → 스킵
   if (state.claimedSeasonMonth === undefined) state.claimedSeasonMonth = null;
@@ -649,7 +662,7 @@ function hatch(speciesKey) {
     onboarded: carry ? carry.onboarded : false,                    // 첫 부화면 false → 환영 모달 노출
     staminaBuyDate: carry ? carry.staminaBuyDate : null,           // 마지막 스태미너 구매 날짜(KST yyyy-mm-dd)
     staminaBuyCount: carry ? carry.staminaBuyCount : 0,            // 해당 날짜 누적 구매 횟수
-    cosmetics: carry ? carry.cosmetics : { owned: [], equipped: { head: null, back: null, tail: null } }, // 외형 장식(계정성)
+    cosmetics: carry ? carry.cosmetics : { owned: [], equipped: { head: null } }, // 외형 장식(계정성)
   };
   pendingRebirth = false;
   checkAchievements(); // 도감 업적(N종 육성 등) 즉시 체크
@@ -1499,21 +1512,30 @@ const SHOP_TITLES = [
   { text: "🌟 전설의 조련사", cost: 800 },
 ];
 
-// 코스메틱 장비 — 순수 외형(스탯 영향 없음). 슬롯 3종: head/back/tail.
-const COSMETIC_SLOTS = ["head", "back", "tail"];
-const COSMETIC_SLOT_LABEL = { head: "머리", back: "등", tail: "꼬리" };
+// 코스메틱 장비 — 순수 외형(스탯 영향 없음). 머리 슬롯 하나(모자/장식).
+// 종/단계 이모지에 따라 머리 위치가 달라 다른 슬롯은 일관되게 표현이 어려워 제거.
+const COSMETIC_SLOTS = ["head"];
 const COSMETIC_ITEMS = [
-  { id: "head_crown",    slot: "head", icon: "👑", name: "왕관",     cost: 250 },
-  { id: "head_strawhat", slot: "head", icon: "👒", name: "밀짚모자", cost: 80  },
-  { id: "head_tophat",   slot: "head", icon: "🎩", name: "실크햇",   cost: 150 },
-  { id: "back_wings",    slot: "back", icon: "🦋", name: "나비날개", cost: 200 },
-  { id: "back_cape",     slot: "back", icon: "🧥", name: "망토",     cost: 120 },
-  { id: "back_star",     slot: "back", icon: "⭐", name: "별빛",     cost: 90  },
-  { id: "tail_ribbon",   slot: "tail", icon: "🎀", name: "리본",     cost: 60  },
-  { id: "tail_bell",     slot: "tail", icon: "🔔", name: "방울",     cost: 90  },
-  { id: "tail_flame",    slot: "tail", icon: "🔥", name: "꼬리불꽃", cost: 180 },
+  { id: "head_strawhat",  slot: "head", icon: "👒", name: "밀짚모자",   cost: 60  },
+  { id: "head_flower",    slot: "head", icon: "🌺", name: "꽃",         cost: 70  },
+  { id: "head_cap",       slot: "head", icon: "🧢", name: "야구모자",   cost: 80  },
+  { id: "head_glasses",   slot: "head", icon: "👓", name: "안경",       cost: 90  },
+  { id: "head_mushroom",  slot: "head", icon: "🍄", name: "버섯",       cost: 100 },
+  { id: "head_helmet",    slot: "head", icon: "⛑️", name: "안전모",     cost: 110 },
+  { id: "head_grad",      slot: "head", icon: "🎓", name: "학사모",     cost: 130 },
+  { id: "head_pumpkin",   slot: "head", icon: "🎃", name: "호박",       cost: 150 },
+  { id: "head_tophat",    slot: "head", icon: "🎩", name: "실크햇",     cost: 180 },
+  { id: "head_sunglass",  slot: "head", icon: "😎", name: "선글라스",   cost: 200 },
+  { id: "head_halo",      slot: "head", icon: "😇", name: "천사 후광",  cost: 240 },
+  { id: "head_military",  slot: "head", icon: "🪖", name: "군모",       cost: 260 },
+  { id: "head_crown",     slot: "head", icon: "👑", name: "왕관",       cost: 300 },
 ];
 function cosmeticById(id) { return COSMETIC_ITEMS.find((c) => c.id === id) || null; }
+// 폐기된 슬롯의 환불 단가 — migrateState에서 1회성 환불
+const OBSOLETE_COSMETICS = {
+  back_wings: 200, back_cape: 120, back_star: 90,
+  tail_ribbon: 60, tail_bell: 90, tail_flame: 180,
+};
 
 function openShop() {
   show("shop");
@@ -1536,7 +1558,7 @@ function renderShop() {
       <button class="shop-buy" data-buy="${it.id}" ${disabled ? "disabled" : ""}>${label}</button>
     </li>`;
   }).join("");
-  // 코스메틱 장비
+  // 코스메틱 장비(모자)
   $("shop-cosmetics").innerHTML = COSMETIC_ITEMS.map((c) => {
     const owned = state.cosmetics.owned.includes(c.id);
     const equipped = state.cosmetics.equipped[c.slot] === c.id;
@@ -1546,7 +1568,7 @@ function renderShop() {
     else btn = `<button class="shop-buy" data-cos-buy="${c.id}" ${state.coins < c.cost ? "disabled" : ""}>🪙${c.cost}</button>`;
     return `<li class="shop-row">
       <span class="shop-icon">${c.icon}</span>
-      <span class="shop-info"><b>${c.name}</b> <span class="shop-desc">(${COSMETIC_SLOT_LABEL[c.slot]})</span>${owned ? ' <span class="shop-desc">· 보유</span>' : ''}</span>
+      <span class="shop-info"><b>${c.name}</b>${owned ? ' <span class="shop-desc">· 보유</span>' : ''}</span>
       ${btn}
     </li>`;
   }).join("");
@@ -1606,9 +1628,7 @@ function equipTitle(text) {
 }
 
 // ---------- 코스메틱 장비 ----------
-// 얼굴만 그려지는 이모지(머리만 보이는 종/단계): 등·꼬리 장식 숨기고 머리만 표시.
-const FACE_ONLY_EMOJIS = new Set(["🦁", "🐰", "🦊", "🐺", "🐹", "🐨", "🐻", "🦄", "🐸", "🐲", "🐯", "🐱", "🐶", "🐭", "🐴"]);
-// 사이드 프로파일 이모지의 머리 방향(Apple 렌더링 기준). 머리/등/꼬리 위치를 정면 방향에 맞춰 조정.
+// 사이드 프로파일 이모지의 머리 방향(Apple 렌더링 기준). 머리 장식 X 위치 조정.
 //   "right" = 머리가 이미지 오른쪽(예: 🦖 T-rex)
 //   "left"  = 머리가 이미지 왼쪽(예: 🐊 악어, 🐉 용)
 const EMOJI_FACING = {
@@ -1617,48 +1637,31 @@ const EMOJI_FACING = {
   "🐊": "left",  "🐋": "left",  "🐉": "left",  "🐎": "left",  "🦌": "left",
   "🐀": "left",  "🐅": "left",  "🦎": "left",  "🐟": "left",
   "🦅": "left",  "🦐": "left",  "🐇": "left",  "🐛": "left",
-  "🦩": "left",  "🦢": "left",  "🐥": "left",  "🐤": "left",
-  "🦂": "left",  "🐢": "right",
+  "🦩": "left",  "🦢": "left",  "🐥": "left",  "🐤": "left", "🦂": "left",
 };
 
 function renderPetCosmetics() {
   if (!state || !state.cosmetics) return;
   const sp = SPECIES[state.species];
   const emoji = sp ? sp.stages[stageIndex(state.level)] : "";
-  const faceOnly = FACE_ONLY_EMOJIS.has(emoji);
   const facing = EMOJI_FACING[emoji] || "center";
+  const headEl = $("cos-head");
+  if (!headEl) return;
 
-  const headEl = $("cos-head"), backEl = $("cos-back"), tailEl = $("cos-tail");
+  // 매 렌더마다 inline 위치 리셋(이전 종/단계 override 청소)
+  headEl.style.left = ""; headEl.style.right = ""; headEl.style.marginLeft = "";
 
-  // 매 렌더마다 inline 위치 리셋(이전 종/단계의 override 청소)
-  for (const el of [headEl, backEl, tailEl]) {
-    if (!el) continue;
-    el.style.left = ""; el.style.right = ""; el.style.top = ""; el.style.marginLeft = "";
-  }
-
-  // 사이드 프로파일이면 머리·꼬리 위치 좌우 교체. 등은 머리 반대편 상단.
+  // 사이드 프로파일이면 머리 X 위치 보정
   if (facing === "right") {
     headEl.style.left = "72%"; headEl.style.marginLeft = "-13px";
-    backEl.style.left = "auto"; backEl.style.right = "28%"; // 머리 왼쪽 어깨
-    tailEl.style.right = "auto"; tailEl.style.left = "8%";   // 꼬리는 왼쪽
   } else if (facing === "left") {
     headEl.style.left = "28%"; headEl.style.marginLeft = "-13px";
-    backEl.style.left = "auto"; backEl.style.right = "14%"; // 머리 오른쪽 어깨
-    // tailEl는 기본 right:12% 그대로(꼬리가 오른쪽)
   }
-  // facing === "center" 또는 미정: 기본 CSS 위치 사용
+  // facing === "center" 또는 미정: 기본 CSS(top center) 사용
 
-  for (const slot of COSMETIC_SLOTS) {
-    const el = $("cos-" + slot);
-    if (!el) continue;
-    const id = state.cosmetics.equipped[slot];
-    const c = id ? cosmeticById(id) : null;
-    if (faceOnly && (slot === "back" || slot === "tail")) {
-      el.textContent = "";
-    } else {
-      el.textContent = c ? c.icon : "";
-    }
-  }
+  const id = state.cosmetics.equipped.head;
+  const c = id ? cosmeticById(id) : null;
+  headEl.textContent = c ? c.icon : "";
 }
 function buyCosmetic(id) {
   const c = cosmeticById(id);
@@ -2230,6 +2233,13 @@ function enterGameFromState() {
   }
   renderAccount();
   if (state) Online.uploadSnapshot(mySnapshot());
+  // 폐기 코스메틱(등/꼬리) 환불 알림 — 1회성
+  if (state && state.cosmeticRefundPending) {
+    const r = state.cosmeticRefundPending;
+    delete state.cosmeticRefundPending;
+    save();
+    setTimeout(() => alert(`등/꼬리 장식은 머리(모자) 슬롯으로 통합됐어요.\n기존에 구매하신 등/꼬리 아이템 가격은 모두 환불됐습니다: 🪙 +${r}`), 400);
+  }
 }
 
 // ---------- 시작 ----------

@@ -151,9 +151,7 @@ body {
 .cos { position: absolute; pointer-events: none; line-height: 1; font-size: 22px;
        filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); }
 .cos:empty { display: none; }
-.cos-head { top: -4px;  left: 50%;   margin-left: -14px; font-size: 26px; }
-.cos-back { top: 28%;   left: 14%; }
-.cos-tail { top: 54%;   right: 12%; }
+.cos-head { top: -4px; left: 50%; margin-left: -13px; font-size: 26px; }
 .sparkle-anim { animation: sparkle .55s steps(3, end) both; }
 @keyframes bob { 0%,100% { transform: translateY(0) scaleY(1);} 50% { transform: translateY(-6px) scaleY(1.06);} }
 @keyframes bounce { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-12px) scale(1.08);} }
