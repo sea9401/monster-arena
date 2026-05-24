@@ -1808,6 +1808,14 @@ $("train-grid").addEventListener("click", (e) => {
 });
 
 document.addEventListener("click", (e) => {
+  // 화면 상단 뒤로가기(← 버튼) — 하단 버튼과 동일한 핸들러 트리거(중복 핸들러 X)
+  const sb = e.target.closest(".screen-back");
+  if (sb && sb.dataset.backTarget) {
+    const target = $(sb.dataset.backTarget);
+    if (target) target.click();
+    return;
+  }
+
   const close = e.target.closest(".tip-close");
   if (close) {
     closeTooltip();

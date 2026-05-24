@@ -221,7 +221,7 @@
 
     <!-- 4. 리더보드 화면 -->
     <section id="leaderboard-screen" class="screen hidden">
-      <h2>🏆 글로벌 리더보드</h2>
+      <h2><button class="screen-back" data-back-target="lb-back" aria-label="뒤로가기">←</button>🏆 글로벌 리더보드</h2>
       <ol class="leaderboard" id="leaderboard-list"></ol>
       <div class="nav">
         <button id="lb-back" class="ghost">← 아레나로</button>
@@ -230,7 +230,7 @@
 
     <!-- 5. 주간 토너먼트 -->
     <section id="tournament-screen" class="screen hidden">
-      <h2>🏅 주간 토너먼트</h2>
+      <h2><button class="screen-back" data-back-target="tourney-back" aria-label="뒤로가기">←</button>🏅 주간 토너먼트</h2>
       <div class="tourney-head">
         <div id="tourney-countdown" class="tourney-countdown">남은 시간 --</div>
         <div id="tourney-me" class="tourney-me"></div>
@@ -245,7 +245,7 @@
 
     <!-- 6. 상점 -->
     <section id="shop-screen" class="screen hidden">
-      <h2>🛒 상점</h2>
+      <h2><button class="screen-back" data-back-target="shop-back" aria-label="뒤로가기">←</button>🛒 상점</h2>
       <div class="shop-coins-bar">보유 코인 🪙 <b id="shop-coins">0</b></div>
       <h3 class="quests-title">아이템</h3>
       <ul class="shop-list" id="shop-items"></ul>
@@ -268,7 +268,7 @@
 
     <!-- 9. 친구 -->
     <section id="friends-screen" class="screen hidden">
-      <h2>👥 친구</h2>
+      <h2><button class="screen-back" data-back-target="friends-back" aria-label="뒤로가기">←</button>👥 친구</h2>
       <div class="friend-code-box">
         <div class="friend-code-label">내 친구 코드</div>
         <div class="friend-code" id="my-friend-code">------</div>
@@ -288,7 +288,7 @@
 
     <!-- 8. 주간 보스 -->
     <section id="boss-screen" class="screen hidden">
-      <h2><span id="boss-icon">🐲</span> <span id="boss-name">주간 보스</span></h2>
+      <h2><button class="screen-back" data-back-target="boss-back" aria-label="뒤로가기">←</button><span id="boss-icon">🐲</span> <span id="boss-name">주간 보스</span></h2>
       <div class="tourney-head">
         <div id="boss-countdown" class="tourney-countdown">--</div>
         <div id="boss-me" class="tourney-me"></div>
@@ -317,7 +317,7 @@
 
     <!-- 7. 월간 시즌 -->
     <section id="season-screen" class="screen hidden">
-      <h2>🗓️ <span id="season-monthid">시즌</span></h2>
+      <h2><button class="screen-back" data-back-target="season-back" aria-label="뒤로가기">←</button>🗓️ <span id="season-monthid">시즌</span></h2>
       <div class="tourney-head">
         <div id="season-countdown" class="tourney-countdown">--</div>
         <div id="season-mytier" class="tourney-me"></div>
