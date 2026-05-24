@@ -57,22 +57,61 @@ const now = () => Date.now();
 // 클라이언트 SPECIES 키와 일치해야 함(스냅샷 검증용). 신규 종 추가 시 여기도 갱신.
 const VALID_SPECIES = ["ember", "aqua", "spark", "lion", "crab", "hare", "wolf", "bat", "armadillo", "bear", "unicorn", "swan", "toad", "viper"];
 
-// ---------- 매칭 풀 시드 (실제 플레이어가 적을 때 고스트 제공) ----------
-const SEED_SPECIES = ["ember", "aqua", "spark"];
+// ---------- 매칭 풀 시드 (실제 플레이어가 적을 때 NPC 상대 제공) ----------
+// 모든 14종 커버 + 브론즈~챔피언 레이팅 분포. 신규 풀 적용 시 SEED_VERSION을 올리면 재시드.
+const SEED_VERSION = 2;
+const SEED_POOL = [
+  // 브론즈 (~1100 미만)
+  { name: "도전자 한",     species: "ember",     rating: 920,  level: 3,  bias: "atk" },
+  { name: "신참 미아",     species: "aqua",      rating: 980,  level: 4,  bias: "def" },
+  { name: "야생의 루",     species: "spark",     rating: 1050, level: 5,  bias: "spd" },
+  // 실버 (1100~1300)
+  { name: "트레이너 보라", species: "lion",      rating: 1150, level: 7,  bias: "atk" },
+  { name: "추적자 진",     species: "wolf",      rating: 1210, level: 8,  bias: "atk" },
+  { name: "철벽의 갑돌",   species: "crab",      rating: 1270, level: 9,  bias: "def" },
+  // 골드 (1300~1550)
+  { name: "라이벌 카이",   species: "hare",      rating: 1350, level: 11, bias: "spd" },
+  { name: "그림자 노아",   species: "bat",       rating: 1430, level: 13, bias: "spd" },
+  { name: "암반 형제 결",  species: "armadillo", rating: 1510, level: 14, bias: "def" },
+  // 플래티넘 (1550~1800)
+  { name: "곰주먹 윤",     species: "bear",      rating: 1600, level: 16, bias: "atk" },
+  { name: "독무의 시아",   species: "toad",      rating: 1680, level: 18, bias: "def" },
+  { name: "독사의 후예",   species: "viper",     rating: 1760, level: 19, bias: "atk" },
+  // 챔피언 (1800+)
+  { name: "백조 기사",     species: "swan",      rating: 1860, level: 21, bias: "spd" },
+  { name: "성광 마법사",   species: "unicorn",   rating: 1960, level: 23, bias: "atk" },
+  { name: "챔프 모모",     species: "ember",     rating: 2060, level: 25, bias: "atk" },
+];
+// 레벨/편향에 따른 시드 스탯 계산 — 실제 플레이어 진행도와 비슷한 곡선.
+function seedStats(level, bias) {
+  const base = 12 + level * 4;
+  const hp = 70 + level * 12;
+  const s = { atk: base, def: base, spd: base, hp };
+  if (bias === "atk")      { s.atk = Math.round(base * 1.30); s.def = Math.round(base * 0.92); }
+  else if (bias === "def") { s.def = Math.round(base * 1.30); s.hp  = Math.round(hp   * 1.15); s.spd = Math.round(base * 0.92); }
+  else if (bias === "spd") { s.spd = Math.round(base * 1.30); s.atk = Math.round(base * 0.92); }
+  return s;
+}
 function seedGhosts() {
-  if (Object.values(db.players).some((p) => p.seeded)) return;
-  const names = ["라이벌 카이", "트레이너 보라", "고스트 진", "야생의 루", "챔프 모모", "도전자 한"];
-  names.forEach((name, i) => {
+  // 풀 버전이 바뀌었으면(또는 첫 실행이면) 기존 시드 캐릭터 제거 후 재시드.
+  // 진행 중 Elo 변동은 풀 버전 같은 사이에만 유지된다.
+  if (db.seedVersion === SEED_VERSION && Object.values(db.players).some((p) => p.seeded)) return;
+  for (const id of Object.keys(db.players)) {
+    if (db.players[id].seeded) delete db.players[id];
+  }
+  SEED_POOL.forEach((seed, i) => {
     const id = "ghost-" + i;
-    const rating = 950 + i * 90; // 950 ~ 1400 분포
-    const lvl = 4 + i;
-    const base = 40 + i * 18;
+    const st = seedStats(seed.level, seed.bias);
     db.players[id] = {
-      playerId: id, name, species: SEED_SPECIES[i % 3], seeded: true,
-      level: lvl, atk: base, def: Math.round(base * 0.9), spd: Math.round(base * 0.8),
-      hp: 90 + i * 20, rating, dayCount: lvl, wins: i, losses: 1, updatedAt: now(),
+      playerId: id, name: seed.name, species: seed.species, seeded: true,
+      level: seed.level, atk: st.atk, def: st.def, spd: st.spd, hp: st.hp,
+      rating: seed.rating, dayCount: seed.level,
+      wins: Math.max(1, Math.floor(seed.level * 0.6)),
+      losses: Math.max(1, Math.floor(seed.level * 0.3)),
+      updatedAt: now(),
     };
   });
+  db.seedVersion = SEED_VERSION;
   save();
 }
 
