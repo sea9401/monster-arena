@@ -1,8 +1,10 @@
 // 에셋 없는 합성 사운드/햅틱 레이어
 window.SoundFX = (() => {
-  const MUTE_KEY = "muted";
+  const MUTE_KEY = "muted";          // 사운드(이름 유지 — 기존 저장값 호환)
+  const HAPTIC_MUTE_KEY = "hapticMuted";
   let ctx = null;
   let muted = localStorage.getItem(MUTE_KEY) === "1";
+  let hapticMuted = localStorage.getItem(HAPTIC_MUTE_KEY) === "1";
 
   function audioCtx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -15,6 +17,7 @@ window.SoundFX = (() => {
   }
 
   function haptic(pattern) {
+    if (hapticMuted) return;
     if (navigator.vibrate) navigator.vibrate(pattern);
   }
 
@@ -57,12 +60,20 @@ window.SoundFX = (() => {
     if (!muted) resume();
     return muted;
   }
+  function toggleHapticMute() {
+    hapticMuted = !hapticMuted;
+    localStorage.setItem(HAPTIC_MUTE_KEY, hapticMuted ? "1" : "0");
+    if (!hapticMuted && navigator.vibrate) navigator.vibrate(15); // 켤 때 짧은 진동 피드백
+    return hapticMuted;
+  }
 
   const api = {
     resume,
     haptic,
     isMuted: () => muted,
     toggleMute,
+    isHapticMuted: () => hapticMuted,
+    toggleHapticMute,
     playTick: () => tone(620, 0.045, "triangle", 0.025),
     playLevelUp: () => { tone(520, 0.08, "sine", 0.045); tone(780, 0.10, "sine", 0.045, 0.08); tone(1040, 0.12, "sine", 0.04, 0.16); },
     playEvolve: () => { sweep(360, 1100, 0.28, "triangle", 0.055); tone(1320, 0.18, "sine", 0.04, 0.2); },

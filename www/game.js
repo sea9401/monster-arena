@@ -336,6 +336,35 @@ function show(name) {
   haptic(5); // 화면 전환 시 가벼운 진동
 }
 
+// 좌측 가장자리에서 우측으로 스와이프 시 현재 화면의 뒤로가기 트리거.
+// 전투 중(arena-screen + match-battle visible)에는 비활성.
+(() => {
+  let startX = 0, startY = 0, startT = 0, tracking = false;
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (t.clientX > window.innerWidth * 0.18) return; // 좌측 18% 가장자리에서만
+    startX = t.clientX; startY = t.clientY; startT = Date.now(); tracking = true;
+  }, { passive: true });
+  document.addEventListener("touchend", (e) => {
+    if (!tracking) return; tracking = false;
+    if (!e.changedTouches.length) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY, dt = Date.now() - startT;
+    if (dx < 80 || Math.abs(dy) > 70 || dt > 600) return;
+    // 전투 중이면 무시
+    const arenaShown = !screens.arena.classList.contains("hidden");
+    if (arenaShown && !$("match-battle").classList.contains("hidden")) return;
+    // 현재 화면의 screen-back 또는 fallback 핸들러
+    const visible = Object.values(screens).find((s) => !s.classList.contains("hidden"));
+    if (!visible) return;
+    const back = visible.querySelector(".screen-back");
+    if (back) { back.click(); return; }
+    // 아레나는 back-home 우선
+    if (visible === screens.arena) { $("back-home")?.click(); return; }
+  }, { passive: true });
+})();
+
 function tooltipTitle(el) {
   return el.dataset.tipTitle || el.textContent.trim().replace("ⓘ", "").slice(0, 24);
 }
@@ -370,10 +399,19 @@ function haptic(pattern) {
 
 function updateMuteButton() {
   const btn = $("mute-btn");
-  if (!btn || !SFX.isMuted) return;
-  const muted = SFX.isMuted();
-  btn.textContent = muted ? "🔇" : "🔊";
-  btn.setAttribute("aria-label", muted ? "사운드 켜기" : "음소거");
+  if (btn && SFX.isMuted) {
+    const muted = SFX.isMuted();
+    btn.textContent = muted ? "🔇" : "🔊";
+    btn.classList.toggle("off", muted);
+    btn.setAttribute("aria-label", muted ? "사운드 켜기" : "음소거");
+  }
+  const hBtn = $("haptic-btn");
+  if (hBtn && SFX.isHapticMuted) {
+    const off = SFX.isHapticMuted();
+    hBtn.textContent = off ? "🚫" : "📳";
+    hBtn.classList.toggle("off", off);
+    hBtn.setAttribute("aria-label", off ? "진동 켜기" : "진동 끄기");
+  }
 }
 
 function sparkle(el) {
@@ -418,7 +456,10 @@ function showHomeTab(tab) {
     btn.classList.toggle("active", btn.dataset.tab === tab);
   });
   closeTooltip();
-  if (tab === "arena") renderArenaLobby();
+  if (tab === "arena") {
+    renderArenaLobby();
+    setTimeout(peekInboxBadge, 1500); // refreshInbox가 ack한 후 배지 갱신
+  }
   if (prev && prev !== tab) haptic(5);
 }
 
@@ -1784,6 +1825,17 @@ async function sendTaunt(presetId) {
   }
 }
 
+// 도발 메시지 알림 배지 — 미열람 메시지가 있고 아레나 탭이 아니면 점 표시.
+// refreshInbox()와 별도 — 여기서는 ack 하지 않음(아레나 탭 진입 시 refreshInbox가 ack).
+async function peekInboxBadge() {
+  const btn = document.querySelector('.home-tab-btn[data-tab="arena"]');
+  if (!btn) return;
+  if (!Online.status.reachable || !Online.status.playerId) { btn.classList.remove("has-badge"); return; }
+  const msgs = await Online.getMessages();
+  const onArena = activeHomeTab === "arena" && !screens.home.classList.contains("hidden");
+  btn.classList.toggle("has-badge", msgs.length > 0 && !onArena);
+}
+
 async function refreshInbox() {
   const box = $("inbox");
   if (!box) return;
@@ -1843,7 +1895,7 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b || b.disabled) return;
-  if (b.matches("[data-train], .quest-claim, #att-claim, #mute-btn")) return;
+  if (b.matches("[data-train], .quest-claim, #att-claim, #mute-btn, #haptic-btn")) return;
   playFx("playTick");
   haptic(8);
 });
@@ -1999,6 +2051,10 @@ $("lb-back").addEventListener("click", () => {
   }
 });
 
+$("haptic-btn").addEventListener("click", () => {
+  if (SFX.toggleHapticMute) SFX.toggleHapticMute();
+  updateMuteButton();
+});
 $("mute-btn").addEventListener("click", () => {
   if (SFX.toggleMute) SFX.toggleMute();
   updateMuteButton();
@@ -2460,7 +2516,10 @@ setInterval(() => {
 
 // 일일 이벤트 stale 방지: 5분마다 + 탭 복귀 시 재확인(자정 KST 넘어가면 교체)
 setInterval(refreshEvent, 5 * 60 * 1000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { refreshEvent(); checkAppVersion(); } });
+// 도발 메시지 배지: 60초마다 폴 + 탭 복귀 시
+setInterval(peekInboxBadge, 60 * 1000);
+peekInboxBadge();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { refreshEvent(); checkAppVersion(); peekInboxBadge(); } });
 
 // ---------- 자동 업데이트 감지 (배포 후 강력 새로고침 없이 자동 반영) ----------
 // 서버 BUILD_ID가 바뀌면 배너 표시 + 안전한 시점에 자동 리로드.
