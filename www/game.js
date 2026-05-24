@@ -1071,6 +1071,43 @@ function renderQuests() {
   });
 }
 
+// ---------- 스탯 레이더 차트 (4축 SVG) ----------
+// 4축(상=ATK, 우=SPD, 하=HP, 좌=DEF)을 정규화해 다각형 그리기.
+// MAX 값은 게임 후반 평균 도달치 — 시각적 분산 좋게 잡음(체력은 상대적으로 크므로 큰 분모).
+function renderStatRadar() {
+  const el = $("stat-radar");
+  if (!el || !state) return;
+  const cx = 60, cy = 60, R = 46;
+  const MAX = { atk: 160, def: 140, spd: 140, hp: 380 };
+  const norm = (v, m) => Math.max(0.06, Math.min(1, (v || 0) / m)); // 최소 6%로 0 회피
+  const a = norm(state.atk, MAX.atk);
+  const sp = norm(state.spd, MAX.spd);
+  const hp = norm(state.hp, MAX.hp);
+  const df = norm(state.def, MAX.def);
+  const pt = (val, deg) => {
+    const r = val * R, rad = deg * Math.PI / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  };
+  const [pA, pS, pH, pD] = [pt(a, -90), pt(sp, 0), pt(hp, 90), pt(df, 180)];
+  const poly = `${pA[0]},${pA[1]} ${pS[0]},${pS[1]} ${pH[0]},${pH[1]} ${pD[0]},${pD[1]}`;
+  const ring = (f) => {
+    const r = f * R;
+    return `<polygon points="${cx},${cy-r} ${cx+r},${cy} ${cx},${cy+r} ${cx-r},${cy}" fill="none" stroke="#0f380f" stroke-width="1"/>`;
+  };
+  el.innerHTML = `
+    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      ${ring(0.33)}${ring(0.66)}${ring(1)}
+      <line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" stroke="#0f380f" stroke-width="1"/>
+      <line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" stroke="#0f380f" stroke-width="1"/>
+      <polygon points="${poly}" fill="rgba(155,188,15,.42)" stroke="#9bbc0f" stroke-width="2" stroke-linejoin="round"/>
+      <text x="${cx}" y="11" text-anchor="middle" font-size="9" fill="#9bbc0f" font-weight="900">ATK</text>
+      <text x="118" y="${cy+3}" text-anchor="end" font-size="9" fill="#9bbc0f" font-weight="900">SPD</text>
+      <text x="${cx}" y="118" text-anchor="middle" font-size="9" fill="#9bbc0f" font-weight="900">HP</text>
+      <text x="2" y="${cy+3}" text-anchor="start" font-size="9" fill="#9bbc0f" font-weight="900">DEF</text>
+    </svg>
+  `;
+}
+
 // ---------- 성장 그래프 (의존성 없는 인라인 SVG) ----------
 function renderStatChart() {
   const el = $("stat-chart");
@@ -1146,6 +1183,7 @@ function renderHome() {
   $("stat-def").textContent = state.def;
   $("stat-spd").textContent = state.spd;
   $("stat-hp").textContent = state.hp;
+  renderStatRadar();
 
   $("streak").textContent = state.streak;
   $("power").textContent = power(state);
