@@ -142,14 +142,17 @@ body {
 .card .stats { color: var(--accent); font-size: 13px; line-height: 1.6; }
 
 .pet-panel { padding: 20px; text-align: center; }
-.pet-sprite-wrap { position: relative; display: inline-block; line-height: 0; }
+.pet-sprite-wrap { position: relative; display: inline-block; }
 .pet-sprite { font-size: 84px; line-height: 1; animation: bob 1.4s steps(2, end) infinite; transform-origin: 50% 100%; }
 .pet-sprite.happy { animation: bounce .35s steps(2, end); }
-.cos { position: absolute; pointer-events: none; font-size: 28px; line-height: 1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.35)); }
+/* 코스메틱: 펫 몸에 작게 겹쳐서 액세서리 느낌. 펫 본체 bob 애니메이션과 동기 */
+.cos { position: absolute; pointer-events: none; line-height: 1; font-size: 24px;
+       filter: drop-shadow(0 1px 0 rgba(0,0,0,.45));
+       animation: bob 1.4s steps(2, end) infinite; }
 .cos:empty { display: none; }
-.cos-head { top: -6px; left: 50%; transform: translateX(-50%); font-size: 32px; }
-.cos-back { top: 50%; left: -4px; transform: translate(-60%, -55%) scaleX(-1); }
-.cos-tail { top: 60%; right: -4px; transform: translate(60%, -50%); }
+.cos-head { top: -4px;  left: 50%;   transform: translateX(-50%); font-size: 28px; }
+.cos-back { top: 28%;   left: 14%; }
+.cos-tail { top: 54%;   right: 12%; }
 .sparkle-anim { animation: sparkle .55s steps(3, end) both; }
 @keyframes bob { 0%,100% { transform: translateY(0) scaleY(1);} 50% { transform: translateY(-6px) scaleY(1.06);} }
 @keyframes bounce { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-12px) scale(1.08);} }
