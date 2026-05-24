@@ -1259,12 +1259,14 @@ function updateOnlineStatus() {
   }
 }
 
-// 서버 스냅샷 → 전투용 상대 객체
+// 서버 스냅샷 → 전투용 상대 객체.
+// ghost=true는 "서버에서 받은 상대"(시드 NPC 포함), seeded=true는 서버 시드 캐릭터(NPC).
 function opponentFromSnapshot(o) {
   const sp = SPECIES[o.species] || SPECIES.ember;
   return {
-    name: o.name, type: sp.type, emoji: sp.stages[stageIndex(o.level)],
+    playerId: o.playerId, name: o.name, type: sp.type, emoji: sp.stages[stageIndex(o.level)],
     atk: o.atk, def: o.def, spd: o.spd, hp: o.hp, ghost: true,
+    seeded: typeof o.playerId === "string" && o.playerId.startsWith("ghost-"),
   };
 }
 
@@ -1287,7 +1289,11 @@ async function findMatch() {
 
   const o = currentOpponent;
   const el = ELEMENTS[o.type];
-  const tag = o.ghost ? `<span class="ghost-tag">👤 실제 플레이어</span>` : `<span class="ghost-tag ai">🤖 AI</span>`;
+  const tag = o.seeded
+    ? `<span class="ghost-tag npc">🤖 NPC</span>`
+    : o.ghost
+      ? `<span class="ghost-tag">👤 실제 플레이어</span>`
+      : `<span class="ghost-tag ai">🤖 AI</span>`;
   $("opponent-card").innerHTML = `
     <div class="emoji">${o.emoji}</div>
     <h3>${o.name} <span class="elem-badge ${o.type}">${el.icon} ${el.label}</span></h3>
@@ -1940,10 +1946,12 @@ async function openLeaderboard() {
   list.innerHTML = rows.map((r) => {
     const sp = SPECIES[r.species] || SPECIES.ember;
     const me = r.playerId === myId ? " me" : "";
+    const npc = typeof r.playerId === "string" && r.playerId.startsWith("ghost-");
+    const nameHtml = npc ? `${r.name} <span class="npc-mini">🤖</span>` : r.name;
     return `<li class="lb-row${me}">
       <span class="lb-rank">${r.rank}</span>
       <span class="lb-emoji">${ELEMENTS[sp.type].icon}</span>
-      <span class="lb-name">${r.name}</span>
+      <span class="lb-name">${nameHtml}</span>
       <span class="lb-rating">${r.rating} · ${r.wins}승 ${r.losses}패</span>
     </li>`;
   }).join("");
