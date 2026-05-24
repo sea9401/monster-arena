@@ -78,6 +78,20 @@ body {
   to   { transform: translateX(0);  opacity: 1; }
 }
 
+/* 아레나 화면 상단 유틸리티 바 (홈/랭킹) */
+.arena-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin: 0 0 8px;
+}
+.arena-topbar .screen-back { position: static; transform: none; }
+.arena-topbar .screen-back:active { transform: translate(1px,1px); }
+.topbar-ghost {
+  background: var(--panel); color: var(--accent2);
+  border: 2px solid var(--bg); padding: 6px 12px; font-size: 12px;
+  box-shadow: 2px 2px 0 #0f380f; cursor: pointer; font-family: inherit; font-weight: 700;
+}
+.topbar-ghost:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #0f380f; }
+
 /* 아레나 상단 액션 탭 (3x2 그리드) */
 .arena-actions {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
@@ -296,7 +310,12 @@ body {
 .passive-line { font-size: 12px; color: var(--gold); margin-bottom: 6px; }
 
 .training { margin: 18px 0 8px; }
-.train-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 10px; }
+.train-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+@media (max-width: 540px) { .train-grid { grid-template-columns: repeat(3, 1fr); } }
+.train-grid button {
+  padding: 14px 4px;
+  font-size: 13px; line-height: 1.25;
+}
 button,
 .train-grid button,
 .att-claim,

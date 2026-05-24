@@ -183,6 +183,10 @@
 
     <!-- 3. PvP 아레나 화면 -->
     <section id="arena-screen" class="screen hidden">
+      <div class="arena-topbar">
+        <button id="back-home" class="screen-back" aria-label="홈으로">←</button>
+        <button id="leaderboard-btn" class="topbar-ghost">🏆 랭킹</button>
+      </div>
       <div class="rank-banner">
         <span id="rank-tier">🥉 브론즈</span>
         <span>레이팅 <b id="rating">1000</b></span>
@@ -196,10 +200,6 @@
         <div class="nav">
           <button id="fight-btn" class="primary">⚔️ 대전 시작</button>
           <button id="rematch-btn" class="ghost">🔄 다른 상대</button>
-        </div>
-        <div class="nav">
-          <button id="leaderboard-btn" class="ghost">🏆 리더보드</button>
-          <button id="back-home" class="ghost">🏠 돌아가기</button>
         </div>
       </div>
 
@@ -226,7 +226,6 @@
         <div id="result-social" class="social-bar hidden"></div>
         <div class="nav">
           <button id="again-btn" class="primary">다시 대전</button>
-          <button id="result-home" class="ghost">🏠 돌아가기</button>
         </div>
       </div>
     </section>

@@ -333,6 +333,7 @@ function show(name) {
   Object.values(screens).forEach((s) => s.classList.add("hidden"));
   screens[name].classList.remove("hidden");
   closeTooltip();
+  haptic(5); // 화면 전환 시 가벼운 진동
 }
 
 function tooltipTitle(el) {
@@ -407,6 +408,7 @@ function resultOverlay(won) {
 }
 
 function showHomeTab(tab) {
+  const prev = activeHomeTab;
   activeHomeTab = tab;
   document.querySelectorAll(".home-tab-content").forEach((el) => {
     el.classList.toggle("hidden", el.dataset.homeTab !== tab);
@@ -417,6 +419,7 @@ function showHomeTab(tab) {
   });
   closeTooltip();
   if (tab === "arena") renderArenaLobby();
+  if (prev && prev !== tab) haptic(5);
 }
 
 // "오늘" — KST 기준(서버 kstDateStr과 동기). + 테스트용 dayOffset.
@@ -1899,7 +1902,6 @@ $("logout-btn").addEventListener("click", doLogout);
 
 $("go-pvp").addEventListener("click", enterArena);
 $("back-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
-$("result-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
 $("fight-btn").addEventListener("click", startBattle);
 $("again-btn").addEventListener("click", freshMatch);   // 다시 대전 = 새 매칭 세션(리롤 리셋)
 $("rematch-btn").addEventListener("click", rerollMatch); // 다른 상대 = 리롤(최대 2회)
