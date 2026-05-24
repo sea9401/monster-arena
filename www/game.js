@@ -2219,10 +2219,10 @@ function closeDex() { $("dex-backdrop").classList.add("hidden"); }
 // 산책 시간이 길수록 시간당 효율 ↑ (긴 commit 보상).
 // EXP는 상점 EXP포션과 중복이라 제외, 대신 포만/행복 회복으로 상점 간식 대체 가치.
 const WALK_OPTIONS = [
-  { min: 15,  label: "🥾 산책",     coins: 10,  food: 10, happy: 15 },
-  { min: 30,  label: "🌳 소풍",     coins: 25,  food: 20, happy: 25 },
-  { min: 60,  label: "🗺️ 탐험",     coins: 60,  food: 30, happy: 40 },
-  { min: 120, label: "⛰️ 대원정",   coins: 150, food: 50, happy: 50 },
+  { min: 15,  label: "🥾 산책",     coins: 5,   food: 10, happy: 15 },
+  { min: 30,  label: "🌳 소풍",     coins: 12,  food: 20, happy: 25 },
+  { min: 60,  label: "🗺️ 탐험",     coins: 25,  food: 30, happy: 40 },
+  { min: 120, label: "⛰️ 대원정",   coins: 50,  food: 50, happy: 50 },
 ];
 function walkPhase() {
   if (!state || !state.walkStart) return "idle";
