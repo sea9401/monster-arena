@@ -205,6 +205,28 @@ body {
 .card h3 { margin: 8px 0 4px; color: var(--accent2); }
 .card .stats { color: var(--accent); font-size: 13px; line-height: 1.6; }
 
+/* 펫 로스터 — 다중 펫 전환 + 졸업 */
+.pet-roster { display: flex; gap: 6px; justify-content: center; margin: 8px 0 6px; flex-wrap: wrap; }
+.pet-slot {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  padding: 6px 8px; min-width: 56px;
+  background: var(--panel); border: 2px solid var(--bg); cursor: pointer;
+  box-shadow: 2px 2px 0 #0f380f; font-family: inherit;
+}
+.pet-slot.active { background: var(--gold); border-color: var(--gold); }
+.pet-slot.active .pet-slot-name { color: var(--bg); }
+.pet-slot .pet-slot-emoji { font-size: 28px; line-height: 1; }
+.pet-slot .pet-slot-name { font-size: 10px; color: var(--accent2); margin-top: 2px; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pet-slot .pet-slot-level { font-size: 9px; color: var(--accent); }
+.pet-slot.active .pet-slot-level { color: var(--bg); opacity: .7; }
+.pet-slot .pet-slot-graduate {
+  position: absolute; top: -6px; right: -6px;
+  width: 18px; height: 18px; border-radius: 50%; padding: 0;
+  background: var(--bad); color: white; border: 2px solid var(--bg);
+  font-size: 10px; line-height: 1; cursor: pointer; box-shadow: none;
+  display: none; align-items: center; justify-content: center;
+}
+.pet-slot:hover .pet-slot-graduate, .pet-slot.editing .pet-slot-graduate { display: flex; }
 .pet-panel { padding: 20px; text-align: center; }
 .pet-sprite-wrap { position: relative; display: inline-block; }
 .pet-sprite { font-size: 84px; line-height: 1; animation: bob 1.4s steps(2, end) infinite; transform-origin: 50% 100%; }

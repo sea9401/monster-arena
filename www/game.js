@@ -513,6 +513,7 @@ function upsertStatLog() {
 }
 
 function save() {
+  syncTopToActivePet(); // 상위 필드(활성 펫 거울) → pets 배열에 반영
   upsertStatLog();
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   // 로그인 상태면 클라우드에도 동기화(디바운스)
@@ -523,6 +524,48 @@ function save() {
 }
 function load() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
+}
+
+// 다중 펫 로스터 — 펫 고유 필드(state.species/level/atk/def/spd/hp/exp/food/happy/name)는
+// 활성 펫의 거울. state.pets는 진실의 소스이고, 전환 시 양방향 동기화.
+const MAX_PETS = 3;
+const PET_FIELDS = ["species", "name", "level", "exp", "atk", "def", "spd", "hp", "food", "happy"];
+function syncTopToActivePet() {
+  if (!state || !Array.isArray(state.pets)) return;
+  const p = state.pets[state.activePetIdx];
+  if (!p) return;
+  for (const k of PET_FIELDS) p[k] = state[k];
+}
+function syncActivePetToTop() {
+  if (!state || !Array.isArray(state.pets)) return;
+  const p = state.pets[state.activePetIdx];
+  if (!p) return;
+  for (const k of PET_FIELDS) state[k] = p[k];
+}
+function switchActivePet(newIdx) {
+  if (!state || newIdx === state.activePetIdx) return;
+  if (!state.pets[newIdx]) return;
+  syncTopToActivePet();
+  state.activePetIdx = newIdx;
+  syncActivePetToTop();
+  save();
+  renderHome();
+  msg(`${state.name}로 전환`, true);
+  haptic(10);
+}
+function graduatePet(idx) {
+  if (!state || !state.pets[idx]) return;
+  if (state.pets.length <= 1) { msg("마지막 펫은 졸업할 수 없어요", false); return; }
+  const p = state.pets[idx];
+  if (!confirm(`'${p.name}' (Lv.${p.level})를 졸업시킬까요? 다시 돌아오지 않습니다.`)) return;
+  state.pets.splice(idx, 1);
+  // 활성 인덱스 보정
+  if (state.activePetIdx >= state.pets.length) state.activePetIdx = state.pets.length - 1;
+  else if (idx < state.activePetIdx) state.activePetIdx -= 1;
+  syncActivePetToTop();
+  save();
+  renderHome();
+  msg(`${p.name} 졸업`, true);
 }
 
 function migrateState() {
@@ -540,6 +583,17 @@ function migrateState() {
   if (!Number.isFinite(state.coins)) state.coins = 0;
   if (state.staminaBuyDate === undefined) state.staminaBuyDate = null;
   if (!Number.isFinite(state.staminaBuyCount)) state.staminaBuyCount = 0;
+  // 다중 펫 로스터 마이그레이션 — 기존 단일 펫을 pets[0]으로 추출
+  if (!Array.isArray(state.pets) || !state.pets.length) {
+    state.pets = [{
+      species: state.species, name: state.name,
+      level: state.level || 1, exp: state.exp || 0,
+      atk: state.atk, def: state.def, spd: state.spd, hp: state.hp,
+      food: state.food, happy: state.happy,
+    }];
+    state.activePetIdx = 0;
+  }
+  if (!Number.isFinite(state.activePetIdx) || !state.pets[state.activePetIdx]) state.activePetIdx = 0;
   // 일회성 보정: 구매 카운트 중복 가산 버그로 한도 초과된 유저 복구
   if (!state.staminaBuyResetV1) {
     state.staminaBuyDate = null;
@@ -694,58 +748,62 @@ function renderEggs() {
 
 function hatch(speciesKey) {
   const sp = SPECIES[speciesKey];
-  const name = prompt(`${sp.name}이(가) 부화했어요!\n이름을 지어주세요:`, sp.name) || sp.name;
-  // 환생이면 계정성 진행도(레이팅·전적·업적·누적·출석)는 이어받고, 몬스터만 새로 시작.
-  const carry = pendingRebirth && state ? state : null;
-  const lifetime = carry ? carry.lifetime : { trains: 0, feeds: 0, plays: 0, pvp: 0, upsets: 0, speciesSeen: [] };
-  if (!Array.isArray(lifetime.speciesSeen)) lifetime.speciesSeen = [];
-  if (!lifetime.speciesSeen.includes(speciesKey)) lifetime.speciesSeen.push(speciesKey); // 도감 기록
-  state = {
-    species: speciesKey,
-    name: name.slice(0, 12),
+  const name = (prompt(`${sp.name}이(가) 부화했어요!\n이름을 지어주세요:`, sp.name) || sp.name).slice(0, 12);
+  // 활성 펫 데이터(현재 키우는 몬스터의 사진)
+  const newPet = {
+    species: speciesKey, name,
     level: 1, exp: 0,
     atk: sp.base.atk, def: sp.base.def, spd: sp.base.spd, hp: sp.base.hp,
     food: 70, happy: 70,
-    streak: carry ? carry.streak : 1,
-    dayCount: carry ? carry.dayCount : 1,
-    lastDate: carry ? carry.lastDate : todayStr(),
-    stamina: STAMINA_MAX,
-    staminaAt: Date.now(),
-    rating: carry ? carry.rating : 1000,
-    wins: carry ? carry.wins : 0,
-    losses: carry ? carry.losses : 0,
-    dayOffset: carry ? carry.dayOffset : 0,
-    timeOffset: carry ? carry.timeOffset : 0,
-    history: carry ? carry.history : [],
-    quests: generateQuests(),
-    attendanceClaimedDate: carry ? carry.attendanceClaimedDate : null, // 오늘 출석 보상 수령 여부
-    achievements: carry ? carry.achievements : {},  // { [업적id]: 해금 타임스탬프 }
-    lifetime,                                        // 누적 카운터(업적/도감용)
-    coins: carry ? carry.coins : 0,                  // 상점 화폐
-    titles: carry ? carry.titles : [],               // 보유 칭호 id 배열
-    title: carry ? carry.title : "",                 // 장착 칭호(표시용)
-    claimedChampionWeek: carry ? carry.claimedChampionWeek : null, // 챔피언 보상 받은 weekId
-    claimedSeasonMonth: carry ? carry.claimedSeasonMonth : null,   // 시즌 보상 받은 monthId
-    onboarded: carry ? carry.onboarded : false,                    // 첫 부화면 false → 환영 모달 노출
-    staminaBuyDate: carry ? carry.staminaBuyDate : null,           // 마지막 스태미너 구매 날짜(KST yyyy-mm-dd)
-    staminaBuyCount: carry ? carry.staminaBuyCount : 0,            // 해당 날짜 누적 구매 횟수
-    cosmetics: carry ? carry.cosmetics : { owned: [], equipped: { head: null } }, // 외형 장식(계정성)
   };
+  // 도감 기록(계정성)
+  const carry = pendingRebirth && state ? state : null;
+  const lifetime = carry ? carry.lifetime : { trains: 0, feeds: 0, plays: 0, pvp: 0, upsets: 0, speciesSeen: [] };
+  if (!Array.isArray(lifetime.speciesSeen)) lifetime.speciesSeen = [];
+  if (!lifetime.speciesSeen.includes(speciesKey)) lifetime.speciesSeen.push(speciesKey);
+
+  if (pendingRebirth && state && Array.isArray(state.pets)) {
+    // 이미 첫 펫 있음 → 로스터에 추가(이전 펫 보존)
+    syncTopToActivePet();
+    state.pets.push(newPet);
+    state.activePetIdx = state.pets.length - 1;
+    state.lifetime = lifetime; // speciesSeen 갱신 반영
+    syncActivePetToTop();
+  } else {
+    // 신규 게임 또는 카리 없는 경우
+    state = Object.assign({
+      streak: 1, dayCount: 1, lastDate: todayStr(),
+      stamina: STAMINA_MAX, staminaAt: Date.now(),
+      rating: 1000, wins: 0, losses: 0,
+      dayOffset: 0, timeOffset: 0,
+      history: [], quests: generateQuests(),
+      attendanceClaimedDate: null, achievements: {},
+      coins: 0, titles: [], title: "",
+      claimedChampionWeek: null, claimedSeasonMonth: null,
+      onboarded: false,
+      staminaBuyDate: null, staminaBuyCount: 0,
+      cosmetics: { owned: [], equipped: { head: null } },
+    }, carry || {}, newPet, {
+      pets: [newPet], activePetIdx: 0, lifetime,
+    });
+  }
   pendingRebirth = false;
-  checkAchievements(); // 도감 업적(N종 육성 등) 즉시 체크
+  checkAchievements();
   save();
   renderHome();
   showHomeTab("grow");
   show("home");
-  if (!state.onboarded) setTimeout(showWelcome, 250); // 첫 부화면 환영 모달
+  if (!state.onboarded) setTimeout(showWelcome, 250);
 }
 
-// 환생: 현재 몬스터를 졸업시키고 새 종으로 다시 시작(계정성 진행도는 유지).
+// 새 펫 부화: 로스터에 추가(슬롯 < MAX_PETS일 때만 활성화)
 function startRebirth() {
-  if (!state) return;
-  const ok = confirm(
-    `정말 환생할까요?\n\n지금 몬스터 "${state.name}"(Lv.${state.level})는 떠나고 새 종으로 다시 시작합니다.\n레이팅·전적·업적·도감은 그대로 유지돼요.`
-  );
+  if (!state || !Array.isArray(state.pets)) return;
+  if (state.pets.length >= MAX_PETS) {
+    msg(`로스터 가득(${MAX_PETS}/${MAX_PETS}). 먼저 졸업시켜 슬롯을 비우세요.`, false);
+    return;
+  }
+  const ok = confirm(`새 펫을 부화시킬까요? (${state.pets.length}/${MAX_PETS} → ${state.pets.length + 1}/${MAX_PETS})\n도감/레이팅은 유지되고 현재 펫은 보존돼요.`);
   if (!ok) return;
   pendingRebirth = true;
   renderEggs();
@@ -1164,6 +1222,7 @@ function renderHome() {
   $("pet-sprite").textContent = sp.stages[stage];
   $("pet-name").textContent = state.name;
   renderPetCosmetics();
+  renderPetRoster();
   const titleEl = $("pet-title");
   if (titleEl) { titleEl.textContent = state.title || ""; titleEl.classList.toggle("hidden", !state.title); }
   document.querySelectorAll(".coin-balance").forEach((el) => { el.textContent = state.coins || 0; });
@@ -1777,6 +1836,30 @@ const EMOJI_FACING = {
   "🦩": "left",  "🦢": "left",  "🐥": "left",  "🐤": "left", "🦂": "left",
 };
 
+// 펫 로스터 — 현재 보유 펫 썸네일 + 활성 표시 + 졸업 버튼
+function renderPetRoster() {
+  const el = $("pet-roster");
+  if (!el || !state || !Array.isArray(state.pets)) return;
+  const slots = state.pets.map((p, i) => {
+    const sp = SPECIES[p.species] || SPECIES.ember;
+    const emoji = sp.stages[Math.min(stageIndex(p.level), sp.stages.length - 1)];
+    const isActive = i === state.activePetIdx;
+    const cls = "pet-slot" + (isActive ? " active" : "");
+    return `<div class="${cls}" data-pet-idx="${i}">
+      <span class="pet-slot-emoji">${emoji}</span>
+      <span class="pet-slot-name">${p.name}</span>
+      <span class="pet-slot-level">Lv ${p.level}</span>
+      ${state.pets.length > 1 ? `<button class="pet-slot-graduate" data-graduate-idx="${i}" aria-label="졸업">✕</button>` : ""}
+    </div>`;
+  }).join("");
+  // 빈 슬롯
+  let empty = "";
+  for (let i = state.pets.length; i < MAX_PETS; i++) {
+    empty += `<div class="pet-slot" data-add-pet><span class="pet-slot-emoji">+</span><span class="pet-slot-name">새 펫</span></div>`;
+  }
+  el.innerHTML = slots + empty;
+}
+
 function renderPetCosmetics() {
   if (!state || !state.cosmetics) return;
   const sp = SPECIES[state.species];
@@ -2016,6 +2099,17 @@ $("quest-list").addEventListener("click", (e) => {
 
 $("att-claim").addEventListener("click", claimAttendance);
 $("rebirth-btn").addEventListener("click", startRebirth);
+$("pet-roster").addEventListener("click", (e) => {
+  // 졸업 버튼 우선
+  const grad = e.target.closest("[data-graduate-idx]");
+  if (grad) { e.stopPropagation(); graduatePet(Number(grad.dataset.graduateIdx)); return; }
+  // 빈 슬롯
+  const add = e.target.closest("[data-add-pet]");
+  if (add) { startRebirth(); return; }
+  // 슬롯 클릭 → 활성 전환
+  const slot = e.target.closest("[data-pet-idx]");
+  if (slot) switchActivePet(Number(slot.dataset.petIdx));
+});
 
 $("home-screen").addEventListener("click", (e) => {
   const btn = e.target.closest(".home-tab-btn");
