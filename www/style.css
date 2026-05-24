@@ -342,12 +342,15 @@ body {
 .stat-grid b { font-size: 20px; color: var(--accent2); }
 .bar-row[data-tip] > span:first-child::after { content: " [i]"; color: var(--accent2); font-size: 11px; font-weight: 900; }
 
-.streak-line { font-size: 13px; color: var(--accent); }
+/* 펫 카드 위계 — 메타 정보(streak/스킬)는 시각 무게 줄임 */
+.streak-line { font-size: 11px; color: var(--accent); opacity: .85; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--bg); }
 .streak-line b { color: var(--gold); }
-.skills-line { font-size: 12px; color: var(--accent); margin-top: 10px; }
+.skills-line { font-size: 11px; color: var(--accent); opacity: .8; margin-top: 8px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.skills-line::-webkit-scrollbar { height: 4px; }
+.skills-line::-webkit-scrollbar-thumb { background: var(--accent); }
 .skill-chip { margin: 2px; color: var(--accent2); }
 .skill-chip.sig { color: var(--gold); font-weight: 900; border-color: var(--gold); }
-.passive-line { font-size: 12px; color: var(--gold); margin-bottom: 6px; }
+.passive-line { font-size: 11px; color: var(--gold); margin-bottom: 4px; opacity: .9; }
 
 .training { margin: 18px 0 8px; }
 .train-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
@@ -652,7 +655,7 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .season-result-row { color: var(--accent2); font-size: 12px; margin: 3px 0; text-transform: none; letter-spacing: normal; }
 
 /* 칭호 */
-.pet-title { color: var(--gold); font-size: 12px; font-weight: 900; margin-bottom: 4px; }
+.pet-title { color: var(--gold); font-size: 11px; font-weight: 900; margin-bottom: 4px; opacity: .9; }
 
 /* 환영/도움말 모달 */
 .welcome-backdrop {
