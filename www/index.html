@@ -123,6 +123,9 @@
           <button id="help-btn" class="ghost">ℹ️ 도움말</button>
           <button id="shop-btn" class="primary">🛒 상점</button>
         </div>
+        <div class="lucky-bar">
+          <button id="lucky-open" class="lucky-btn">🎰 <span>행운의 룰렛</span><span id="lucky-status" class="lucky-status">오늘 1회</span></button>
+        </div>
         <div class="attendance">
           <div class="att-head">
             <h3 class="att-title">📅 출석 보상</h3>
@@ -360,6 +363,23 @@
         <li><b>🪙 코인</b> — 전투·퀘스트·출석으로 모아 상점에서 사용.</li>
       </ul>
       <button id="welcome-close" class="primary">시작하기</button>
+    </div>
+  </div>
+
+  <!-- 행운의 룰렛 모달 -->
+  <div id="lucky-backdrop" class="welcome-backdrop hidden">
+    <div class="welcome-sheet lucky-sheet">
+      <h2>🎰 행운의 룰렛</h2>
+      <p class="muted">하루 1회 · KST 자정 리셋</p>
+      <div class="lucky-wheel-wrap">
+        <div class="lucky-pointer">▼</div>
+        <div class="lucky-wheel" id="lucky-wheel"></div>
+      </div>
+      <div id="lucky-result" class="lucky-result"></div>
+      <div class="nav">
+        <button id="lucky-spin" class="primary">🎲 돌리기</button>
+        <button id="lucky-close" class="ghost">닫기</button>
+      </div>
     </div>
   </div>
 

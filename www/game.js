@@ -583,6 +583,7 @@ function migrateState() {
   if (!Number.isFinite(state.coins)) state.coins = 0;
   if (state.staminaBuyDate === undefined) state.staminaBuyDate = null;
   if (!Number.isFinite(state.staminaBuyCount)) state.staminaBuyCount = 0;
+  if (state.luckyRollDate === undefined) state.luckyRollDate = null;
   // 다중 펫 로스터 마이그레이션 — 기존 단일 펫을 pets[0]으로 추출
   if (!Array.isArray(state.pets) || !state.pets.length) {
     state.pets = [{
@@ -1243,6 +1244,7 @@ function renderHome() {
   $("stat-spd").textContent = state.spd;
   $("stat-hp").textContent = state.hp;
   renderStatRadar();
+  renderLuckyButton();
 
   $("streak").textContent = state.streak;
   $("power").textContent = power(state);
@@ -2011,6 +2013,73 @@ async function refreshInbox() {
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
 
+// ---------- 행운의 룰렛 (사이드 컨텐츠 — 스태미너 없이) ----------
+// 하루 1회 KST 자정 리셋. 8섹터 휠 + 보상 분포(저보상 다수, 고보상 희소).
+const LUCKY_REWARDS = [
+  { type: "coin", amt: 10,  label: "🪙10" },
+  { type: "coin", amt: 30,  label: "🪙30" },
+  { type: "coin", amt: 10,  label: "🪙10" },
+  { type: "exp",  amt: 30,  label: "EXP+30" },
+  { type: "coin", amt: 50,  label: "🪙50" },
+  { type: "coin", amt: 10,  label: "🪙10" },
+  { type: "coin", amt: 30,  label: "🪙30" },
+  { type: "coin", amt: 100, label: "🪙100" },
+];
+let _luckyRotation = 0;
+let _luckySpinning = false;
+
+function luckyAvailable() {
+  return !state || state.luckyRollDate !== todayStr();
+}
+function renderLuckyButton() {
+  const btn = $("lucky-open");
+  if (!btn) return;
+  const avail = luckyAvailable();
+  btn.classList.toggle("done", !avail);
+  $("lucky-status").textContent = avail ? "오늘 1회" : "내일 다시";
+}
+function openLucky() {
+  const wheel = $("lucky-wheel");
+  if (!wheel) return;
+  // 섹터 렌더 (1회만 — 회전이 누적되므로 매번 그릴 필요 X. 비어있을 때만)
+  if (!wheel.children.length) {
+    wheel.innerHTML = LUCKY_REWARDS.map((r, i) => {
+      // 각 섹터: 중심(50%,50%)에서 angle 방향으로 반지름 78만큼 떨어진 곳에 라벨
+      const a = i * 45;
+      return `<div class="lucky-sector" style="transform: rotate(${a}deg) translate(-50%, -88px) rotate(${-a}deg);">${r.label}</div>`;
+    }).join("");
+  }
+  $("lucky-result").textContent = "";
+  $("lucky-spin").disabled = !luckyAvailable() || _luckySpinning;
+  $("lucky-spin").textContent = luckyAvailable() ? "🎲 돌리기" : "오늘 완료";
+  $("lucky-backdrop").classList.remove("hidden");
+}
+function closeLucky() { $("lucky-backdrop").classList.add("hidden"); }
+function spinLucky() {
+  if (!state || !luckyAvailable() || _luckySpinning) return;
+  _luckySpinning = true;
+  $("lucky-spin").disabled = true;
+  const idx = Math.floor(Math.random() * LUCKY_REWARDS.length);
+  // 휠을 5바퀴 돌고 idx 섹터가 상단(포인터 위치)으로 오게 회전 (CCW)
+  _luckyRotation -= 360 * 5 + idx * 45;
+  const wheel = $("lucky-wheel");
+  wheel.style.transform = `rotate(${_luckyRotation}deg)`;
+  state.luckyRollDate = todayStr();
+  setTimeout(() => {
+    const r = LUCKY_REWARDS[idx];
+    if (r.type === "coin") addCoins(r.amt);
+    else if (r.type === "exp") gainExp(r.amt);
+    save();
+    renderLuckyButton();
+    $("lucky-result").textContent = `🎉 ${r.label} 획득!`;
+    $("lucky-spin").textContent = "오늘 완료";
+    playFx("playReward");
+    haptic(20);
+    _luckySpinning = false;
+    renderHome();
+  }, 3100);
+}
+
 // ---------- 전투 리플레이 ----------
 let _replayTimer = null;
 function playReplay() {
@@ -2163,6 +2232,10 @@ $("replay-btn").addEventListener("click", playReplay);
 $("replay-close").addEventListener("click", closeReplay);
 $("replay-restart").addEventListener("click", playReplay);
 $("replay-backdrop").addEventListener("click", (e) => { if (e.target.id === "replay-backdrop") closeReplay(); });
+$("lucky-open").addEventListener("click", openLucky);
+$("lucky-close").addEventListener("click", closeLucky);
+$("lucky-spin").addEventListener("click", spinLucky);
+$("lucky-backdrop").addEventListener("click", (e) => { if (e.target.id === "lucky-backdrop") closeLucky(); });
 $("rematch-btn").addEventListener("click", rerollMatch); // 다른 상대 = 리롤(최대 2회)
 $("leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "arena"; openLeaderboard(); });
 $("home-leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "home-arena"; openLeaderboard(); });

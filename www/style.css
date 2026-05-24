@@ -668,6 +668,43 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 행운의 룰렛 */
+.lucky-bar { margin: 12px 0; }
+.lucky-btn {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, var(--gold), #d4a32f);
+  color: var(--bg); border: 2px solid var(--bg);
+  font-weight: 900; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 3px 3px 0 #0f380f;
+}
+.lucky-btn:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 #0f380f; }
+.lucky-btn.done { background: var(--panel); color: var(--accent); }
+.lucky-status { font-size: 11px; opacity: .85; }
+.lucky-sheet { max-width: 320px; }
+.lucky-wheel-wrap { position: relative; width: 220px; height: 220px; margin: 16px auto; }
+.lucky-pointer {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  font-size: 22px; color: var(--bad); z-index: 3; text-shadow: 1px 1px 0 #000;
+}
+.lucky-wheel {
+  position: absolute; inset: 0;
+  border: 4px solid var(--gold); border-radius: 50%;
+  background: radial-gradient(circle, var(--panel) 50%, var(--panel2) 100%);
+  box-shadow: 0 0 0 4px var(--bg), inset 0 0 0 2px var(--accent);
+  transition: transform 3s cubic-bezier(.18,.7,.2,1);
+}
+.lucky-sector {
+  position: absolute; top: 50%; left: 50%;
+  transform-origin: 0 0;
+  font-size: 13px; font-weight: 900; color: var(--gold);
+  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  white-space: nowrap;
+}
+.lucky-result { text-align: center; min-height: 24px; color: var(--accent2); font-weight: 700; }
+.lucky-sheet .nav { display: flex; gap: 6px; }
+.lucky-sheet .nav button { flex: 1; }
+
 .replay-sheet { max-width: 360px; }
 .replay-sheet .log { max-height: 50vh; overflow-y: auto; background: var(--bg); padding: 8px; border: 2px solid var(--accent); margin: 8px 0; }
 .replay-sheet .nav { display: flex; gap: 6px; }
