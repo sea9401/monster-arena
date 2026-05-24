@@ -92,6 +92,37 @@ function seedStats(level, bias) {
   else if (bias === "spd") { s.spd = Math.round(base * 1.30); s.atk = Math.round(base * 0.92); }
   return s;
 }
+// 주간 레이팅 감쇠 + 시드 NPC 셔플(주말 자정 KST에 자동 트리거).
+// - 비활동 플레이어(14일+ PvP 없음): rating -25, 1000 미만 방지
+// - 시드 NPC: 풀 기본 레이팅 ±50 무작위 변동 + 전적 재설정 → 매주 매칭 분포 새로움
+const INACTIVITY_MS = 14 * 86400000;
+const INACTIVITY_DECAY = 25;
+function weeklyDecayAndShuffle() {
+  const { weekId } = weekInfo();
+  if (db.lastDecayWeek === weekId) return;
+  const cutoff = now() - INACTIVITY_MS;
+  for (const p of Object.values(db.players)) {
+    if (p.seeded) continue;
+    // 신규 도입 — lastPvpAt 없는 기존 유저는 updatedAt을 첫 기준으로 인정(즉시 감쇠 방지)
+    if (!p.lastPvpAt) p.lastPvpAt = p.updatedAt || now();
+    if (p.lastPvpAt < cutoff && (p.rating || 1000) > 1000) {
+      p.rating = Math.max(1000, (p.rating || 1000) - INACTIVITY_DECAY);
+    }
+  }
+  // 시드 NPC: 풀 기본값 ±50 jitter로 매주 새 분포
+  SEED_POOL.forEach((seed, i) => {
+    const id = "ghost-" + i;
+    const p = db.players[id];
+    if (!p) return;
+    const jitter = Math.floor(Math.random() * 101) - 50; // -50..+50
+    p.rating = Math.max(800, seed.rating + jitter);
+    p.wins = Math.max(1, Math.floor(seed.level * 0.6));
+    p.losses = Math.max(1, Math.floor(seed.level * 0.3));
+    p.updatedAt = now();
+  });
+  db.lastDecayWeek = weekId;
+  save();
+}
 function seedGhosts() {
   // 풀 버전이 바뀌었으면(또는 첫 실행이면) 기존 시드 캐릭터 제거 후 재시드.
   // 진행 중 Elo 변동은 풀 버전 같은 사이에만 유지된다.
@@ -414,6 +445,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url === "/matches/find" && method === "POST") {
+    weeklyDecayAndShuffle();
     const b = await readBody(req);
     const me = db.players[b.playerId];
     const myRating = me ? me.rating : Number(b.rating) || 1000;
@@ -447,10 +479,12 @@ const server = http.createServer(async (req, res) => {
     me.rating = elo(oldRating, oldOpp, won);
     if (won) me.wins++; else me.losses++;
     me.updatedAt = now();
+    me.lastPvpAt = now(); // 비활동 감쇠 기준
     // 고스트(상대)도 Elo 대칭 갱신 — 비동기 PvP에서 내 몬스터가 남의 고스트로 방어
     opp.rating = elo(oldOpp, oldRating, !won);
     if (won) opp.losses++; else opp.wins++;
     opp.updatedAt = now();
+    if (!opp.seeded) opp.lastPvpAt = now(); // NPC는 자체 셔플로 관리
     match.done = true;
     // 주간 토너먼트 승점(제출자 본인만): 승 +10, 패 +3(참가 보상)
     rolloverTournament();
@@ -464,6 +498,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url === "/leaderboard" && method === "GET") {
+    weeklyDecayAndShuffle();
     const limit = Math.min(Number(query.limit) || 50, 100);
     const rows = Object.values(db.players)
       .sort((a, b) => b.rating - a.rating)
@@ -484,6 +519,7 @@ const server = http.createServer(async (req, res) => {
   // --- 주간 토너먼트 ---
   if (url === "/tournament" && method === "GET") {
     rolloverTournament();
+    weeklyDecayAndShuffle();
     const { weekId, endsAt } = weekInfo();
     const all = Object.values(db.tournament.scores).sort((a, b) => b.points - a.points);
     const rows = all.slice(0, 20).map((s, i) => ({ rank: i + 1, playerId: s.playerId, name: s.name, species: s.species, points: s.points, wins: s.wins || 0, title: s.title || "" }));
