@@ -66,7 +66,37 @@ body {
 
 .muted { color: var(--accent); }
 .hidden { display: none !important; }
-.screen { animation: fade 0ms linear; }
+.screen { animation: screen-slide-in .22s cubic-bezier(.2,.7,.2,1); }
+@keyframes screen-slide-in {
+  from { transform: translateX(8%); opacity: 0; }
+  to   { transform: translateX(0);  opacity: 1; }
+}
+/* 홈 내부 탭 전환에도 미세 슬라이드 */
+.home-tab-content { animation: tab-slide-in .18s ease-out; }
+@keyframes tab-slide-in {
+  from { transform: translateX(4%); opacity: 0; }
+  to   { transform: translateX(0);  opacity: 1; }
+}
+
+/* 아레나 상단 액션 탭 (3x2 그리드) */
+.arena-actions {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  margin: 0 0 12px;
+}
+.action-tab {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 4px;
+  background: var(--panel); border: 2px solid var(--bg);
+  color: var(--accent2); cursor: pointer; font-family: inherit;
+  box-shadow: 2px 2px 0 #0f380f;
+  transition: filter .1s;
+}
+.action-tab.primary { background: var(--gold); color: var(--bg); }
+.action-tab.primary .action-label { color: var(--bg); }
+.action-tab:hover { filter: brightness(1.08); }
+.action-tab:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #0f380f; }
+.action-icon { font-size: 26px; line-height: 1; }
+.action-label { font-size: 11px; font-weight: 700; color: var(--accent2); }
 .screen > h2 { position: relative; padding-left: 44px; }
 .screen-back {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
