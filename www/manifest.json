@@ -1,0 +1,18 @@
+{
+  "name": "몬스터 아레나",
+  "short_name": "아레나",
+  "description": "몬스터를 키우고 싸우는 비동기 PvP 게임",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#306230",
+  "background_color": "#0f380f",
+  "lang": "ko",
+  "icons": [
+    { "src": "/assets/icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/assets/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/assets/icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ],
+  "categories": ["games"]
+}

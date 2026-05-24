@@ -3372,3 +3372,10 @@ function showUpdateBanner() {
 }
 setInterval(checkAppVersion, 30 * 1000);
 checkAppVersion(); // 부팅 시 1회 — 현재 빌드 기록
+
+// 서비스워커 등록 (PWA 설치 가능) — 정적 자산 캐시 + 오프라인 fallback
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
