@@ -555,9 +555,9 @@ function switchActivePet(newIdx) {
 }
 function graduatePet(idx) {
   if (!state || !state.pets[idx]) return;
-  if (state.pets.length <= 1) { msg("마지막 펫은 졸업할 수 없어요", false); return; }
+  if (state.pets.length <= 1) { msg("마지막 펫과는 작별할 수 없어요", false); return; }
   const p = state.pets[idx];
-  if (!confirm(`'${p.name}' (Lv.${p.level})를 졸업시킬까요? 다시 돌아오지 않습니다.`)) return;
+  if (!confirm(`'${p.name}' (Lv.${p.level})와 작별할까요?\n\n다시 돌아오지 않습니다 (도감 기록은 유지).`)) return;
   state.pets.splice(idx, 1);
   // 활성 인덱스 보정
   if (state.activePetIdx >= state.pets.length) state.activePetIdx = state.pets.length - 1;
@@ -565,7 +565,7 @@ function graduatePet(idx) {
   syncActivePetToTop();
   save();
   renderHome();
-  msg(`${p.name} 졸업`, true);
+  msg(`${p.name}와 작별`, true);
 }
 
 function migrateState() {
@@ -800,7 +800,7 @@ function hatch(speciesKey) {
 function startRebirth() {
   if (!state || !Array.isArray(state.pets)) return;
   if (state.pets.length >= MAX_PETS) {
-    msg(`로스터 가득(${MAX_PETS}/${MAX_PETS}). 먼저 졸업시켜 슬롯을 비우세요.`, false);
+    msg(`로스터 가득(${MAX_PETS}/${MAX_PETS}). 다른 펫과 작별해 슬롯을 비우세요.`, false);
     return;
   }
   const ok = confirm(`새 펫을 부화시킬까요? (${state.pets.length}/${MAX_PETS} → ${state.pets.length + 1}/${MAX_PETS})\n도감/레이팅은 유지되고 현재 펫은 보존돼요.`);
@@ -1849,7 +1849,7 @@ function renderPetRoster() {
       <span class="pet-slot-emoji">${emoji}</span>
       <span class="pet-slot-name">${p.name}</span>
       <span class="pet-slot-level">Lv ${p.level}</span>
-      ${state.pets.length > 1 ? `<button class="pet-slot-graduate" data-graduate-idx="${i}" aria-label="졸업">✕</button>` : ""}
+      ${state.pets.length > 1 && !isActive ? `<button class="pet-slot-graduate" data-graduate-idx="${i}" aria-label="작별">✕</button>` : ""}
     </div>`;
   }).join("");
   // 빈 슬롯

@@ -220,13 +220,12 @@ body {
 .pet-slot .pet-slot-level { font-size: 9px; color: var(--accent); }
 .pet-slot.active .pet-slot-level { color: var(--bg); opacity: .7; }
 .pet-slot .pet-slot-graduate {
-  position: absolute; top: -6px; right: -6px;
-  width: 18px; height: 18px; border-radius: 50%; padding: 0;
+  position: absolute; top: -7px; right: -7px;
+  width: 20px; height: 20px; border-radius: 50%; padding: 0;
   background: var(--bad); color: white; border: 2px solid var(--bg);
-  font-size: 10px; line-height: 1; cursor: pointer; box-shadow: none;
-  display: none; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 900; line-height: 1; cursor: pointer; box-shadow: none;
+  display: flex; align-items: center; justify-content: center;
 }
-.pet-slot:hover .pet-slot-graduate, .pet-slot.editing .pet-slot-graduate { display: flex; }
 .pet-panel { padding: 20px; text-align: center; }
 .pet-sprite-wrap { position: relative; display: inline-block; }
 .pet-sprite { font-size: 84px; line-height: 1; animation: bob 1.4s steps(2, end) infinite; transform-origin: 50% 100%; }
