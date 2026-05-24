@@ -668,6 +668,13 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 펫 자랑 카드 */
+.share-sheet { max-width: 360px; }
+.share-preview { text-align: center; margin: 10px 0; }
+.share-preview canvas { max-width: 100%; height: auto; border: 2px solid var(--gold); image-rendering: pixelated; }
+.share-sheet .nav { display: flex; gap: 6px; }
+.share-sheet .nav button { flex: 1; }
+
 /* 친구 펫 방문 */
 .visit-sheet { max-width: 320px; }
 .visit-pet { text-align: center; padding: 14px; background: var(--bg); border: 2px solid var(--accent); margin: 10px 0; }

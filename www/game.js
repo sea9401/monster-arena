@@ -2019,6 +2019,104 @@ async function refreshInbox() {
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
 
+// ---------- 펫 자랑 카드 (Canvas → 이미지 다운로드) ----------
+function generateShareCard() {
+  const canvas = document.createElement("canvas");
+  const W = 480, H = 720;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  const sp = SPECIES[state.species] || SPECIES.ember;
+  const emoji = sp.stages[stageIndex(state.level)];
+  const el = ELEMENTS[sp.type];
+  const sig = SPECIES_SKILLS[state.species];
+  const hat = state.cosmetics.equipped.head ? cosmeticById(state.cosmetics.equipped.head) : null;
+
+  // 배경 그라데이션 (테마)
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, "#306230"); bg.addColorStop(1, "#0f380f");
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // 황금 테두리
+  ctx.strokeStyle = "#f0c040"; ctx.lineWidth = 6;
+  ctx.strokeRect(8, 8, W - 16, H - 16);
+  ctx.lineWidth = 2; ctx.strokeStyle = "#9bbc0f";
+  ctx.strokeRect(18, 18, W - 36, H - 36);
+
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+  // 상단 타이틀
+  ctx.fillStyle = "#9bbc0f";
+  ctx.font = "bold 22px sans-serif";
+  ctx.fillText("🐲 몬스터 아레나", W / 2, 56);
+
+  // 펫 (큰 이모지)
+  ctx.font = "180px sans-serif";
+  ctx.fillText(emoji, W / 2, 260);
+  // 모자
+  if (hat) { ctx.font = "60px sans-serif"; ctx.fillText(hat.icon, W / 2, 145); }
+
+  // 이름
+  ctx.fillStyle = "#f0c040";
+  ctx.font = "bold 30px sans-serif";
+  ctx.fillText(state.name, W / 2, 390);
+
+  // 메타 (레벨/속성/레이팅)
+  ctx.fillStyle = "#9bbc0f";
+  ctx.font = "18px sans-serif";
+  ctx.fillText(`Lv ${state.level} · ${el.icon} ${el.label} · 레이팅 ${state.rating}`, W / 2, 425);
+
+  // 칭호
+  if (state.title) {
+    ctx.fillStyle = "#f0c040";
+    ctx.font = "16px sans-serif";
+    ctx.fillText(state.title, W / 2, 455);
+  }
+
+  // 스탯 박스
+  ctx.strokeStyle = "#9bbc0f"; ctx.lineWidth = 2;
+  ctx.strokeRect(60, 485, W - 120, 60);
+  ctx.fillStyle = "#9bbc0f"; ctx.font = "bold 18px sans-serif";
+  ctx.fillText(`🗡️ ${state.atk}    🛡️ ${state.def}    💨 ${state.spd}    ❤️ ${state.hp}`, W / 2, 515);
+
+  // 시그니처 스킬
+  if (sig) {
+    ctx.fillStyle = "#f0c040"; ctx.font = "16px sans-serif";
+    ctx.fillText(`⭐ 시그니처: ${sig.name}`, W / 2, 575);
+  }
+
+  // 전적
+  ctx.fillStyle = "#9bbc0f"; ctx.font = "16px sans-serif";
+  ctx.fillText(`${state.wins}승 ${state.losses}패`, W / 2, 615);
+
+  // 푸터
+  ctx.fillStyle = "#8bac0f"; ctx.font = "12px sans-serif";
+  ctx.fillText("arena.msmsge.com", W / 2, 685);
+
+  return canvas;
+}
+function openShareCard() {
+  if (!state) return;
+  const canvas = generateShareCard();
+  const preview = $("share-preview");
+  preview.innerHTML = "";
+  preview.appendChild(canvas);
+  $("share-backdrop").classList.remove("hidden");
+}
+function closeShareCard() { $("share-backdrop").classList.add("hidden"); }
+function downloadShareCard() {
+  const canvas = generateShareCard();
+  canvas.toBlob((blob) => {
+    if (!blob) { msg("이미지 생성 실패", false); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `monster-arena-${state.name}.png`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    msg("이미지 저장됨", true);
+    playFx("playReward");
+  }, "image/png");
+}
+
 // ---------- 내 프로필 (계정 진행도 한눈에) ----------
 async function openProfile() {
   show("profile");
@@ -2039,6 +2137,9 @@ async function renderProfile() {
   const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
   const pct = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
   body.innerHTML = `
+    <div class="nav" style="margin: 0 0 8px;">
+      <button id="profile-share" class="primary">📤 펫 자랑 카드</button>
+    </div>
     <div class="profile-section">
       <h3>🐲 펫 컬렉션 <b>${seenN}/${totalSpecies}</b></h3>
       <div class="profile-bar"><div style="width:${pct(seenN, totalSpecies)}%"></div></div>
@@ -2410,6 +2511,12 @@ $("walk-body").addEventListener("click", (e) => {
 $("dex-open").addEventListener("click", openDex);
 $("profile-open").addEventListener("click", openProfile);
 $("profile-back").addEventListener("click", () => { renderHome(); showHomeTab("daily"); show("home"); });
+$("profile-body").addEventListener("click", (e) => {
+  if (e.target.closest("#profile-share")) openShareCard();
+});
+$("share-close").addEventListener("click", closeShareCard);
+$("share-download").addEventListener("click", downloadShareCard);
+$("share-backdrop").addEventListener("click", (e) => { if (e.target.id === "share-backdrop") closeShareCard(); });
 $("dex-close").addEventListener("click", closeDex);
 $("dex-backdrop").addEventListener("click", (e) => { if (e.target.id === "dex-backdrop") closeDex(); });
 $("visit-close").addEventListener("click", closeVisit);
