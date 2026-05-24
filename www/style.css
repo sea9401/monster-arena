@@ -668,6 +668,36 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 도감 */
+.dex-bar { margin: 12px 0; }
+.dex-btn {
+  width: 100%; padding: 10px;
+  background: var(--panel); color: var(--accent2); border: 2px solid var(--accent);
+  font-weight: 900; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 2px 2px 0 #0f380f;
+}
+.dex-btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #0f380f; }
+.dex-btn #dex-count { color: var(--gold); font-size: 12px; }
+.dex-sheet { max-width: 420px; }
+.dex-progress { color: var(--gold); font-size: 13px; font-weight: 700; margin-left: 4px; }
+.dex-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  max-height: 60vh; overflow-y: auto; padding: 4px;
+  background: var(--bg); border: 2px solid var(--accent); margin: 10px 0;
+}
+.dex-card {
+  background: var(--panel); border: 2px solid var(--bg); padding: 8px 4px;
+  text-align: center; font-size: 10px; color: var(--accent2);
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.2);
+}
+.dex-card.locked { opacity: .45; filter: grayscale(.8); }
+.dex-card .dex-emoji { font-size: 28px; line-height: 1; margin-bottom: 4px; display: block; }
+.dex-card .dex-name { color: var(--accent2); font-weight: 900; font-size: 11px; }
+.dex-card .dex-type { display: block; color: var(--accent); font-size: 9px; margin: 2px 0; }
+.dex-card .dex-sig { color: var(--gold); font-size: 10px; font-weight: 700; display: block; margin-top: 4px; }
+.dex-card.locked .dex-sig { color: var(--accent); }
+
 /* 펫 산책 (사이드 컨텐츠) */
 .walk-card { margin: 16px 0; padding: 12px 14px; background: var(--panel); border: 2px solid var(--bg); box-shadow: inset 2px 2px 0 rgba(0,0,0,.2); }
 .walk-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 6px; }

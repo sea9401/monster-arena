@@ -145,6 +145,9 @@
           <ul class="quest-list" id="quest-list"></ul>
         </div>
 
+        <div class="dex-bar">
+          <button id="dex-open" class="dex-btn">📖 도감 <span id="dex-count">0/14</span></button>
+        </div>
         <div class="achievements">
           <div class="att-head">
             <h3 class="quests-title">🏆 업적</h3>
@@ -368,6 +371,17 @@
         <li><b>🪙 코인</b> — 전투·퀘스트·출석으로 모아 상점에서 사용.</li>
       </ul>
       <button id="welcome-close" class="primary">시작하기</button>
+    </div>
+  </div>
+
+  <!-- 도감 모달 -->
+  <div id="dex-backdrop" class="welcome-backdrop hidden">
+    <div class="welcome-sheet dex-sheet">
+      <h2>📖 몬스터 도감 <span class="dex-progress" id="dex-progress">0/14</span></h2>
+      <div class="dex-grid" id="dex-grid"></div>
+      <div class="nav">
+        <button id="dex-close" class="primary">닫기</button>
+      </div>
     </div>
   </div>
 

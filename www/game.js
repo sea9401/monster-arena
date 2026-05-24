@@ -1248,6 +1248,7 @@ function renderHome() {
   renderStatRadar();
   renderLuckyButton();
   renderWalk();
+  renderDexCount();
 
   $("streak").textContent = state.streak;
   $("power").textContent = power(state);
@@ -2016,6 +2017,37 @@ async function refreshInbox() {
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
 
+// ---------- 도감 (사이드 컨텐츠 — 컬렉션 진행도) ----------
+function dexUnlocked() {
+  const seen = (state && state.lifetime && state.lifetime.speciesSeen) || [];
+  return new Set(seen);
+}
+function renderDexCount() {
+  const el = $("dex-count");
+  if (!el) return;
+  el.textContent = `${dexUnlocked().size}/${Object.keys(SPECIES).length}`;
+}
+function openDex() {
+  const grid = $("dex-grid");
+  const unlocked = dexUnlocked();
+  const total = Object.keys(SPECIES).length;
+  $("dex-progress").textContent = `${unlocked.size}/${total}`;
+  grid.innerHTML = Object.entries(SPECIES).map(([key, sp]) => {
+    const got = unlocked.has(key);
+    const stage3 = sp.stages[sp.stages.length - 1];
+    const el = ELEMENTS[sp.type];
+    const sig = SPECIES_SKILLS[key];
+    return `<div class="dex-card${got ? "" : " locked"}">
+      <span class="dex-emoji">${got ? stage3 : "🥚"}</span>
+      <span class="dex-name">${got ? sp.name : "???"}</span>
+      <span class="dex-type">${el.icon} ${el.label}</span>
+      <span class="dex-sig">${got && sig ? "⭐ " + sig.name : got ? "" : "🔒"}</span>
+    </div>`;
+  }).join("");
+  $("dex-backdrop").classList.remove("hidden");
+}
+function closeDex() { $("dex-backdrop").classList.add("hidden"); }
+
 // ---------- 펫 산책 (사이드 컨텐츠 — idle 진행, 스태미너 무관) ----------
 // 산책 시간이 길수록 시간당 효율 ↑ (긴 commit 보상).
 const WALK_OPTIONS = [
@@ -2303,6 +2335,9 @@ $("walk-body").addEventListener("click", (e) => {
   if (b.dataset.walkMin) startWalk(Number(b.dataset.walkMin));
   else if (b.classList.contains("walk-claim")) claimWalk();
 });
+$("dex-open").addEventListener("click", openDex);
+$("dex-close").addEventListener("click", closeDex);
+$("dex-backdrop").addEventListener("click", (e) => { if (e.target.id === "dex-backdrop") closeDex(); });
 $("rematch-btn").addEventListener("click", rerollMatch); // 다른 상대 = 리롤(최대 2회)
 $("leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "arena"; openLeaderboard(); });
 $("home-leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "home-arena"; openLeaderboard(); });
