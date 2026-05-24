@@ -420,6 +420,20 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .tourney-champion { color: var(--accent); font-size: 12px; margin-top: 6px; text-transform: none; letter-spacing: normal; }
 .tourney-note { font-size: 11px; margin-top: 8px; text-align: center; text-transform: none; letter-spacing: normal; }
 
+/* 업데이트 배너 (배포 후 자동 리로드) */
+.update-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: var(--gold); color: var(--bg);
+  padding: 10px 14px; font-weight: 900; font-size: 13px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  box-shadow: 0 3px 0 rgba(0,0,0,.35); animation: update-slide-in .25s ease-out;
+}
+.update-bar button {
+  background: var(--bg); color: var(--gold); border: 2px solid var(--bg);
+  padding: 6px 12px; font-weight: 900; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+@keyframes update-slide-in { from { transform: translateY(-100%);} to { transform: translateY(0);} }
+
 /* 주간 보스 HP 바 */
 .boss-hp-wrap { text-align: center; margin: 12px 0 16px; }
 .boss-hp-bar { height: 18px; background: #0f380f; border: 2px solid var(--accent); border-radius: 0; box-shadow: inset 2px 2px 0 #000; overflow: hidden; }

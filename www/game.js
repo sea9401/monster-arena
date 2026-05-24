@@ -2223,4 +2223,42 @@ setInterval(() => {
 
 // 일일 이벤트 stale 방지: 5분마다 + 탭 복귀 시 재확인(자정 KST 넘어가면 교체)
 setInterval(refreshEvent, 5 * 60 * 1000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshEvent(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { refreshEvent(); checkAppVersion(); } });
+
+// ---------- 자동 업데이트 감지 (배포 후 강력 새로고침 없이 자동 반영) ----------
+// 서버 BUILD_ID가 바뀌면 배너 표시 + 안전한 시점에 자동 리로드.
+let _bootBuild = null;
+let _updateShown = false;
+async function checkAppVersion() {
+  try {
+    const base = (window.APP_CONFIG && window.APP_CONFIG.API_BASE) || "";
+    const r = await fetch(base + "/version", { cache: "no-store" });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j || !j.build) return;
+    if (!_bootBuild) { _bootBuild = j.build; return; }
+    if (j.build !== _bootBuild) showUpdateBanner();
+  } catch {}
+}
+function showUpdateBanner() {
+  if (_updateShown) return;
+  _updateShown = true;
+  const inArena = !screens.arena.classList.contains("hidden"); // 전투 중이면 자동 리로드 보류
+  const bar = document.createElement("div");
+  bar.className = "update-bar";
+  bar.innerHTML = `<span id="update-text">🔄 새 버전이 있어요</span><button id="update-now">지금 새로고침</button>`;
+  document.body.appendChild(bar);
+  $("update-now").addEventListener("click", () => location.reload());
+  if (!inArena) {
+    let n = 8;
+    const txt = $("update-text");
+    txt.textContent = `🔄 새 버전 — ${n}초 후 자동 새로고침`;
+    const tick = setInterval(() => {
+      n--;
+      if (n <= 0) { clearInterval(tick); location.reload(); return; }
+      txt.textContent = `🔄 새 버전 — ${n}초 후 자동 새로고침`;
+    }, 1000);
+  }
+}
+setInterval(checkAppVersion, 30 * 1000);
+checkAppVersion(); // 부팅 시 1회 — 현재 빌드 기록

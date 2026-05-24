@@ -12,6 +12,12 @@ const PORT = Number(process.env.PORT || 3000);
 const ROOT = path.join(__dirname, "..", "www");    // Capacitor webDir(정적 파일)
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
 const VERSION = "1.0.0";
+// 배포 식별자 — 클라가 /version 폴링해서 변경 감지 시 자동 리로드.
+// git 해시 우선, 실패 시 프로세스 시작 시각(매 배포마다 systemd가 새로 띄우므로 결정적으로 바뀜).
+const BUILD_ID = (() => {
+  try { return require("child_process").execSync("git rev-parse --short HEAD", { cwd: path.join(__dirname, "..") }).toString().trim(); }
+  catch { return String(Date.now()); }
+})();
 
 // ---------- 저장소 (JSON 파일) ----------
 let db = { players: {}, matches: {} };
@@ -299,11 +305,29 @@ function serveStatic(req, res) {
   if (rel === "/") rel = "/index.html";
   const filePath = path.join(ROOT, path.normalize(rel));
   if (!filePath.startsWith(ROOT)) return send(res, 403, { error: "forbidden" });
+  const ext = path.extname(filePath);
+  // index.html은 텍스트로 읽어 <script>/<link> 태그에 ?v=BUILD_ID를 주입(캐시 버스팅).
+  // 모바일 브라우저가 no-cache를 무시하더라도 URL이 바뀌면 강제로 새 파일을 받음.
+  if (ext === ".html") {
+    fs.readFile(filePath, "utf8", (err, html) => {
+      if (err) return send(res, 404, { error: "not found" });
+      const v = encodeURIComponent(BUILD_ID);
+      const injected = html
+        .replace(/(<script\b[^>]*\bsrc=")([^"?]+\.js)(")/g, `$1$2?v=${v}$3`)
+        .replace(/(<link\b[^>]*\bhref=")([^"?]+\.css)(")/g, `$1$2?v=${v}$3`);
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache, max-age=0, must-revalidate",
+      });
+      res.end(injected);
+    });
+    return;
+  }
   fs.readFile(filePath, (err, buf) => {
     if (err) return send(res, 404, { error: "not found" });
     // 패치가 즉시 적용되도록 정적 파일은 매 요청 재검증(304 또는 200). ETag/Last-Modified는 노드 기본값에 의존하지 않으므로 no-cache로 단순화.
     res.writeHead(200, {
-      "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream",
+      "Content-Type": MIME[ext] || "application/octet-stream",
       "Cache-Control": "no-cache, max-age=0, must-revalidate",
     });
     res.end(buf);
@@ -320,6 +344,14 @@ const server = http.createServer(async (req, res) => {
 
   // --- API ---
   if (url === "/health") return send(res, 200, { ok: true, version: VERSION, players: Object.keys(db.players).length });
+  if (url === "/version") {
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-cache, max-age=0, must-revalidate",
+    });
+    return res.end(JSON.stringify({ build: BUILD_ID }));
+  }
 
   if (url === "/players/register" && method === "POST") {
     const b = await readBody(req);
