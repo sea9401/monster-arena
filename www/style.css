@@ -852,6 +852,13 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .welcome-sheet button { width: 100%; padding: 12px; }
 
 /* 코인/상점 진입 바 */
+/* 일일 탭 섹션 구분자 */
+.section-divider {
+  margin: 18px 0 8px;
+  color: var(--accent); font-size: 12px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  border-bottom: 2px dashed var(--bg); padding-bottom: 4px;
+}
 .shop-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   margin-bottom: 12px; padding: 8px 10px;
