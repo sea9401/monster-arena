@@ -1918,6 +1918,10 @@ $("boss-back").addEventListener("click", () => {
   show("home");
 });
 $("boss-attack-btn").addEventListener("click", attackBoss);
+$("boss-target").addEventListener("click", () => {
+  if (!$("boss-target").classList.contains("attackable")) return;
+  attackBoss();
+});
 
 // 도움말 / 환영 모달
 $("help-btn").addEventListener("click", showWelcome);
@@ -2158,9 +2162,17 @@ async function refreshBoss() {
   $("boss-my-dmg").textContent = (data.myDamage || 0).toLocaleString();
   const rankTxt = data.myRank > 0 ? `${data.myRank}위` : "순위권 외";
   $("boss-me").textContent = `${rankTxt} · 남은 공격 ${data.attacksLeft}회`;
-  $("boss-attack-btn").disabled = bossBusy || data.attacksLeft <= 0 || !Online.status.reachable;
+  const attackable = !bossBusy && data.attacksLeft > 0 && Online.status.reachable;
+  $("boss-attack-btn").disabled = !attackable;
   if (data.attacksLeft <= 0) $("boss-attack-btn").textContent = "이번 주 공격 한도 ⛔";
   else $("boss-attack-btn").textContent = `⚔️ 보스 공격 (스태미너 1)`;
+  const target = $("boss-target");
+  if (target) {
+    target.classList.toggle("attackable", attackable);
+    target.classList.toggle("disabled", !attackable);
+  }
+  const hint = $("boss-tap-hint");
+  if (hint) hint.classList.toggle("hidden", !attackable);
   if (data.lastResult) {
     const lr = data.lastResult;
     const claimedNote = data.claimed ? " (수령 완료)" : "";
