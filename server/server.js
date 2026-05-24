@@ -40,6 +40,7 @@ function load() {
   if (!db.shareCodes) db.shareCodes = {};  // code -> playerId (친구 코드 룩업)
   if (!db.gifts) db.gifts = {};            // recipientId -> [{from,fromName,coins,at}]
   if (!db.giftSent) db.giftSent = {};      // senderId -> { recipientId: "YYYY-MM-DD" }
+  if (!db.patSent) db.patSent = {};        // senderId -> { friendId: "YYYY-MM-DD" } 쓰다듬기 일일 한도
   if (!db.boss) db.boss = { weekId: weekInfo().weekId, boss: bossFor(weekInfo().weekId), contributions: {}, attackLog: {}, lastResults: {}, claimedBy: {} };
   if (!db.boss.attackLog) db.boss.attackLog = {};
   if (!db.boss.lastResults) db.boss.lastResults = {};
@@ -651,6 +652,29 @@ const server = http.createServer(async (req, res) => {
     const sentMap = db.giftSent[pid] || {};
     const sentIds = Object.entries(sentMap).filter(([_, d]) => d === today).map(([id]) => id);
     return send(res, 200, { sent: sentIds });
+  }
+
+  if (url === "/pat" && method === "POST") {
+    const b = await readBody(req);
+    const from = String(b.playerId || ""), to = String(b.friendId || "");
+    const fromP = db.players[from], toP = db.players[to];
+    if (!fromP || !toP) return send(res, 404, { error: "no_player" });
+    if (from === to) return send(res, 400, { error: "self" });
+    if (!Array.isArray(fromP.friends) || !fromP.friends.includes(to)) return send(res, 403, { error: "not_friend" });
+    const today = kstDateStr(now());
+    if (!db.patSent[from]) db.patSent[from] = {};
+    if (db.patSent[from][to] === today) return send(res, 409, { error: "already_patted" });
+    db.patSent[from][to] = today;
+    save();
+    return send(res, 200, { ok: true, coins: 5 });
+  }
+  if (url === "/pat/today" && method === "GET") {
+    const pid = String(query.playerId || "");
+    if (!db.players[pid]) return send(res, 404, { error: "no_player" });
+    const today = kstDateStr(now());
+    const sentMap = db.patSent[pid] || {};
+    const sent = Object.entries(sentMap).filter(([_, d]) => d === today).map(([id]) => id);
+    return send(res, 200, { sent });
   }
 
   if (url === "/friends/remove" && method === "POST") {

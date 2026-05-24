@@ -668,6 +668,18 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 친구 펫 방문 */
+.visit-sheet { max-width: 320px; }
+.visit-pet { text-align: center; padding: 14px; background: var(--bg); border: 2px solid var(--accent); margin: 10px 0; }
+.visit-pet .visit-emoji { font-size: 64px; line-height: 1; display: block; margin-bottom: 6px; }
+.visit-pet .visit-name { color: var(--accent2); font-weight: 900; font-size: 14px; }
+.visit-pet .visit-meta { color: var(--accent); font-size: 11px; margin: 4px 0; }
+.visit-pet .visit-stats { font-size: 11px; color: var(--accent2); margin: 6px 0; }
+.visit-pet .visit-sig { color: var(--gold); font-weight: 700; font-size: 11px; }
+.visit-sheet .nav { display: flex; gap: 6px; }
+.visit-sheet .nav button { flex: 1; }
+.friend-row { cursor: pointer; }
+
 /* 도감 */
 .dex-bar { margin: 12px 0; }
 .dex-btn {

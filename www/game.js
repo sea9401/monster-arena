@@ -2338,6 +2338,9 @@ $("walk-body").addEventListener("click", (e) => {
 $("dex-open").addEventListener("click", openDex);
 $("dex-close").addEventListener("click", closeDex);
 $("dex-backdrop").addEventListener("click", (e) => { if (e.target.id === "dex-backdrop") closeDex(); });
+$("visit-close").addEventListener("click", closeVisit);
+$("visit-pat").addEventListener("click", patVisit);
+$("visit-backdrop").addEventListener("click", (e) => { if (e.target.id === "visit-backdrop") closeVisit(); });
 $("rematch-btn").addEventListener("click", rerollMatch); // 다른 상대 = 리롤(최대 2회)
 $("leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "arena"; openLeaderboard(); });
 $("home-leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "home-arena"; openLeaderboard(); });
@@ -2377,11 +2380,17 @@ $("add-friend-btn").addEventListener("click", tryAddFriend);
 $("friend-code-input").addEventListener("keydown", (e) => { if (e.key === "Enter") tryAddFriend(); });
 $("friend-list").addEventListener("click", (e) => {
   const b = e.target.closest("button");
-  if (!b || b.disabled) return;
-  if (b.dataset.friendGift) giftFriend(b.dataset.friendGift, b.dataset.friendName);
-  else if (b.dataset.friendTaunt) tauntFriend(b.dataset.friendTaunt, b.dataset.friendName);
-  else if (b.dataset.friendFight) fightFriend(b.dataset.friendFight);
-  else if (b.dataset.friendRemove) removeFriendClick(b.dataset.friendRemove, b.dataset.friendName);
+  if (b) {
+    if (b.disabled) return;
+    if (b.dataset.friendGift) giftFriend(b.dataset.friendGift, b.dataset.friendName);
+    else if (b.dataset.friendTaunt) tauntFriend(b.dataset.friendTaunt, b.dataset.friendName);
+    else if (b.dataset.friendFight) fightFriend(b.dataset.friendFight);
+    else if (b.dataset.friendRemove) removeFriendClick(b.dataset.friendRemove, b.dataset.friendName);
+    return;
+  }
+  // 버튼 외 영역 클릭 → 친구 펫 방문(본인 행 제외)
+  const row = e.target.closest("[data-friend-id]");
+  if (row) visitFriend(row.dataset.friendId);
 });
 $("boss-target").addEventListener("click", () => {
   if (!$("boss-target").classList.contains("attackable")) return;
@@ -2816,6 +2825,50 @@ async function removeFriendClick(friendId, name) {
   await Online.removeFriend(friendId);
   await refreshFriends();
 }
+let _visitFriendId = null;
+async function visitFriend(friendId) {
+  const snap = await Online.getPlayer(friendId);
+  if (!snap) { msg("친구 정보를 가져올 수 없어요", false); return; }
+  _visitFriendId = friendId;
+  const sp = SPECIES[snap.species] || SPECIES.ember;
+  const emoji = sp.stages[Math.min(stageIndex(snap.level || 1), sp.stages.length - 1)];
+  const el = ELEMENTS[sp.type];
+  const sig = SPECIES_SKILLS[snap.species];
+  $("visit-title").textContent = `${snap.name}의 펫`;
+  $("visit-pet").innerHTML = `
+    <span class="visit-emoji">${emoji}</span>
+    <div class="visit-name">${snap.name}${snap.title ? ' <span class="shop-desc">' + snap.title + '</span>' : ''}</div>
+    <div class="visit-meta">Lv ${snap.level} · ${el.icon} ${el.label} · 레이팅 ${snap.rating}</div>
+    <div class="visit-stats">🗡️${snap.atk} 🛡️${snap.def} 💨${snap.spd} ❤️${snap.hp}</div>
+    ${sig ? `<div class="visit-sig">⭐ ${sig.name}</div>` : ""}
+  `;
+  // 오늘 이미 쓰다듬은 친구인지 확인
+  const today = await Online.patSentToday();
+  const already = today.includes(friendId);
+  const btn = $("visit-pat");
+  btn.disabled = already;
+  btn.textContent = already ? "오늘 이미 쓰다듬음" : "🤲 쓰다듬기 (+🪙5)";
+  $("visit-backdrop").classList.remove("hidden");
+}
+function closeVisit() { $("visit-backdrop").classList.add("hidden"); _visitFriendId = null; }
+async function patVisit() {
+  if (!_visitFriendId) return;
+  const r = await Online.patFriend(_visitFriendId);
+  if (!r.ok) {
+    if (r.error === "already_patted") msg("오늘 이미 쓰다듬었어요", false);
+    else msg("실패", false);
+    return;
+  }
+  addCoins(r.coins || 5);
+  save();
+  msg(`🤲 +🪙${r.coins || 5}`, true);
+  haptic(15);
+  playFx("playTick");
+  const btn = $("visit-pat");
+  btn.disabled = true;
+  btn.textContent = "오늘 이미 쓰다듬음";
+}
+
 async function giftFriend(friendId, name) {
   if (!Online.status.reachable) { msg("오프라인", false); return; }
   const r = await Online.sendGift(friendId);

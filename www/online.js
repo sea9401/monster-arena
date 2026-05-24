@@ -177,6 +177,18 @@ const Online = (() => {
     const r = await call(`/gifts/sent-today?playerId=${encodeURIComponent(status.playerId)}`);
     return r && r.sent ? r.sent : [];
   }
+  async function patFriend(friendId) {
+    if (!status.reachable || !status.playerId) return { ok: false, error: "NETWORK" };
+    const r = await call("/pat", { method: "POST", body: JSON.stringify({ playerId: status.playerId, friendId }) });
+    if (!r) return { ok: false, error: "NETWORK" };
+    if (r._error) return { ok: false, error: r.error || ("ERR_" + r._error) };
+    return r;
+  }
+  async function patSentToday() {
+    if (!status.reachable || !status.playerId) return [];
+    const r = await call(`/pat/today?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && r.sent ? r.sent : [];
+  }
   async function bossState() {
     if (!status.reachable) return null;
     const r = await call(`/boss/state?playerId=${encodeURIComponent(status.playerId)}`);
@@ -212,5 +224,6 @@ const Online = (() => {
     claimChampion, sendTaunt, getMessages, ackMessages, season, claimSeason,
     bossState, bossAttack, bossClaim,
     myCode, friendsList, addFriend, removeFriend, getPlayer,
-    sendGift, claimGifts, giftsSentToday };
+    sendGift, claimGifts, giftsSentToday,
+    patFriend, patSentToday };
 })();
