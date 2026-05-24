@@ -31,6 +31,11 @@ function load() {
   if (!db.season) db.season = { monthId: monthInfo().monthId, lastResults: {}, claimedBy: {} };
   if (!db.season.lastResults) db.season.lastResults = {};
   if (!db.season.claimedBy) db.season.claimedBy = {};
+  if (!db.boss) db.boss = { weekId: weekInfo().weekId, boss: bossFor(weekInfo().weekId), contributions: {}, attackLog: {}, lastResults: {}, claimedBy: {} };
+  if (!db.boss.attackLog) db.boss.attackLog = {};
+  if (!db.boss.lastResults) db.boss.lastResults = {};
+  if (!db.boss.claimedBy) db.boss.claimedBy = {};
+  if (!db.boss.contributions) db.boss.contributions = {};
 }
 let saveTimer = null;
 function save() {
@@ -132,6 +137,57 @@ function rolloverSeason() {
     db.season.lastResults[p.playerId] = seasonReward(p.rating || 1000, db.season.monthId);
   }
   db.season.monthId = monthId;
+}
+
+// ---------- 주간 보스 (비동기 협력 PvE) ----------
+// 모든 유저가 주간 보스에 누적 데미지. 매주 월요일 KST 자정 리셋 + 직전 결과 정산.
+// 멱등 공격(attackId 클라 생성). 데미지는 서버에서 플레이어 스냅샷으로 계산(클라 위조 차단).
+const BOSSES = [
+  { id: "ironclad",    name: "철갑 골렘",     icon: "🗿", element: "earth", hpMax: 5000 },
+  { id: "voidkraken",  name: "심연의 크라켄", icon: "🐙", element: "water", hpMax: 5500 },
+  { id: "infernal",    name: "지옥불 와이번", icon: "🐉", element: "fire",  hpMax: 6000 },
+  { id: "thunderlord", name: "뇌제 가루다",   icon: "⚡", element: "elec",  hpMax: 5200 },
+];
+function bossFor(weekId) {
+  const idx = djb2(String(weekId)) % BOSSES.length;
+  const def = BOSSES[idx];
+  return { ...def, hp: def.hpMax };
+}
+const BOSS_ATTACKS_PER_WEEK = 15;
+function calcBossDamage(p) {
+  const base = (p.atk || 10) + (p.level || 1) * 2;
+  const r = 0.85 + Math.random() * 0.30; // 0.85x ~ 1.15x
+  return Math.max(10, Math.round(base * r));
+}
+function bossRewardFor(rank) {
+  if (rank === 1)  return { coins: 300, title: "🐲 보스 슬레이어" };
+  if (rank <= 3)  return { coins: 150, title: "" };
+  if (rank <= 10) return { coins: 80,  title: "" };
+  return { coins: 30, title: "" }; // 참가 보상
+}
+function rolloverBoss() {
+  const { weekId } = weekInfo();
+  if (db.boss.weekId === weekId) return;
+  // 직전 주 결과 스냅샷
+  const sorted = Object.values(db.boss.contributions).filter((c) => c.damage > 0).sort((a, b) => b.damage - a.damage);
+  sorted.forEach((c, i) => {
+    const rank = i + 1;
+    const rw = bossRewardFor(rank);
+    db.boss.lastResults[c.playerId] = {
+      weekId: db.boss.weekId, rank, damage: c.damage,
+      coins: rw.coins, title: rw.title,
+      bossName: db.boss.boss.name, bossIcon: db.boss.boss.icon,
+    };
+  });
+  // 새 주 진입
+  db.boss = {
+    weekId,
+    boss: bossFor(weekId),
+    contributions: {},
+    attackLog: {},
+    lastResults: db.boss.lastResults,
+    claimedBy: db.boss.claimedBy,
+  };
 }
 
 // ---------- 소셜: 프리셋 도발 메시지 ----------
@@ -397,6 +453,69 @@ const server = http.createServer(async (req, res) => {
     db.season.claimedBy[b.playerId] = lr.monthId;
     save();
     return send(res, 200, { reward: { coins: lr.coins, title: lr.title, monthId: lr.monthId, tier: lr.tier } });
+  }
+
+  // --- 주간 보스 ---
+  if (url === "/boss/state" && method === "GET") {
+    rolloverBoss();
+    const { weekId } = weekInfo();
+    const { endsAt } = weekInfo();
+    const pid = query.playerId || "";
+    const myC = pid ? (db.boss.contributions[pid] || { damage: 0, attacks: 0 }) : { damage: 0, attacks: 0 };
+    const top = Object.values(db.boss.contributions)
+      .filter((c) => c.damage > 0)
+      .sort((a, b) => b.damage - a.damage)
+      .slice(0, 10)
+      .map((c, i) => ({ rank: i + 1, playerId: c.playerId, name: c.name, species: c.species, title: c.title || "", damage: c.damage }));
+    const lr = pid ? db.boss.lastResults[pid] : null;
+    const claimed = !!(pid && lr && db.boss.claimedBy[pid] === lr.weekId);
+    return send(res, 200, {
+      weekId, endsAt,
+      boss: db.boss.boss,
+      myDamage: myC.damage, myAttacks: myC.attacks,
+      attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - myC.attacks),
+      top,
+      lastResult: lr || null,
+      claimed,
+    });
+  }
+  if (url === "/boss/attack" && method === "POST") {
+    rolloverBoss();
+    const b = await readBody(req);
+    const pid = String(b.playerId || "");
+    const attackId = String(b.attackId || "");
+    if (!pid || !attackId) return send(res, 400, { error: "bad_request" });
+    const p = db.players[pid];
+    if (!p) return send(res, 404, { error: "no_player" });
+    // 멱등 — 같은 attackId 재요청은 이전 결과 반환
+    const prev = db.boss.attackLog[attackId];
+    if (prev) {
+      return send(res, 200, { ok: true, idempotent: true, damage: prev.damage, bossHp: db.boss.boss.hp, attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - (db.boss.contributions[pid]?.attacks || 0)), killed: db.boss.boss.hp <= 0 });
+    }
+    const c = db.boss.contributions[pid] || { playerId: pid, name: p.name, species: p.species, title: p.title || "", damage: 0, attacks: 0, lastAttackAt: 0 };
+    if (c.attacks >= BOSS_ATTACKS_PER_WEEK) return send(res, 409, { error: "out_of_attacks", attacksLeft: 0 });
+    if (db.boss.boss.hp <= 0) return send(res, 409, { error: "boss_dead", bossHp: 0 });
+    const dmg = Math.min(calcBossDamage(p), db.boss.boss.hp); // 오버킬 잘림
+    db.boss.boss.hp -= dmg;
+    c.damage += dmg;
+    c.attacks += 1;
+    c.lastAttackAt = now();
+    c.name = p.name; c.species = p.species; c.title = p.title || ""; // 최신 표시명 동기화
+    db.boss.contributions[pid] = c;
+    db.boss.attackLog[attackId] = { playerId: pid, damage: dmg, at: now() };
+    save();
+    return send(res, 200, { ok: true, damage: dmg, bossHp: db.boss.boss.hp, attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - c.attacks), killed: db.boss.boss.hp <= 0 });
+  }
+  if (url === "/boss/claim" && method === "POST") {
+    rolloverBoss();
+    const b = await readBody(req);
+    const pid = String(b.playerId || "");
+    const lr = db.boss.lastResults[pid];
+    if (!lr) return send(res, 200, { reward: null });
+    if (db.boss.claimedBy[pid] === lr.weekId) return send(res, 200, { reward: null });
+    db.boss.claimedBy[pid] = lr.weekId;
+    save();
+    return send(res, 200, { reward: { coins: lr.coins, title: lr.title, weekId: lr.weekId, rank: lr.rank, damage: lr.damage, bossName: lr.bossName, bossIcon: lr.bossIcon } });
   }
 
   // --- 소셜: 도발 메시지 ---

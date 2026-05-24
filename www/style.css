@@ -142,8 +142,14 @@ body {
 .card .stats { color: var(--accent); font-size: 13px; line-height: 1.6; }
 
 .pet-panel { padding: 20px; text-align: center; }
+.pet-sprite-wrap { position: relative; display: inline-block; line-height: 0; }
 .pet-sprite { font-size: 84px; line-height: 1; animation: bob 1.4s steps(2, end) infinite; transform-origin: 50% 100%; }
 .pet-sprite.happy { animation: bounce .35s steps(2, end); }
+.cos { position: absolute; pointer-events: none; font-size: 28px; line-height: 1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.35)); }
+.cos:empty { display: none; }
+.cos-head { top: -6px; left: 50%; transform: translateX(-50%); font-size: 32px; }
+.cos-back { top: 50%; left: -4px; transform: translate(-60%, -55%) scaleX(-1); }
+.cos-tail { top: 60%; right: -4px; transform: translate(60%, -50%); }
 .sparkle-anim { animation: sparkle .55s steps(3, end) both; }
 @keyframes bob { 0%,100% { transform: translateY(0) scaleY(1);} 50% { transform: translateY(-6px) scaleY(1.06);} }
 @keyframes bounce { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-12px) scale(1.08);} }
@@ -294,6 +300,7 @@ button:disabled,
 
 .quests { padding: 14px 16px; margin-top: 16px; }
 .quests-title { margin: 0 0 10px; font-size: 16px; color: var(--accent2); }
+.quest-progress { font-size: 12px; font-weight: 400; color: var(--accent); margin-left: 4px; }
 .quest-list { list-style: none; margin: 0; padding: 0; }
 .quest-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 2px solid var(--bg); }
 .quest-item:first-child { border-top: none; }
@@ -412,6 +419,12 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .tourney-me { color: var(--accent2); font-size: 13px; margin-top: 6px; }
 .tourney-champion { color: var(--accent); font-size: 12px; margin-top: 6px; text-transform: none; letter-spacing: normal; }
 .tourney-note { font-size: 11px; margin-top: 8px; text-align: center; text-transform: none; letter-spacing: normal; }
+
+/* 주간 보스 HP 바 */
+.boss-hp-wrap { text-align: center; margin: 12px 0 16px; }
+.boss-hp-bar { height: 18px; background: #0f380f; border: 2px solid var(--accent); border-radius: 0; box-shadow: inset 2px 2px 0 #000; overflow: hidden; }
+.boss-hp-fill { height: 100%; width: 100%; background: linear-gradient(to right, #e74c3c, #f0c040); transition: width .25s; }
+.boss-hp-text { color: var(--accent2); font-size: 12px; margin-top: 4px; font-weight: 700; }
 
 /* 월간 시즌 결과 카드 */
 .season-lastresult {

@@ -324,6 +324,7 @@ const screens = {
   tournament: $("tournament-screen"),
   shop: $("shop-screen"),
   season: $("season-screen"),
+  boss: $("boss-screen"),
 };
 let tooltipEl = null;
 
@@ -417,11 +418,13 @@ function showHomeTab(tab) {
   if (tab === "arena") renderArenaLobby();
 }
 
-// "오늘" — 실제 날짜 + 테스트용 오프셋
+// "오늘" — KST 기준(서버 kstDateStr과 동기). + 테스트용 dayOffset.
+// 과거 UTC 기준이었던 탓에 자정~오전 9시(KST) 사이 출석/퀘스트가 어제로 잡혔던 버그를 해소.
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 function todayStr() {
-  const offset = state ? state.dayOffset : 0;
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
+  const offset = state ? (state.dayOffset || 0) : 0;
+  const d = new Date(Date.now() + KST_OFFSET_MS);
+  d.setUTCDate(d.getUTCDate() + offset);
   return d.toISOString().slice(0, 10);
 }
 
@@ -470,9 +473,24 @@ function migrateState() {
   if (!Number.isFinite(state.coins)) state.coins = 0;
   if (state.staminaBuyDate === undefined) state.staminaBuyDate = null;
   if (!Number.isFinite(state.staminaBuyCount)) state.staminaBuyCount = 0;
+  // 일회성 보정: 구매 카운트 중복 가산 버그로 한도 초과된 유저 복구
+  if (!state.staminaBuyResetV1) {
+    state.staminaBuyDate = null;
+    state.staminaBuyCount = 0;
+    state.staminaBuyResetV1 = true;
+  }
   if (!Array.isArray(state.titles)) state.titles = [];
   if (typeof state.title !== "string") state.title = "";
   if (state.title && !state.titles.includes(state.title)) state.title = ""; // 보유 안 한 칭호는 장착 해제
+  // 코스메틱 장비 — 외형 전용
+  if (!state.cosmetics || typeof state.cosmetics !== "object") state.cosmetics = { owned: [], equipped: { head: null, back: null, tail: null } };
+  if (!Array.isArray(state.cosmetics.owned)) state.cosmetics.owned = [];
+  if (!state.cosmetics.equipped || typeof state.cosmetics.equipped !== "object") state.cosmetics.equipped = { head: null, back: null, tail: null };
+  for (const slot of ["head", "back", "tail"]) {
+    if (state.cosmetics.equipped[slot] === undefined) state.cosmetics.equipped[slot] = null;
+    const cur = state.cosmetics.equipped[slot];
+    if (cur && !state.cosmetics.owned.includes(cur)) state.cosmetics.equipped[slot] = null; // 미보유 장착 해제
+  }
   if (state.claimedChampionWeek === undefined) state.claimedChampionWeek = null;
   if (state.onboarded === undefined) state.onboarded = true; // 기존 유저는 이미 익숙 → 스킵
   if (state.claimedSeasonMonth === undefined) state.claimedSeasonMonth = null;
@@ -631,6 +649,7 @@ function hatch(speciesKey) {
     onboarded: carry ? carry.onboarded : false,                    // 첫 부화면 false → 환영 모달 노출
     staminaBuyDate: carry ? carry.staminaBuyDate : null,           // 마지막 스태미너 구매 날짜(KST yyyy-mm-dd)
     staminaBuyCount: carry ? carry.staminaBuyCount : 0,            // 해당 날짜 누적 구매 횟수
+    cosmetics: carry ? carry.cosmetics : { owned: [], equipped: { head: null, back: null, tail: null } }, // 외형 장식(계정성)
   };
   pendingRebirth = false;
   checkAchievements(); // 도감 업적(N종 육성 등) 즉시 체크
@@ -947,6 +966,10 @@ function claimQuest(idx) {
 function renderQuests() {
   const list = $("quest-list");
   list.innerHTML = "";
+  const total = state.quests.length;
+  const cleared = state.quests.filter((q) => q.claimed).length;
+  const progEl = $("quest-progress");
+  if (progEl) progEl.textContent = total ? `(${cleared}/${total} 완료)` : "";
   state.quests.forEach((q, idx) => {
     const done = q.progress >= q.target;
     const li = document.createElement("li");
@@ -1023,6 +1046,7 @@ function renderHome() {
   const stage = stageIndex(state.level);
   $("pet-sprite").textContent = sp.stages[stage];
   $("pet-name").textContent = state.name;
+  renderPetCosmetics();
   const titleEl = $("pet-title");
   if (titleEl) { titleEl.textContent = state.title || ""; titleEl.classList.toggle("hidden", !state.title); }
   document.querySelectorAll(".coin-balance").forEach((el) => { el.textContent = state.coins || 0; });
@@ -1475,6 +1499,22 @@ const SHOP_TITLES = [
   { text: "🌟 전설의 조련사", cost: 800 },
 ];
 
+// 코스메틱 장비 — 순수 외형(스탯 영향 없음). 슬롯 3종: head/back/tail.
+const COSMETIC_SLOTS = ["head", "back", "tail"];
+const COSMETIC_SLOT_LABEL = { head: "머리", back: "등", tail: "꼬리" };
+const COSMETIC_ITEMS = [
+  { id: "head_crown",    slot: "head", icon: "👑", name: "왕관",     cost: 250 },
+  { id: "head_strawhat", slot: "head", icon: "👒", name: "밀짚모자", cost: 80  },
+  { id: "head_tophat",   slot: "head", icon: "🎩", name: "실크햇",   cost: 150 },
+  { id: "back_wings",    slot: "back", icon: "🦋", name: "나비날개", cost: 200 },
+  { id: "back_cape",     slot: "back", icon: "🧥", name: "망토",     cost: 120 },
+  { id: "back_star",     slot: "back", icon: "⭐", name: "별빛",     cost: 90  },
+  { id: "tail_ribbon",   slot: "tail", icon: "🎀", name: "리본",     cost: 60  },
+  { id: "tail_bell",     slot: "tail", icon: "🔔", name: "방울",     cost: 90  },
+  { id: "tail_flame",    slot: "tail", icon: "🔥", name: "꼬리불꽃", cost: 180 },
+];
+function cosmeticById(id) { return COSMETIC_ITEMS.find((c) => c.id === id) || null; }
+
 function openShop() {
   show("shop");
   renderShop();
@@ -1494,6 +1534,20 @@ function renderShop() {
       <span class="shop-icon">${it.icon}</span>
       <span class="shop-info"><b>${it.name}</b><br><span class="shop-desc">${desc}</span></span>
       <button class="shop-buy" data-buy="${it.id}" ${disabled ? "disabled" : ""}>${label}</button>
+    </li>`;
+  }).join("");
+  // 코스메틱 장비
+  $("shop-cosmetics").innerHTML = COSMETIC_ITEMS.map((c) => {
+    const owned = state.cosmetics.owned.includes(c.id);
+    const equipped = state.cosmetics.equipped[c.slot] === c.id;
+    let btn;
+    if (equipped) btn = `<button class="shop-buy" data-cos-unequip="${c.slot}">해제</button>`;
+    else if (owned) btn = `<button class="shop-buy" data-cos-equip="${c.id}">장착</button>`;
+    else btn = `<button class="shop-buy" data-cos-buy="${c.id}" ${state.coins < c.cost ? "disabled" : ""}>🪙${c.cost}</button>`;
+    return `<li class="shop-row">
+      <span class="shop-icon">${c.icon}</span>
+      <span class="shop-info"><b>${c.name}</b> <span class="shop-desc">(${COSMETIC_SLOT_LABEL[c.slot]})</span>${owned ? ' <span class="shop-desc">· 보유</span>' : ''}</span>
+      ${btn}
     </li>`;
   }).join("");
   // 칭호
@@ -1520,8 +1574,9 @@ function buyItem(id) {
       renderShop();
       return;
     }
+    const prev = staminaBuysToday();
     state.staminaBuyDate = todayStr();
-    state.staminaBuyCount = staminaBuysToday() + 1;
+    state.staminaBuyCount = prev + 1;
   }
   addCoins(-it.cost);
   it.apply();
@@ -1545,6 +1600,47 @@ function buyTitle(text, cost) {
 function equipTitle(text) {
   if (!(state.titles || []).includes(text) && text !== "") return;
   state.title = text;
+  save();
+  renderShop();
+  renderHome();
+}
+
+// ---------- 코스메틱 장비 ----------
+function renderPetCosmetics() {
+  if (!state || !state.cosmetics) return;
+  for (const slot of COSMETIC_SLOTS) {
+    const el = $("cos-" + slot);
+    if (!el) continue;
+    const id = state.cosmetics.equipped[slot];
+    const c = id ? cosmeticById(id) : null;
+    el.textContent = c ? c.icon : "";
+  }
+}
+function buyCosmetic(id) {
+  const c = cosmeticById(id);
+  if (!c) return;
+  if ((state.cosmetics.owned || []).includes(id)) return; // 중복 보유 방지
+  if (state.coins < c.cost) return;
+  addCoins(-c.cost);
+  state.cosmetics.owned.push(id);
+  state.cosmetics.equipped[c.slot] = id; // 구매 즉시 장착
+  save();
+  renderShop();
+  renderHome();
+  msg(`${c.name} 획득! 자동 장착됨 (-🪙${c.cost})`, true);
+  playFx("playReward");
+}
+function equipCosmetic(id) {
+  const c = cosmeticById(id);
+  if (!c || !state.cosmetics.owned.includes(id)) return;
+  state.cosmetics.equipped[c.slot] = id;
+  save();
+  renderShop();
+  renderHome();
+}
+function unequipCosmetic(slot) {
+  if (!COSMETIC_SLOTS.includes(slot)) return;
+  state.cosmetics.equipped[slot] = null;
   save();
   renderShop();
   renderHome();
@@ -1731,6 +1827,14 @@ $("season-back").addEventListener("click", () => {
   showHomeTab("arena");
   show("home");
 });
+$("home-boss-btn").addEventListener("click", openBoss);
+$("boss-back").addEventListener("click", () => {
+  clearInterval(bossTimer);
+  renderHome();
+  showHomeTab("arena");
+  show("home");
+});
+$("boss-attack-btn").addEventListener("click", attackBoss);
 
 // 도움말 / 환영 모달
 $("help-btn").addEventListener("click", showWelcome);
@@ -1747,6 +1851,9 @@ $("shop-screen").addEventListener("click", (e) => {
   else if (b.dataset.title) buyTitle(b.dataset.title, Number(b.dataset.cost));
   else if (b.dataset.equip) equipTitle(b.dataset.equip);
   else if (b.dataset.unequip) equipTitle("");
+  else if (b.dataset.cosBuy) buyCosmetic(b.dataset.cosBuy);
+  else if (b.dataset.cosEquip) equipCosmetic(b.dataset.cosEquip);
+  else if (b.dataset.cosUnequip) unequipCosmetic(b.dataset.cosUnequip);
 });
 
 // 소셜(결과화면): 친선 재대결 + 도발
@@ -1907,6 +2014,132 @@ function startSeasonCountdown(endsAt) {
   };
   tick();
   seasonTimer = setInterval(tick, 60000);
+}
+
+// ---------- 주간 보스 (비동기 협력 PvE) ----------
+let bossTimer = null;
+let bossBusy = false;
+const ELEM_LABEL = { fire: "🔥", water: "💧", elec: "⚡", earth: "🌿" };
+
+async function tryClaimBoss() {
+  const reward = await Online.bossClaim();
+  if (!reward) return;
+  if (reward.coins) addCoins(reward.coins);
+  if (reward.title && !state.titles.includes(reward.title)) state.titles.push(reward.title);
+  save();
+  Online.uploadSnapshot(mySnapshot());
+  alert(`${reward.bossIcon || "🐲"} ${reward.bossName || "보스"} 정산!\n순위 ${reward.rank}위 · 누적 ${reward.damage} 데미지\n보상: 🪙 ${reward.coins}${reward.title ? "\n칭호: " + reward.title : ""}`);
+}
+
+async function openBoss() {
+  show("boss");
+  await tryClaimBoss();
+  $("boss-name").textContent = "...";
+  $("boss-icon").textContent = "🐲";
+  $("boss-countdown").textContent = "";
+  $("boss-me").textContent = "";
+  $("boss-hp-fill").style.width = "0%";
+  $("boss-hp-text").textContent = "불러오는 중...";
+  $("boss-top").innerHTML = `<li class="muted">불러오는 중...</li>`;
+  $("boss-last-result").innerHTML = "";
+  $("boss-attack-btn").disabled = true;
+  await refreshBoss();
+}
+
+async function refreshBoss() {
+  const data = await Online.bossState();
+  if (!data) {
+    $("boss-name").textContent = "오프라인";
+    $("boss-hp-text").textContent = "서버에 연결할 수 없어요";
+    $("boss-top").innerHTML = `<li class="muted">접속 후 다시 시도해 주세요.</li>`;
+    return;
+  }
+  startBossCountdown(data.endsAt);
+  $("boss-name").textContent = data.boss.name + (data.boss.element ? ` ${ELEM_LABEL[data.boss.element] || ""}` : "");
+  $("boss-icon").textContent = data.boss.icon || "🐲";
+  const pct = Math.max(0, Math.min(100, (data.boss.hp / data.boss.hpMax) * 100));
+  $("boss-hp-fill").style.width = pct + "%";
+  $("boss-hp-text").textContent = `HP ${data.boss.hp.toLocaleString()} / ${data.boss.hpMax.toLocaleString()}`;
+  const myId = Online.status.playerId;
+  const rank = data.top.findIndex((r) => r.playerId === myId);
+  const rankTxt = rank >= 0 ? `${rank + 1}위` : "순위권 외";
+  $("boss-me").textContent = `내 누적 데미지 ${data.myDamage.toLocaleString()} (${rankTxt}) · 남은 공격 ${data.attacksLeft}회`;
+  $("boss-attack-btn").disabled = bossBusy || data.attacksLeft <= 0 || data.boss.hp <= 0 || !Online.status.reachable;
+  if (data.boss.hp <= 0) $("boss-attack-btn").textContent = "💀 보스 처치됨 — 주말 정산 대기";
+  else if (data.attacksLeft <= 0) $("boss-attack-btn").textContent = "오늘 공격 한도 ⛔";
+  else $("boss-attack-btn").textContent = `⚔️ 보스 공격 (스태미너 1)`;
+  if (data.lastResult) {
+    const lr = data.lastResult;
+    const claimedNote = data.claimed ? " (수령 완료)" : "";
+    $("boss-last-result").innerHTML =
+      `<div class="season-result-title">📦 직전 주(${lr.weekId}) 결과</div>` +
+      `<div class="season-result-row">${lr.bossIcon || ""} ${lr.bossName || ""} · ${lr.rank}위 · 누적 ${lr.damage} 데미지</div>` +
+      `<div class="season-result-row">보상: 🪙 ${lr.coins}${lr.title ? " · 칭호 " + lr.title : ""}${claimedNote}</div>`;
+  } else {
+    $("boss-last-result").innerHTML = "";
+  }
+  if (!data.top.length) {
+    $("boss-top").innerHTML = `<li class="muted">아직 공격한 사람이 없어요. 첫 타격을!</li>`;
+  } else {
+    $("boss-top").innerHTML = data.top.map((r) => {
+      const sp = SPECIES[r.species] || SPECIES.ember;
+      const me = r.playerId === myId ? " me" : "";
+      const rk = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : r.rank;
+      return `<li class="lb-row${me}">
+        <span class="lb-rank">${rk}</span>
+        <span class="lb-emoji">${ELEMENTS[sp.type].icon}</span>
+        <span class="lb-name">${r.name}</span>
+        <span class="lb-rating">${r.damage.toLocaleString()} dmg</span>
+      </li>`;
+    }).join("");
+  }
+}
+
+async function attackBoss() {
+  if (bossBusy) return;
+  if (state.stamina <= 0) { msg("스태미너가 부족해요!", false); return; }
+  if (!Online.status.reachable) { msg("오프라인이라 보스 공격을 보낼 수 없어요.", false); return; }
+  bossBusy = true;
+  $("boss-attack-btn").disabled = true;
+  // 스태미너 차감(낙관적) — 서버 거부 시 환불
+  const wasFull = state.stamina >= STAMINA_MAX;
+  state.stamina -= 1;
+  if (wasFull) state.staminaAt = gameNow();
+  save();
+  renderStamina();
+  const attackId = "atk-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  const res = await Online.bossAttack(attackId);
+  if (!res || res._error || !res.ok) {
+    // 환불
+    state.stamina += 1;
+    save();
+    renderStamina();
+    const err = res && res.error;
+    if (err === "out_of_attacks") msg("이번 주 공격 한도를 모두 소진했어요.", false);
+    else if (err === "boss_dead") msg("보스는 이미 쓰러졌어요.", false);
+    else msg("공격 실패 — 잠시 후 다시 시도해 주세요.", false);
+  } else {
+    if (res.killed) playFx("playReward");
+    else playFx("playHit");
+    msg(`⚔️ ${res.damage} 데미지!` + (res.killed ? " 보스 처치!" : ""), true);
+  }
+  bossBusy = false;
+  await refreshBoss();
+}
+
+function startBossCountdown(endsAt) {
+  clearInterval(bossTimer);
+  const el = $("boss-countdown");
+  const tick = () => {
+    const ms = endsAt - Date.now();
+    if (ms <= 0) { el.textContent = "⏰ 주간 정산이 곧 진행돼요!"; clearInterval(bossTimer); return; }
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    const mn = Math.floor((ms % 3600000) / 60000);
+    el.textContent = `⏳ 정산까지 ${d}일 ${h}시간 ${mn}분`;
+  };
+  tick();
+  bossTimer = setInterval(tick, 60000);
 }
 
 // ---------- 계정 UI ----------

@@ -133,6 +133,21 @@ const Online = (() => {
     const r = await call("/tournament/claim", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
     return r && !r._error ? r.reward : null;
   }
+  async function bossState() {
+    if (!status.reachable) return null;
+    const r = await call(`/boss/state?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && !r._error ? r : null;
+  }
+  async function bossAttack(attackId) {
+    if (!status.reachable || !status.playerId) return null;
+    const r = await call("/boss/attack", { method: "POST", body: JSON.stringify({ playerId: status.playerId, attackId }) });
+    return r && !r._error ? r : (r || null);
+  }
+  async function bossClaim() {
+    if (!status.reachable || !status.playerId) return null;
+    const r = await call("/boss/claim", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
+    return r && !r._error ? r.reward : null;
+  }
   async function sendTaunt(toPlayerId, presetId) {
     if (!status.reachable || !status.playerId) return false;
     const r = await call("/messages", { method: "POST", body: JSON.stringify({ from: status.playerId, toPlayerId, presetId }) });
@@ -150,5 +165,6 @@ const Online = (() => {
 
   return { status, init, register, login, logout, loadCloudSave, pushCloudSave,
     uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event,
-    claimChampion, sendTaunt, getMessages, ackMessages, season, claimSeason };
+    claimChampion, sendTaunt, getMessages, ackMessages, season, claimSeason,
+    bossState, bossAttack, bossClaim };
 })();

@@ -46,7 +46,12 @@
       <div class="home-tab-content active" data-home-tab="grow">
         <div id="event-banner" class="event-banner hidden"></div>
         <div class="pet-panel">
-          <div class="pet-sprite" id="pet-sprite">🥚</div>
+          <div class="pet-sprite-wrap">
+            <span class="cos cos-head" id="cos-head"></span>
+            <span class="cos cos-back" id="cos-back"></span>
+            <div class="pet-sprite" id="pet-sprite">🥚</div>
+            <span class="cos cos-tail" id="cos-tail"></span>
+          </div>
           <div class="pet-title hidden" id="pet-title"></div>
           <div class="pet-head">
             <h2 id="pet-name">이름</h2>
@@ -125,7 +130,7 @@
         </div>
 
         <div class="quests">
-          <h3 class="quests-title">📋 데일리 퀘스트</h3>
+          <h3 class="quests-title">📋 데일리 퀘스트 <span class="quest-progress" id="quest-progress"></span></h3>
           <ul class="quest-list" id="quest-list"></ul>
         </div>
 
@@ -158,6 +163,7 @@
           <button id="go-pvp" class="primary">⚔️ 아레나 입장</button>
           <button id="home-tournament-btn" class="ghost">🏅 주간 토너먼트</button>
           <button id="home-season-btn" class="ghost">🗓️ 월간 시즌</button>
+          <button id="home-boss-btn" class="ghost">🐲 주간 보스</button>
           <button id="home-leaderboard-btn" class="ghost">🏆 리더보드</button>
         </div>
       </div>
@@ -244,11 +250,36 @@
       <div class="shop-coins-bar">보유 코인 🪙 <b id="shop-coins">0</b></div>
       <h3 class="quests-title">아이템</h3>
       <ul class="shop-list" id="shop-items"></ul>
+      <h3 class="quests-title">장비 (꾸미기)</h3>
+      <ul class="shop-list" id="shop-cosmetics"></ul>
       <h3 class="quests-title">칭호</h3>
       <ul class="shop-list" id="shop-titles"></ul>
       <p class="muted tourney-note">코인은 전투(승+20/패+5)·퀘스트(+10)·출석(+15)으로 모아요</p>
       <div class="nav">
         <button id="shop-back" class="ghost">← 돌아가기</button>
+      </div>
+    </section>
+
+    <!-- 8. 주간 보스 -->
+    <section id="boss-screen" class="screen hidden">
+      <h2><span id="boss-icon">🐲</span> <span id="boss-name">주간 보스</span></h2>
+      <div class="tourney-head">
+        <div id="boss-countdown" class="tourney-countdown">--</div>
+        <div id="boss-me" class="tourney-me"></div>
+      </div>
+      <div class="boss-hp-wrap">
+        <div class="boss-hp-bar"><div class="boss-hp-fill" id="boss-hp-fill"></div></div>
+        <div class="boss-hp-text" id="boss-hp-text">--</div>
+      </div>
+      <div id="boss-last-result" class="season-lastresult"></div>
+      <div class="nav">
+        <button id="boss-attack-btn" class="primary">⚔️ 보스 공격 (스태미너 1)</button>
+      </div>
+      <h3 class="quests-title">상위 기여자</h3>
+      <ol class="leaderboard" id="boss-top"></ol>
+      <p class="muted tourney-note">매주 월요일 0시(KST) 리셋 · 1주 최대 15회 공격 · 보상: 1위 🪙300+칭호 / 2-3위 🪙150 / 4-10위 🪙80 / 참가 🪙30</p>
+      <div class="nav">
+        <button id="boss-back" class="ghost">← 아레나로</button>
       </div>
     </section>
 
