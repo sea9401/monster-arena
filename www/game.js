@@ -149,13 +149,35 @@ const SKILL_KITS = {
   ],
 };
 
+// 종별 시그니처 스킬 — 종마다 고유 1개. type 스킬 키트 위에 4번째로 추가.
+// 쿨다운이 길어 한 경기 2~3번 사용 가능 — 종 선택에 의미 부여.
+const SPECIES_SKILLS = {
+  ember:     { id: "ember_sig",     name: "용의 분노",      type: "fire",     power: 1.45, cd: 4 },
+  lion:      { id: "lion_sig",      name: "사자후",          type: "fire",     power: 1.05, cd: 3, buffAtk: { mult: 1.35, turns: 3 } },
+  aqua:      { id: "aqua_sig",      name: "해류 방벽",       type: "water",    power: 0.75, cd: 4, shield: { reduce: 0.4, turns: 3 } },
+  crab:      { id: "crab_sig",      name: "강철 집게",       type: "water",    power: 1.5,  cd: 4 },
+  spark:     { id: "spark_sig",     name: "초가속",         type: "electric", power: 1.25, cd: 3, speedScale: 1.6 },
+  hare:      { id: "hare_sig",      name: "이단 점프",       type: "electric", power: 1.0,  cd: 3, extraHit: { chance: 0.85, power: 0.7 } },
+  wolf:      { id: "wolf_sig",      name: "사냥꾼의 추격",   type: "dark",     power: 1.5,  cd: 4 },
+  bat:       { id: "bat_sig",       name: "흡혈",           type: "dark",     power: 1.0,  cd: 3, heal: 0.15 },
+  armadillo: { id: "armadillo_sig", name: "가시 방벽",       type: "earth",    power: 0.65, cd: 3, shield: { reduce: 0.5, turns: 2 } },
+  bear:      { id: "bear_sig",      name: "거대한 일격",     type: "earth",    power: 1.6,  cd: 4 },
+  unicorn:   { id: "unicorn_sig",   name: "프리즘 광선",     type: "light",    power: 1.45, cd: 3 },
+  swan:      { id: "swan_sig",      name: "성스러운 치유",   type: "light",    power: 0.7,  cd: 4, heal: 0.18 },
+  toad:      { id: "toad_sig",      name: "맹독 분출",       type: "poison",   power: 1.05, cd: 3, dot: { frac: 0.05, turns: 4 } },
+  viper:     { id: "viper_sig",     name: "치명타 독니",     type: "poison",   power: 1.3,  cd: 2, dot: { frac: 0.04, turns: 3 } },
+};
+
 let lastTypeMult = 1; // 직전 스킬의 상성 배율(로그용)
 
 // 전투용 파이터 객체(스킬 키트 + 쿨다운/버프 + 종 패시브 부착)
 function buildFighter(base) {
   const p = PASSIVE[base.type] || {};
+  // 종별 시그니처 스킬을 type 키트 위에 합쳐서 4스킬 셋 구성
+  const baseKit = SKILL_KITS[base.type] || [];
+  const sig = base.species ? SPECIES_SKILLS[base.species] : null;
   return Object.assign({}, base, {
-    kit: SKILL_KITS[base.type],
+    kit: sig ? [...baseKit, sig] : baseKit,
     cd: {},                              // skillId -> 남은 쿨다운
     atkBuffTurns: 0, atkBuffMult: 1,     // 공격 버프
     shieldTurns: 0, shieldReduce: 0,     // 피해 감소
@@ -1128,10 +1150,15 @@ function renderHome() {
   $("streak").textContent = state.streak;
   $("power").textContent = power(state);
 
+  const allSkills = [...SKILL_KITS[sp.type]];
+  const sig = SPECIES_SKILLS[state.species];
+  if (sig) allSkills.push(sig);
   $("pet-skills").innerHTML =
     `<div class="passive-line">${PASSIVE[sp.type].label}</div>` +
-    "보유 스킬 " + SKILL_KITS[sp.type]
-      .map((s) => `<span class="skill-chip">${ELEMENTS[s.type].icon} ${s.name}</span>`).join(" ");
+    "보유 스킬 " + allSkills.map((s) => {
+      const isSig = sig && s.id === sig.id;
+      return `<span class="skill-chip${isSig ? " sig" : ""}">${ELEMENTS[s.type].icon} ${s.name}${isSig ? " ⭐" : ""}</span>`;
+    }).join(" ");
 
   const noActions = state.stamina <= 0;
   $("train-grid").querySelectorAll("button").forEach((b) => {
@@ -1248,9 +1275,12 @@ function makeOpponent() {
   const stat = (k) => Math.round(((sh[k] / sum) * tp) / PW[k]);
 
   const type = pickFoeType(SPECIES[state.species].type, factor >= 1.05);
+  // 같은 type 안에서 종 무작위 선택 → AI 상대도 종별 시그니처 사용
+  const typeKeys = Object.keys(SPECIES).filter((k) => SPECIES[k].type === type);
+  const species = typeKeys[Math.floor(Math.random() * typeKeys.length)] || "ember";
 
   return {
-    name: RIVAL_NAMES[idx], emoji: RIVAL_EMOJI[idx], type,
+    name: RIVAL_NAMES[idx], emoji: RIVAL_EMOJI[idx], type, species,
     hp: Math.max(40, stat("hp")), atk: Math.max(6, stat("atk")),
     def: Math.max(4, stat("def")), spd: Math.max(4, stat("spd")),
   };
@@ -1309,7 +1339,7 @@ function updateOnlineStatus() {
 function opponentFromSnapshot(o) {
   const sp = SPECIES[o.species] || SPECIES.ember;
   return {
-    playerId: o.playerId, name: o.name, type: sp.type, emoji: sp.stages[stageIndex(o.level)],
+    playerId: o.playerId, name: o.name, species: o.species, type: sp.type, emoji: sp.stages[stageIndex(o.level)],
     atk: o.atk, def: o.def, spd: o.spd, hp: o.hp, ghost: true,
     seeded: typeof o.playerId === "string" && o.playerId.startsWith("ghost-"),
   };
@@ -1345,7 +1375,7 @@ async function findMatch() {
     ${tag}
     <div class="stats">🗡️${o.atk} 🛡️${o.def} 💨${o.spd} ❤️${o.hp}<br>전투력 약 ${power(o)}</div>
     <div class="matchup">${matchupHint(SPECIES[state.species].type, o.type)}</div>
-    <div class="skills-line"><span class="passive-line">${PASSIVE[o.type].label}</span><br>스킬: ${SKILL_KITS[o.type].map((s) => s.name).join(" · ")}</div>
+    <div class="skills-line"><span class="passive-line">${PASSIVE[o.type].label}</span><br>스킬: ${SKILL_KITS[o.type].map((s) => s.name).join(" · ")}${o.species && SPECIES_SKILLS[o.species] ? ` · <b>${SPECIES_SKILLS[o.species].name} ⭐</b>` : ""}</div>
   `;
 }
 
@@ -1355,7 +1385,7 @@ function startBattle() {
   $("match-battle").classList.remove("hidden");
 
   const sp = SPECIES[state.species];
-  const me = buildFighter({ name: state.name, emoji: sp.stages[stageIndex(state.level)], type: sp.type,
+  const me = buildFighter({ name: state.name, species: state.species, emoji: sp.stages[stageIndex(state.level)], type: sp.type,
                hp: state.hp + state.level * 6, maxHp: state.hp + state.level * 6,
                atk: state.atk, def: state.def, spd: state.spd });
   const foe = buildFighter({ ...currentOpponent, maxHp: currentOpponent.hp });
