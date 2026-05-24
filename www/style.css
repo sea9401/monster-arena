@@ -238,6 +238,20 @@ body {
 .cos:empty { display: none; }
 .cos-head { top: -4px; left: 50%; margin-left: -13px; font-size: 26px; }
 
+/* 상점 카테고리 탭 */
+.shop-tabs { display: flex; gap: 4px; margin: 10px 0 12px; }
+.shop-tab {
+  flex: 1; padding: 10px 4px;
+  background: var(--panel); color: var(--accent);
+  border: 2px solid var(--bg); cursor: pointer;
+  font-family: inherit; font-weight: 700; font-size: 12px;
+  box-shadow: 2px 2px 0 #0f380f;
+}
+.shop-tab.active { background: var(--gold); color: var(--bg); box-shadow: inset 2px 2px 0 rgba(0,0,0,.2); }
+.shop-tab:not(.active):active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #0f380f; }
+.shop-tab-content.hidden { display: none; }
+.shop-tab-content { animation: tab-slide-in .18s ease-out; }
+
 /* 상점 모자 미리보기 */
 .cos-preview {
   text-align: center; padding: 14px 12px 10px;

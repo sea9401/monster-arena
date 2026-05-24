@@ -1780,6 +1780,9 @@ let _shopPreviewHat = null; // null = 현재 장착 중인 모자 표시
 function openShop() {
   _shopPreviewHat = null;
   show("shop");
+  // 진입 시 첫 탭(아이템)으로 초기화
+  document.querySelectorAll(".shop-tab").forEach((t) => t.classList.toggle("active", t.dataset.shopTab === "items"));
+  document.querySelectorAll(".shop-tab-content").forEach((c) => c.classList.toggle("hidden", c.dataset.shopContent !== "items"));
   renderShop();
 }
 function renderShop() {
@@ -2673,6 +2676,15 @@ $("welcome-backdrop").addEventListener("click", (e) => { if (e.target.id === "we
 $("shop-btn").addEventListener("click", openShop);
 $("shop-back").addEventListener("click", () => { renderHome(); showHomeTab("daily"); show("home"); });
 $("shop-screen").addEventListener("click", (e) => {
+  // 카테고리 탭 전환
+  const tab = e.target.closest(".shop-tab");
+  if (tab) {
+    const target = tab.dataset.shopTab;
+    document.querySelectorAll(".shop-tab").forEach((t) => t.classList.toggle("active", t === tab));
+    document.querySelectorAll(".shop-tab-content").forEach((c) => c.classList.toggle("hidden", c.dataset.shopContent !== target));
+    haptic(5);
+    return;
+  }
   const b = e.target.closest("button");
   if (b) {
     if (b.dataset.buy) buyItem(b.dataset.buy);

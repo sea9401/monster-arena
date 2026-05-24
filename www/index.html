@@ -279,19 +279,27 @@
     <section id="shop-screen" class="screen hidden">
       <h2><button class="screen-back" data-back-target="shop-back" aria-label="뒤로가기">←</button>🛒 상점</h2>
       <div class="shop-coins-bar">보유 코인 🪙 <b id="shop-coins">0</b></div>
-      <h3 class="quests-title">아이템</h3>
-      <ul class="shop-list" id="shop-items"></ul>
-      <h3 class="quests-title">모자 (꾸미기)</h3>
-      <div class="cos-preview">
-        <div class="cos-preview-pet-wrap">
-          <span class="cos-preview-hat" id="cos-preview-hat"></span>
-          <div class="cos-preview-pet" id="cos-preview-pet">🐲</div>
-        </div>
-        <div class="cos-preview-label" id="cos-preview-label">행을 탭하면 미리 써볼 수 있어요</div>
+      <div class="shop-tabs">
+        <button class="shop-tab active" data-shop-tab="items">🧪 아이템</button>
+        <button class="shop-tab" data-shop-tab="hats">🎩 모자</button>
+        <button class="shop-tab" data-shop-tab="titles">👑 칭호</button>
       </div>
-      <ul class="shop-list" id="shop-cosmetics"></ul>
-      <h3 class="quests-title">칭호</h3>
-      <ul class="shop-list" id="shop-titles"></ul>
+      <div class="shop-tab-content" data-shop-content="items">
+        <ul class="shop-list" id="shop-items"></ul>
+      </div>
+      <div class="shop-tab-content hidden" data-shop-content="hats">
+        <div class="cos-preview">
+          <div class="cos-preview-pet-wrap">
+            <span class="cos-preview-hat" id="cos-preview-hat"></span>
+            <div class="cos-preview-pet" id="cos-preview-pet">🐲</div>
+          </div>
+          <div class="cos-preview-label" id="cos-preview-label">행을 탭하면 미리 써볼 수 있어요</div>
+        </div>
+        <ul class="shop-list" id="shop-cosmetics"></ul>
+      </div>
+      <div class="shop-tab-content hidden" data-shop-content="titles">
+        <ul class="shop-list" id="shop-titles"></ul>
+      </div>
       <p class="muted tourney-note">코인은 전투(승+20/패+5)·퀘스트(+10)·출석(+15)으로 모아요</p>
       <div class="nav">
         <button id="shop-back" class="ghost">← 돌아가기</button>
