@@ -668,6 +668,21 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 펫 산책 (사이드 컨텐츠) */
+.walk-card { margin: 16px 0; padding: 12px 14px; background: var(--panel); border: 2px solid var(--bg); box-shadow: inset 2px 2px 0 rgba(0,0,0,.2); }
+.walk-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 6px; }
+.walk-options button {
+  padding: 10px 6px; font-size: 11px; line-height: 1.3;
+  background: var(--panel2); color: var(--accent2); border: 2px solid var(--accent);
+  cursor: pointer; font-family: inherit;
+}
+.walk-options button:active { transform: translate(1px,1px); }
+.walk-options button b { color: var(--gold); font-size: 14px; display: block; }
+.walk-status { color: var(--accent2); font-size: 13px; text-align: center; padding: 12px 0; }
+.walk-status .walk-time { color: var(--gold); font-weight: 900; font-size: 16px; display: block; margin-top: 4px; }
+.walk-claim { width: 100%; padding: 12px; font-weight: 900; animation: walk-pulse 1.4s ease-in-out infinite; }
+@keyframes walk-pulse { 0%,100% { box-shadow: 3px 3px 0 #0f380f; } 50% { box-shadow: 3px 3px 0 #0f380f, 0 0 12px var(--gold); } }
+
 /* 행운의 룰렛 */
 .lucky-bar { margin: 12px 0; }
 .lucky-btn {

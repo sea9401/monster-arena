@@ -584,6 +584,8 @@ function migrateState() {
   if (state.staminaBuyDate === undefined) state.staminaBuyDate = null;
   if (!Number.isFinite(state.staminaBuyCount)) state.staminaBuyCount = 0;
   if (state.luckyRollDate === undefined) state.luckyRollDate = null;
+  if (state.walkStart === undefined) state.walkStart = null;
+  if (state.walkDur === undefined) state.walkDur = 0;
   // 다중 펫 로스터 마이그레이션 — 기존 단일 펫을 pets[0]으로 추출
   if (!Array.isArray(state.pets) || !state.pets.length) {
     state.pets = [{
@@ -1245,6 +1247,7 @@ function renderHome() {
   $("stat-hp").textContent = state.hp;
   renderStatRadar();
   renderLuckyButton();
+  renderWalk();
 
   $("streak").textContent = state.streak;
   $("power").textContent = power(state);
@@ -2013,6 +2016,64 @@ async function refreshInbox() {
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
 
+// ---------- 펫 산책 (사이드 컨텐츠 — idle 진행, 스태미너 무관) ----------
+// 산책 시간이 길수록 시간당 효율 ↑ (긴 commit 보상).
+const WALK_OPTIONS = [
+  { min: 15,  coins: 15,  exp: 10  },
+  { min: 30,  coins: 35,  exp: 25  },
+  { min: 60,  coins: 80,  exp: 60  },
+  { min: 120, coins: 200, exp: 150 },
+];
+function walkPhase() {
+  if (!state || !state.walkStart) return "idle";
+  const elapsed = Date.now() - state.walkStart;
+  return elapsed >= state.walkDur ? "ready" : "walking";
+}
+function startWalk(min) {
+  if (!state || walkPhase() !== "idle") return;
+  const opt = WALK_OPTIONS.find((o) => o.min === min);
+  if (!opt) return;
+  state.walkStart = Date.now();
+  state.walkDur = min * 60 * 1000;
+  save();
+  renderWalk();
+  msg(`🥾 ${state.name}이(가) ${min}분 산책 출발`, true);
+  haptic(10);
+}
+function claimWalk() {
+  if (!state || walkPhase() !== "ready") return;
+  const minLasted = Math.round(state.walkDur / 60000);
+  const opt = WALK_OPTIONS.find((o) => o.min === minLasted) || WALK_OPTIONS[0];
+  addCoins(opt.coins);
+  gainExp(opt.exp);
+  state.walkStart = null;
+  state.walkDur = 0;
+  save();
+  renderHome();
+  msg(`🥾 산책 완료! +🪙${opt.coins} +EXP${opt.exp}`, true);
+  playFx("playReward");
+  haptic(20);
+}
+function renderWalk() {
+  const body = $("walk-body");
+  if (!body || !state) return;
+  const phase = walkPhase();
+  if (phase === "idle") {
+    body.innerHTML = `<div class="walk-options">` + WALK_OPTIONS.map((o) => {
+      const hm = o.min < 60 ? `${o.min}분` : `${o.min/60}시간`;
+      return `<button data-walk-min="${o.min}"><b>${hm}</b>🪙${o.coins} + EXP${o.exp}</button>`;
+    }).join("") + `</div>`;
+  } else if (phase === "walking") {
+    const remain = state.walkStart + state.walkDur - Date.now();
+    const totalSec = Math.max(0, Math.ceil(remain / 1000));
+    const h = Math.floor(totalSec / 3600), m = Math.floor((totalSec % 3600) / 60), s = totalSec % 60;
+    const timeStr = h > 0 ? `${h}시간 ${m}분` : m > 0 ? `${m}분 ${s}초` : `${s}초`;
+    body.innerHTML = `<div class="walk-status">🥾 ${state.name} 산책 중...<span class="walk-time">${timeStr} 남음</span></div>`;
+  } else {
+    body.innerHTML = `<button class="walk-claim primary">🎁 산책 보상 받기</button>`;
+  }
+}
+
 // ---------- 행운의 룰렛 (사이드 컨텐츠 — 스태미너 없이) ----------
 // 하루 1회 KST 자정 리셋. 8섹터 휠 + 보상 분포(저보상 다수, 고보상 희소).
 const LUCKY_REWARDS = [
@@ -2236,6 +2297,12 @@ $("lucky-open").addEventListener("click", openLucky);
 $("lucky-close").addEventListener("click", closeLucky);
 $("lucky-spin").addEventListener("click", spinLucky);
 $("lucky-backdrop").addEventListener("click", (e) => { if (e.target.id === "lucky-backdrop") closeLucky(); });
+$("walk-body").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.walkMin) startWalk(Number(b.dataset.walkMin));
+  else if (b.classList.contains("walk-claim")) claimWalk();
+});
 $("rematch-btn").addEventListener("click", rerollMatch); // 다른 상대 = 리롤(최대 2회)
 $("leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "arena"; openLeaderboard(); });
 $("home-leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "home-arena"; openLeaderboard(); });
@@ -2845,6 +2912,8 @@ setInterval(() => {
       b.setAttribute("aria-disabled", String(state.stamina <= 0));
     });
   }
+  // 산책 중이면 카운트다운 매초 갱신, ready 전환되는 순간도 즉시 반영
+  if (state.walkStart) renderWalk();
 }, 1000);
 
 // 일일 이벤트 stale 방지: 5분마다 + 탭 복귀 시 재확인(자정 KST 넘어가면 교체)
