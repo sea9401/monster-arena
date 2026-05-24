@@ -162,6 +162,7 @@
           <button id="home-tournament-btn" class="ghost">🏅 주간 토너먼트</button>
           <button id="home-season-btn" class="ghost">🗓️ 월간 시즌</button>
           <button id="home-boss-btn" class="ghost">🐲 주간 보스</button>
+          <button id="home-friends-btn" class="ghost">👥 친구</button>
           <button id="home-leaderboard-btn" class="ghost">🏆 리더보드</button>
         </div>
       </div>
@@ -262,6 +263,26 @@
       <p class="muted tourney-note">코인은 전투(승+20/패+5)·퀘스트(+10)·출석(+15)으로 모아요</p>
       <div class="nav">
         <button id="shop-back" class="ghost">← 돌아가기</button>
+      </div>
+    </section>
+
+    <!-- 9. 친구 -->
+    <section id="friends-screen" class="screen hidden">
+      <h2>👥 친구</h2>
+      <div class="friend-code-box">
+        <div class="friend-code-label">내 친구 코드</div>
+        <div class="friend-code" id="my-friend-code">------</div>
+        <button id="copy-code-btn" class="ghost">📋 복사</button>
+      </div>
+      <div class="friend-add-bar">
+        <input id="friend-code-input" type="text" inputmode="latin" maxlength="8" placeholder="친구 코드 입력 (예: A7K2BR)" />
+        <button id="add-friend-btn" class="primary">추가</button>
+      </div>
+      <h3 class="quests-title">내 친구 <span class="quest-progress" id="friend-count"></span></h3>
+      <ul class="friend-list" id="friend-list"></ul>
+      <p class="muted tourney-note">친구에게 도발 메시지 보내기 / 친선전(보상 없음)으로 다시 만나기</p>
+      <div class="nav">
+        <button id="friends-back" class="ghost">← 아레나로</button>
       </div>
     </section>
 

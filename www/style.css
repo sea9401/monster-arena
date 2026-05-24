@@ -510,6 +510,35 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .boss-stat-label { display: block; color: var(--accent); font-size: 10px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
 .boss-stat b { font-size: 16px; color: var(--gold); }
 
+/* 친구 시스템 */
+.friend-code-box {
+  text-align: center; padding: 14px;
+  background: var(--panel); border: 2px solid var(--gold);
+  margin: 12px 0; box-shadow: 3px 3px 0 #0f380f;
+}
+.friend-code-label { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+.friend-code { color: var(--gold); font-size: 28px; font-weight: 900; letter-spacing: 4px; margin: 6px 0; font-family: monospace; }
+.friend-add-bar { display: flex; gap: 6px; margin: 8px 0 16px; }
+.friend-add-bar input {
+  flex: 1; padding: 10px; font-size: 14px; font-family: monospace; letter-spacing: 2px;
+  background: var(--panel2); color: var(--accent2); border: 2px solid var(--accent);
+  text-transform: uppercase;
+}
+.friend-add-bar button { padding: 8px 14px; font-size: 13px; }
+.friend-list { list-style: none; margin: 0; padding: 0; }
+.friend-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-top: 2px solid var(--bg);
+}
+.friend-row:first-child { border-top: none; }
+.friend-emoji { font-size: 28px; flex-shrink: 0; width: 36px; text-align: center; }
+.friend-info { flex: 1; min-width: 0; }
+.friend-name { color: var(--accent2); font-size: 14px; font-weight: 700; }
+.friend-meta { color: var(--accent); font-size: 11px; margin-top: 2px; }
+.friend-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.friend-actions button { padding: 6px 8px; font-size: 11px; }
+.friend-actions button.danger { color: var(--bad); }
+
 /* 월간 시즌 결과 카드 */
 .season-lastresult {
   margin: 14px 0; padding: 12px 14px;

@@ -37,6 +37,7 @@ function load() {
   if (!db.season) db.season = { monthId: monthInfo().monthId, lastResults: {}, claimedBy: {} };
   if (!db.season.lastResults) db.season.lastResults = {};
   if (!db.season.claimedBy) db.season.claimedBy = {};
+  if (!db.shareCodes) db.shareCodes = {};  // code -> playerId (친구 코드 룩업)
   if (!db.boss) db.boss = { weekId: weekInfo().weekId, boss: bossFor(weekInfo().weekId), contributions: {}, attackLog: {}, lastResults: {}, claimedBy: {} };
   if (!db.boss.attackLog) db.boss.attackLog = {};
   if (!db.boss.lastResults) db.boss.lastResults = {};
@@ -213,6 +214,26 @@ function rolloverSeason() {
     db.season.lastResults[p.playerId] = seasonReward(p.rating || 1000, db.season.monthId);
   }
   db.season.monthId = monthId;
+}
+
+// ---------- 친구 시스템 ----------
+// 짧은 공유 코드(6자, 혼동되는 0/1/I/O 제외)로 친구 추가. 단방향(내 목록에만 추가).
+const SHARE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function generateShareCode() {
+  let s = "";
+  for (let i = 0; i < 6; i++) s += SHARE_ALPHABET[Math.floor(Math.random() * SHARE_ALPHABET.length)];
+  return s;
+}
+function ensureShareCode(playerId) {
+  const p = db.players[playerId];
+  if (!p) return null;
+  if (p.shareCode && db.shareCodes[p.shareCode] === playerId) return p.shareCode;
+  let code, tries = 0;
+  do { code = generateShareCode(); tries++; } while (db.shareCodes[code] && tries < 20);
+  db.shareCodes[code] = playerId;
+  p.shareCode = code;
+  save();
+  return code;
 }
 
 // ---------- 주간 보스 (비동기 협력 PvE) ----------
@@ -561,6 +582,49 @@ const server = http.createServer(async (req, res) => {
     db.season.claimedBy[b.playerId] = lr.monthId;
     save();
     return send(res, 200, { reward: { coins: lr.coins, title: lr.title, monthId: lr.monthId, tier: lr.tier } });
+  }
+
+  // --- 친구 시스템 ---
+  if (url === "/me/code" && method === "GET") {
+    const pid = String(query.playerId || "");
+    if (!db.players[pid]) return send(res, 404, { error: "no_player" });
+    return send(res, 200, { code: ensureShareCode(pid) });
+  }
+  if (url === "/friends" && method === "GET") {
+    const pid = String(query.playerId || "");
+    const me = db.players[pid];
+    if (!me) return send(res, 404, { error: "no_player" });
+    const ids = Array.isArray(me.friends) ? me.friends : [];
+    const rows = ids
+      .map((fid) => db.players[fid])
+      .filter((p) => p)
+      .map((p) => ({ playerId: p.playerId, name: p.name, species: p.species, level: p.level, rating: p.rating, title: p.title || "", seeded: !!p.seeded, updatedAt: p.updatedAt || 0 }));
+    return send(res, 200, { friends: rows });
+  }
+  if (url === "/friends/add" && method === "POST") {
+    const b = await readBody(req);
+    const pid = String(b.playerId || "");
+    const codeRaw = String(b.code || "").toUpperCase().replace(/[^A-Z2-9]/g, "");
+    const me = db.players[pid];
+    if (!me) return send(res, 404, { error: "no_player" });
+    const friendId = db.shareCodes[codeRaw];
+    if (!friendId || !db.players[friendId]) return send(res, 404, { error: "no_code" });
+    if (friendId === pid) return send(res, 400, { error: "self" });
+    if (!Array.isArray(me.friends)) me.friends = [];
+    if (me.friends.includes(friendId)) return send(res, 200, { ok: true, already: true });
+    me.friends.push(friendId);
+    save();
+    const f = db.players[friendId];
+    return send(res, 200, { ok: true, friend: { playerId: f.playerId, name: f.name, species: f.species, level: f.level, rating: f.rating, title: f.title || "", seeded: !!f.seeded } });
+  }
+  if (url === "/friends/remove" && method === "POST") {
+    const b = await readBody(req);
+    const pid = String(b.playerId || ""), fid = String(b.friendId || "");
+    const me = db.players[pid];
+    if (!me || !Array.isArray(me.friends)) return send(res, 200, { ok: true });
+    me.friends = me.friends.filter((x) => x !== fid);
+    save();
+    return send(res, 200, { ok: true });
   }
 
   // --- 주간 보스 ---

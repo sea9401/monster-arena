@@ -325,6 +325,7 @@ const screens = {
   shop: $("shop-screen"),
   season: $("season-screen"),
   boss: $("boss-screen"),
+  friends: $("friends-screen"),
 };
 let tooltipEl = null;
 
@@ -1918,6 +1919,25 @@ $("boss-back").addEventListener("click", () => {
   show("home");
 });
 $("boss-attack-btn").addEventListener("click", attackBoss);
+
+// 친구 화면
+$("home-friends-btn").addEventListener("click", openFriends);
+$("friends-back").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
+$("copy-code-btn").addEventListener("click", async () => {
+  const code = $("my-friend-code").textContent;
+  if (!code || code === "..." || code === "오프라인") return;
+  try { await navigator.clipboard.writeText(code); msg(`코드 복사됨: ${code}`, true); }
+  catch { msg(`코드: ${code}`, true); } // 클립보드 거부되면 그냥 표시
+});
+$("add-friend-btn").addEventListener("click", tryAddFriend);
+$("friend-code-input").addEventListener("keydown", (e) => { if (e.key === "Enter") tryAddFriend(); });
+$("friend-list").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.friendTaunt) tauntFriend(b.dataset.friendTaunt, b.dataset.friendName);
+  else if (b.dataset.friendFight) fightFriend(b.dataset.friendFight);
+  else if (b.dataset.friendRemove) removeFriendClick(b.dataset.friendRemove, b.dataset.friendName);
+});
 $("boss-target").addEventListener("click", () => {
   if (!$("boss-target").classList.contains("attackable")) return;
   attackBoss();
@@ -2261,6 +2281,85 @@ function startBossCountdown(endsAt) {
   };
   tick();
   bossTimer = setInterval(tick, 60000);
+}
+
+// ---------- 친구 시스템 ----------
+async function openFriends() {
+  show("friends");
+  $("my-friend-code").textContent = "...";
+  $("friend-list").innerHTML = `<li class="muted">불러오는 중...</li>`;
+  $("friend-count").textContent = "";
+  const code = await Online.myCode();
+  $("my-friend-code").textContent = code || "오프라인";
+  $("copy-code-btn").disabled = !code;
+  await refreshFriends();
+}
+async function refreshFriends() {
+  const friends = await Online.friendsList();
+  $("friend-count").textContent = `(${friends.length}명)`;
+  if (!friends.length) {
+    $("friend-list").innerHTML = `<li class="muted">아직 친구가 없어요. 코드를 공유하거나 친구 코드를 입력해보세요!</li>`;
+    return;
+  }
+  $("friend-list").innerHTML = friends.map((f) => {
+    const sp = SPECIES[f.species] || SPECIES.ember;
+    const emoji = sp.stages[Math.min(stageIndex(f.level || 1), sp.stages.length - 1)];
+    return `<li class="friend-row" data-friend-id="${f.playerId}">
+      <span class="friend-emoji">${emoji}</span>
+      <div class="friend-info">
+        <div class="friend-name">${f.name}${f.title ? ' <span class="shop-desc">' + f.title + '</span>' : ''}</div>
+        <div class="friend-meta">Lv ${f.level || 1} · ${ELEMENTS[sp.type].icon} ${ELEMENTS[sp.type].label} · 레이팅 ${f.rating}</div>
+      </div>
+      <div class="friend-actions">
+        <button data-friend-taunt="${f.playerId}" data-friend-name="${f.name}">💬</button>
+        <button data-friend-fight="${f.playerId}">⚔️</button>
+        <button class="danger" data-friend-remove="${f.playerId}" data-friend-name="${f.name}">✕</button>
+      </div>
+    </li>`;
+  }).join("");
+}
+async function tryAddFriend() {
+  const input = $("friend-code-input");
+  const code = (input.value || "").trim().toUpperCase().replace(/[^A-Z2-9]/g, "");
+  if (!code) return;
+  if (code.length < 6) { msg("코드는 6자리예요", false); return; }
+  const r = await Online.addFriend(code);
+  if (!r.ok) {
+    if (r.error === "no_code") msg("코드를 찾을 수 없어요", false);
+    else if (r.error === "self") msg("본인은 추가할 수 없어요", false);
+    else msg("친구 추가 실패", false);
+    return;
+  }
+  input.value = "";
+  if (r.already) msg("이미 친구입니다", true);
+  else msg(`${r.friend ? r.friend.name : "친구"} 추가 완료!`, true);
+  await refreshFriends();
+}
+async function removeFriendClick(friendId, name) {
+  if (!confirm(`'${name}' 친구를 삭제할까요?`)) return;
+  await Online.removeFriend(friendId);
+  await refreshFriends();
+}
+async function tauntFriend(friendId, name) {
+  // 친구 1명을 향해 도발 프리셋 선택 → 보내기
+  const presetIds = TAUNTS.map((t) => t.id);
+  const lines = TAUNTS.map((t, i) => `${i + 1}. ${t.text}`).join("\n");
+  const pick = prompt(`'${name}'에게 보낼 메시지 번호:\n\n${lines}`);
+  const idx = Number(pick);
+  if (!Number.isFinite(idx) || idx < 1 || idx > presetIds.length) return;
+  const ok = await Online.sendTaunt(friendId, presetIds[idx - 1]);
+  msg(ok ? "메시지를 보냈어요 📨" : "전송 실패", ok);
+}
+async function fightFriend(friendId) {
+  if (!Online.status.reachable) { msg("오프라인이라 친선전 불가", false); return; }
+  if (state.stamina <= 0) { msg("스태미너가 부족해요!", false); return; }
+  const snap = await Online.getPlayer(friendId);
+  if (!snap) { msg("친구 정보를 가져올 수 없어요", false); return; }
+  currentOpponent = opponentFromSnapshot(snap);
+  friendlyMode = true;
+  currentMatchId = null;
+  show("arena");
+  startBattle();
 }
 
 // ---------- 계정 UI ----------

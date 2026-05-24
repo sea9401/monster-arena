@@ -133,6 +133,33 @@ const Online = (() => {
     const r = await call("/tournament/claim", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
     return r && !r._error ? r.reward : null;
   }
+  async function myCode() {
+    if (!status.reachable || !status.playerId) return null;
+    const r = await call(`/me/code?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && r.code ? r.code : null;
+  }
+  async function friendsList() {
+    if (!status.reachable || !status.playerId) return [];
+    const r = await call(`/friends?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && r.friends ? r.friends : [];
+  }
+  async function addFriend(code) {
+    if (!status.reachable || !status.playerId) return { ok: false, error: "NETWORK" };
+    const r = await call("/friends/add", { method: "POST", body: JSON.stringify({ playerId: status.playerId, code }) });
+    if (!r) return { ok: false, error: "NETWORK" };
+    if (r._error) return { ok: false, error: r.error || ("ERR_" + r._error) };
+    return r;
+  }
+  async function removeFriend(friendId) {
+    if (!status.reachable || !status.playerId) return false;
+    const r = await call("/friends/remove", { method: "POST", body: JSON.stringify({ playerId: status.playerId, friendId }) });
+    return !!(r && r.ok);
+  }
+  async function getPlayer(id) {
+    if (!status.reachable || !id) return null;
+    const r = await call(`/players/${encodeURIComponent(id)}`);
+    return r && !r._error ? r : null;
+  }
   async function bossState() {
     if (!status.reachable) return null;
     const r = await call(`/boss/state?playerId=${encodeURIComponent(status.playerId)}`);
@@ -166,5 +193,6 @@ const Online = (() => {
   return { status, init, register, login, logout, loadCloudSave, pushCloudSave,
     uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event,
     claimChampion, sendTaunt, getMessages, ackMessages, season, claimSeason,
-    bossState, bossAttack, bossClaim };
+    bossState, bossAttack, bossClaim,
+    myCode, friendsList, addFriend, removeFriend, getPlayer };
 })();
