@@ -145,12 +145,13 @@ body {
 .pet-sprite-wrap { position: relative; display: inline-block; }
 .pet-sprite { font-size: 84px; line-height: 1; animation: bob 1.4s steps(2, end) infinite; transform-origin: 50% 100%; }
 .pet-sprite.happy { animation: bounce .35s steps(2, end); }
-/* 코스메틱: 펫 몸에 작게 겹쳐서 액세서리 느낌. 펫 본체 bob 애니메이션과 동기 */
-.cos { position: absolute; pointer-events: none; line-height: 1; font-size: 24px;
-       filter: drop-shadow(0 1px 0 rgba(0,0,0,.45));
-       animation: bob 1.4s steps(2, end) infinite; }
+/* 코스메틱: 펫 몸에 작게 겹쳐서 액세서리 느낌.
+   bob 애니메이션은 transform을 덮어쓰니 코스메틱엔 적용 안 함(고정 표시).
+   정확한 슬롯 위치는 JS에서 종/단계 이모지에 따라 inline으로 조정. */
+.cos { position: absolute; pointer-events: none; line-height: 1; font-size: 22px;
+       filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); }
 .cos:empty { display: none; }
-.cos-head { top: -4px;  left: 50%;   transform: translateX(-50%); font-size: 28px; }
+.cos-head { top: -4px;  left: 50%;   margin-left: -14px; font-size: 26px; }
 .cos-back { top: 28%;   left: 14%; }
 .cos-tail { top: 54%;   right: 12%; }
 .sparkle-anim { animation: sparkle .55s steps(3, end) both; }

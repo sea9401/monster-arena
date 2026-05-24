@@ -1606,20 +1606,55 @@ function equipTitle(text) {
 }
 
 // ---------- 코스메틱 장비 ----------
-// 얼굴만 그려지는 이모지(머리만 보이는 종/단계): 등·꼬리 장식은 숨기고 머리 장식만 표시.
+// 얼굴만 그려지는 이모지(머리만 보이는 종/단계): 등·꼬리 장식 숨기고 머리만 표시.
 const FACE_ONLY_EMOJIS = new Set(["🦁", "🐰", "🦊", "🐺", "🐹", "🐨", "🐻", "🦄", "🐸", "🐲", "🐯", "🐱", "🐶", "🐭", "🐴"]);
+// 사이드 프로파일 이모지의 머리 방향(Apple 렌더링 기준). 머리/등/꼬리 위치를 정면 방향에 맞춰 조정.
+//   "right" = 머리가 이미지 오른쪽(예: 🦖 T-rex)
+//   "left"  = 머리가 이미지 왼쪽(예: 🐊 악어, 🐉 용)
+const EMOJI_FACING = {
+  "🦖": "right", "🦏": "right", "🦬": "right", "🐈": "right", "🐢": "right",
+  "🦘": "right", "🦔": "right", "🐍": "right", "🐔": "right",
+  "🐊": "left",  "🐋": "left",  "🐉": "left",  "🐎": "left",  "🦌": "left",
+  "🐀": "left",  "🐅": "left",  "🦎": "left",  "🐟": "left",
+  "🦅": "left",  "🦐": "left",  "🐇": "left",  "🐛": "left",
+  "🦩": "left",  "🦢": "left",  "🐥": "left",  "🐤": "left",
+  "🦂": "left",  "🐢": "right",
+};
+
 function renderPetCosmetics() {
   if (!state || !state.cosmetics) return;
   const sp = SPECIES[state.species];
   const emoji = sp ? sp.stages[stageIndex(state.level)] : "";
   const faceOnly = FACE_ONLY_EMOJIS.has(emoji);
+  const facing = EMOJI_FACING[emoji] || "center";
+
+  const headEl = $("cos-head"), backEl = $("cos-back"), tailEl = $("cos-tail");
+
+  // 매 렌더마다 inline 위치 리셋(이전 종/단계의 override 청소)
+  for (const el of [headEl, backEl, tailEl]) {
+    if (!el) continue;
+    el.style.left = ""; el.style.right = ""; el.style.top = ""; el.style.marginLeft = "";
+  }
+
+  // 사이드 프로파일이면 머리·꼬리 위치 좌우 교체. 등은 머리 반대편 상단.
+  if (facing === "right") {
+    headEl.style.left = "72%"; headEl.style.marginLeft = "-13px";
+    backEl.style.left = "auto"; backEl.style.right = "28%"; // 머리 왼쪽 어깨
+    tailEl.style.right = "auto"; tailEl.style.left = "8%";   // 꼬리는 왼쪽
+  } else if (facing === "left") {
+    headEl.style.left = "28%"; headEl.style.marginLeft = "-13px";
+    backEl.style.left = "auto"; backEl.style.right = "14%"; // 머리 오른쪽 어깨
+    // tailEl는 기본 right:12% 그대로(꼬리가 오른쪽)
+  }
+  // facing === "center" 또는 미정: 기본 CSS 위치 사용
+
   for (const slot of COSMETIC_SLOTS) {
     const el = $("cos-" + slot);
     if (!el) continue;
     const id = state.cosmetics.equipped[slot];
     const c = id ? cosmeticById(id) : null;
     if (faceOnly && (slot === "back" || slot === "tail")) {
-      el.textContent = ""; // 얼굴만 있는 이모지는 등/꼬리 위치가 어색 → 숨김
+      el.textContent = "";
     } else {
       el.textContent = c ? c.icon : "";
     }
