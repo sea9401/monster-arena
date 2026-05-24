@@ -21,7 +21,7 @@ const SPECIES = {
     base: { atk: 10, def: 7, spd: 14, hp: 55 }, bias: "속도형",
   },
   lion: {
-    name: "맹수 사자", egg: "🥚", stages: ["🐱", "🦁", "🐯"], type: "fire",
+    name: "맹수 사자", egg: "🥚", stages: ["🐈", "🦁", "🐅"], type: "fire",
     base: { atk: 12, def: 9, spd: 8, hp: 62 }, bias: "공격형",
   },
   crab: {
@@ -33,11 +33,11 @@ const SPECIES = {
     base: { atk: 9, def: 7, spd: 15, hp: 54 }, bias: "속도형",
   },
   wolf: {
-    name: "그림자 늑대", egg: "🥚", stages: ["🐶", "🦊", "🐺"], type: "dark",
+    name: "그림자 늑대", egg: "🥚", stages: ["🐕", "🦊", "🐺"], type: "dark",
     base: { atk: 13, def: 8, spd: 9, hp: 58 }, bias: "공격형",
   },
   bat: {
-    name: "심연 박쥐", egg: "🥚", stages: ["🐭", "🦇", "🐲"], type: "dark",
+    name: "심연 박쥐", egg: "🥚", stages: ["🐀", "🦇", "🐉"], type: "dark",
     base: { atk: 12, def: 7, spd: 12, hp: 55 }, bias: "공격형",
   },
   armadillo: {
@@ -49,7 +49,7 @@ const SPECIES = {
     base: { atk: 10, def: 13, spd: 6, hp: 82 }, bias: "방어형",
   },
   unicorn: {
-    name: "광휘 유니콘", egg: "🥚", stages: ["🐴", "🦌", "🦄"], type: "light",
+    name: "광휘 유니콘", egg: "🥚", stages: ["🐎", "🦌", "🦄"], type: "light",
     base: { atk: 12, def: 8, spd: 11, hp: 56 }, bias: "공격형",
   },
   swan: {
@@ -1606,14 +1606,23 @@ function equipTitle(text) {
 }
 
 // ---------- 코스메틱 장비 ----------
+// 얼굴만 그려지는 이모지(머리만 보이는 종/단계): 등·꼬리 장식은 숨기고 머리 장식만 표시.
+const FACE_ONLY_EMOJIS = new Set(["🦁", "🐰", "🦊", "🐺", "🐹", "🐨", "🐻", "🦄", "🐸", "🐲", "🐯", "🐱", "🐶", "🐭", "🐴"]);
 function renderPetCosmetics() {
   if (!state || !state.cosmetics) return;
+  const sp = SPECIES[state.species];
+  const emoji = sp ? sp.stages[stageIndex(state.level)] : "";
+  const faceOnly = FACE_ONLY_EMOJIS.has(emoji);
   for (const slot of COSMETIC_SLOTS) {
     const el = $("cos-" + slot);
     if (!el) continue;
     const id = state.cosmetics.equipped[slot];
     const c = id ? cosmeticById(id) : null;
-    el.textContent = c ? c.icon : "";
+    if (faceOnly && (slot === "back" || slot === "tail")) {
+      el.textContent = ""; // 얼굴만 있는 이모지는 등/꼬리 위치가 어색 → 숨김
+    } else {
+      el.textContent = c ? c.icon : "";
+    }
   }
 }
 function buyCosmetic(id) {
