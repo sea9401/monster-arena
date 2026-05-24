@@ -8,14 +8,25 @@ const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // ---- game.js와 동일한 상수/수식 ----
+// 14종 중 type별 대표 1종으로 검증(밸런스는 type-level이 결정적, within-type은 sig 차이만).
 const SPECIES = {
-  ember: { type: "fire",     base: { atk: 12, def: 8,  spd: 9,  hp: 60 }, primary: "atk" },
-  aqua:  { type: "water",    base: { atk: 8,  def: 13, spd: 7,  hp: 80 }, primary: "def" },
-  spark: { type: "electric", base: { atk: 10, def: 7,  spd: 14, hp: 55 }, primary: "spd" },
-  lux:   { type: "light",    base: { atk: 12, def: 8,  spd: 11, hp: 56 }, primary: "atk" },
-  wolf:  { type: "dark",     base: { atk: 13, def: 8,  spd: 9,  hp: 58 }, primary: "atk" },
-  arma:  { type: "earth",    base: { atk: 8,  def: 15, spd: 6,  hp: 78 }, primary: "def" },
-  toxin: { type: "poison",   base: { atk: 9,  def: 13, spd: 7,  hp: 76 }, primary: "def" },
+  ember:     { type: "fire",     base: { atk: 12, def: 8,  spd: 9,  hp: 60 }, primary: "atk" },
+  aqua:      { type: "water",    base: { atk: 8,  def: 13, spd: 7,  hp: 80 }, primary: "def" },
+  spark:     { type: "electric", base: { atk: 10, def: 7,  spd: 14, hp: 55 }, primary: "spd" },
+  unicorn:   { type: "light",    base: { atk: 12, def: 8,  spd: 11, hp: 56 }, primary: "atk" },
+  wolf:      { type: "dark",     base: { atk: 13, def: 8,  spd: 9,  hp: 58 }, primary: "atk" },
+  armadillo: { type: "earth",    base: { atk: 8,  def: 15, spd: 6,  hp: 78 }, primary: "def" },
+  toad:      { type: "poison",   base: { atk: 9,  def: 13, spd: 7,  hp: 76 }, primary: "def" },
+};
+// 종별 시그니처 스킬 (game.js SPECIES_SKILLS — 대표종만)
+const SPECIES_SKILLS = {
+  ember:     { id: "ember_sig",     type: "fire",     power: 1.30, cd: 4 },
+  aqua:      { id: "aqua_sig",      type: "water",    power: 0.75, cd: 4, shield: { reduce: 0.4, turns: 3 } },
+  spark:     { id: "spark_sig",     type: "electric", power: 1.10, cd: 4, speedScale: 1.35 },
+  unicorn:   { id: "unicorn_sig",   type: "light",    power: 1.30, cd: 3 },
+  wolf:      { id: "wolf_sig",      type: "dark",     power: 1.30, cd: 4 },
+  armadillo: { id: "armadillo_sig", type: "earth",    power: 0.9,  cd: 3, shield: { reduce: 0.3, turns: 2 } },
+  toad:      { id: "toad_sig",      type: "poison",   power: 0.85, cd: 4, dot: { frac: 0.035, turns: 4 } },
 };
 const ELEMENTS = { fire: 1, water: 1, electric: 1, light: 1, dark: 1, earth: 1, poison: 1 };
 const BEATS = { water: "fire", fire: "electric", electric: "light", light: "dark", dark: "earth", earth: "poison", poison: "water" };
@@ -119,8 +130,11 @@ function raise(speciesKey, days) {
 // ---- 전투 엔진 (game.js와 동일 로직) ----
 function buildFighter(base) {
   const p = PASSIVE[base.type] || {};
+  const baseKit = SKILL_KITS[base.type] || [];
+  const sig = base.species ? SPECIES_SKILLS[base.species] : null;
   return Object.assign({}, base, {
-    kit: SKILL_KITS[base.type], cd: {}, atkBuffTurns: 0, atkBuffMult: 1, shieldTurns: 0, shieldReduce: 0,
+    kit: sig ? [...baseKit, sig] : baseKit,
+    cd: {}, atkBuffTurns: 0, atkBuffMult: 1, shieldTurns: 0, shieldReduce: 0,
     dotTurns: 0, dotDmg: 0,
     pDmgDealt: p.dmgDealt || 1, pDmgTaken: p.dmgTaken || 1, pEva: p.evaBonus || 0,
   });
@@ -184,10 +198,10 @@ function runMatch(me, foe) {
 }
 function fighterFrom(t) {
   const maxHp = t.hp + t.level * 6;
-  return buildFighter({ type: SPECIES[t.species].type, atk: t.atk, def: t.def, spd: t.spd, hp: maxHp, maxHp });
+  return buildFighter({ species: t.species, type: SPECIES[t.species].type, atk: t.atk, def: t.def, spd: t.spd, hp: maxHp, maxHp });
 }
 function fixedFighter(speciesKey) {
-  return buildFighter({ type: SPECIES[speciesKey].type, atk: 70, def: 70, spd: 70, hp: 200, maxHp: 200 });
+  return buildFighter({ species: speciesKey, type: SPECIES[speciesKey].type, atk: 70, def: 70, spd: 70, hp: 200, maxHp: 200 });
 }
 
 // 라이벌 생성 (game.js makeOpponent과 동일: 배분 합=1 정규화, factor 0.82~1.12)
@@ -207,16 +221,18 @@ function makeOpponent(myPower, myType) {
   const factor = rand(80, 108) / 100;
   const tp = Math.max(40, Math.round(myPower * factor));
   const type = pickFoeType(myType, factor >= 1.05);
+  // 같은 type 안에서 대표 species 선택(같은 sig 적용)
+  const speciesKey = Object.keys(SPECIES).find((k) => SPECIES[k].type === type) || "ember";
   const sh = { hp: rand(23, 31), atk: rand(26, 35), def: rand(19, 27), spd: rand(15, 22) };
   const sum = sh.hp + sh.atk + sh.def + sh.spd;
   const stat = (k) => Math.round(((sh[k] / sum) * tp) / PW[k]);
   const maxHp = Math.max(40, stat("hp"));
-  return buildFighter({ type, atk: Math.max(6, stat("atk")), def: Math.max(4, stat("def")), spd: Math.max(4, stat("spd")), hp: maxHp, maxHp });
+  return buildFighter({ species: speciesKey, type, atk: Math.max(6, stat("atk")), def: Math.max(4, stat("def")), spd: Math.max(4, stat("spd")), hp: maxHp, maxHp });
 }
 
 // ---- 리포트 ----
-const keys = ["ember", "aqua", "spark", "lux", "wolf", "arma", "toxin"];
-const label = { ember: "불(공격)", aqua: "물(방어)", spark: "전기(속도)", lux: "빛(공격)", wolf: "어둠(공격)", arma: "땅(방어)", toxin: "독(지속)" };
+const keys = ["ember", "aqua", "spark", "unicorn", "wolf", "armadillo", "toad"];
+const label = { ember: "불(공격)", aqua: "물(방어)", spark: "전기(속도)", unicorn: "빛(공격)", wolf: "어둠(공격)", armadillo: "땅(방어)", toad: "독(지속)" };
 const days = 14;
 console.log(`(육성 정책: ${POLICY})\n`);
 

@@ -151,21 +151,23 @@ const SKILL_KITS = {
 
 // 종별 시그니처 스킬 — 종마다 고유 1개. type 스킬 키트 위에 4번째로 추가.
 // 쿨다운이 길어 한 경기 2~3번 사용 가능 — 종 선택에 의미 부여.
+// 시그니처 스킬 — 종마다 type 키트에 추가되는 4번째. 너무 강하면 상성 역전을 일으키므로
+// 공격형 power는 ~1.25~1.35, 유틸형은 효과 turns/frac 조정. (sim.js로 검증, 52~62% 한 밴드)
 const SPECIES_SKILLS = {
-  ember:     { id: "ember_sig",     name: "용의 분노",      type: "fire",     power: 1.45, cd: 4 },
-  lion:      { id: "lion_sig",      name: "사자후",          type: "fire",     power: 1.05, cd: 3, buffAtk: { mult: 1.35, turns: 3 } },
+  ember:     { id: "ember_sig",     name: "용의 분노",      type: "fire",     power: 1.30, cd: 4 },
+  lion:      { id: "lion_sig",      name: "사자후",          type: "fire",     power: 1.05, cd: 3, buffAtk: { mult: 1.30, turns: 3 } },
   aqua:      { id: "aqua_sig",      name: "해류 방벽",       type: "water",    power: 0.75, cd: 4, shield: { reduce: 0.4, turns: 3 } },
-  crab:      { id: "crab_sig",      name: "강철 집게",       type: "water",    power: 1.5,  cd: 4 },
-  spark:     { id: "spark_sig",     name: "초가속",         type: "electric", power: 1.25, cd: 3, speedScale: 1.6 },
-  hare:      { id: "hare_sig",      name: "이단 점프",       type: "electric", power: 1.0,  cd: 3, extraHit: { chance: 0.85, power: 0.7 } },
-  wolf:      { id: "wolf_sig",      name: "사냥꾼의 추격",   type: "dark",     power: 1.5,  cd: 4 },
-  bat:       { id: "bat_sig",       name: "흡혈",           type: "dark",     power: 1.0,  cd: 3, heal: 0.15 },
-  armadillo: { id: "armadillo_sig", name: "가시 방벽",       type: "earth",    power: 0.65, cd: 3, shield: { reduce: 0.5, turns: 2 } },
-  bear:      { id: "bear_sig",      name: "거대한 일격",     type: "earth",    power: 1.6,  cd: 4 },
-  unicorn:   { id: "unicorn_sig",   name: "프리즘 광선",     type: "light",    power: 1.45, cd: 3 },
+  crab:      { id: "crab_sig",      name: "강철 집게",       type: "water",    power: 1.35, cd: 4 },
+  spark:     { id: "spark_sig",     name: "초가속",         type: "electric", power: 1.10, cd: 4, speedScale: 1.35 },
+  hare:      { id: "hare_sig",      name: "이단 점프",       type: "electric", power: 1.0,  cd: 3, extraHit: { chance: 0.75, power: 0.6 } },
+  wolf:      { id: "wolf_sig",      name: "사냥꾼의 추격",   type: "dark",     power: 1.30, cd: 4 },
+  bat:       { id: "bat_sig",       name: "흡혈",           type: "dark",     power: 1.0,  cd: 3, heal: 0.13 },
+  armadillo: { id: "armadillo_sig", name: "가시 반격",       type: "earth",    power: 0.9,  cd: 3, shield: { reduce: 0.3, turns: 2 } },
+  bear:      { id: "bear_sig",      name: "거대한 일격",     type: "earth",    power: 1.40, cd: 4 },
+  unicorn:   { id: "unicorn_sig",   name: "프리즘 광선",     type: "light",    power: 1.30, cd: 3 },
   swan:      { id: "swan_sig",      name: "성스러운 치유",   type: "light",    power: 0.7,  cd: 4, heal: 0.18 },
-  toad:      { id: "toad_sig",      name: "맹독 분출",       type: "poison",   power: 1.05, cd: 3, dot: { frac: 0.05, turns: 4 } },
-  viper:     { id: "viper_sig",     name: "치명타 독니",     type: "poison",   power: 1.3,  cd: 2, dot: { frac: 0.04, turns: 3 } },
+  toad:      { id: "toad_sig",      name: "맹독 분출",       type: "poison",   power: 0.85, cd: 4, dot: { frac: 0.035, turns: 4 } },
+  viper:     { id: "viper_sig",     name: "치명타 독니",     type: "poison",   power: 1.20, cd: 3, dot: { frac: 0.03, turns: 3 } },
 };
 
 let lastTypeMult = 1; // 직전 스킬의 상성 배율(로그용)
