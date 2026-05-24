@@ -386,6 +386,20 @@
     </div>
   </div>
 
+  <!-- 범용 다이얼로그 (alert/confirm/prompt 대체) -->
+  <div id="dialog-backdrop" class="welcome-backdrop hidden">
+    <div class="welcome-sheet dialog-sheet">
+      <h2 id="dialog-title">알림</h2>
+      <p id="dialog-text" class="dialog-text"></p>
+      <input id="dialog-input" type="text" class="dialog-input hidden" maxlength="12" />
+      <div id="dialog-choices" class="dialog-choices hidden"></div>
+      <div class="nav dialog-nav">
+        <button id="dialog-cancel" class="ghost hidden">취소</button>
+        <button id="dialog-confirm" class="primary">확인</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 펫 자랑 카드 -->
   <div id="share-backdrop" class="welcome-backdrop hidden">
     <div class="welcome-sheet share-sheet">

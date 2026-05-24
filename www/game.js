@@ -554,11 +554,12 @@ function switchActivePet(newIdx) {
   msg(`${state.name}로 전환`, true);
   haptic(10);
 }
-function graduatePet(idx) {
+async function graduatePet(idx) {
   if (!state || !state.pets[idx]) return;
   if (state.pets.length <= 1) { msg("마지막 펫과는 작별할 수 없어요", false); return; }
   const p = state.pets[idx];
-  if (!confirm(`'${p.name}' (Lv.${p.level})와 작별할까요?\n\n다시 돌아오지 않습니다 (도감 기록은 유지).`)) return;
+  const ok = await customConfirm(`'${p.name}' (Lv.${p.level})와 작별할까요?\n다시 돌아오지 않습니다 (도감 기록은 유지).`, "작별");
+  if (!ok) return;
   state.pets.splice(idx, 1);
   // 활성 인덱스 보정
   if (state.activePetIdx >= state.pets.length) state.activePetIdx = state.pets.length - 1;
@@ -751,9 +752,10 @@ function renderEggs() {
   });
 }
 
-function hatch(speciesKey) {
+async function hatch(speciesKey) {
   const sp = SPECIES[speciesKey];
-  const name = (prompt(`${sp.name}이(가) 부화했어요!\n이름을 지어주세요:`, sp.name) || sp.name).slice(0, 12);
+  const named = await customPrompt(`${sp.name}이(가) 부화했어요!\n이름을 지어주세요:`, sp.name, "이름 짓기");
+  const name = ((named && named.trim()) || sp.name).slice(0, 12);
   // 활성 펫 데이터(현재 키우는 몬스터의 사진)
   const newPet = {
     species: speciesKey, name,
@@ -802,13 +804,13 @@ function hatch(speciesKey) {
 }
 
 // 새 펫 부화: 로스터에 추가(슬롯 < MAX_PETS일 때만 활성화)
-function startRebirth() {
+async function startRebirth() {
   if (!state || !Array.isArray(state.pets)) return;
   if (state.pets.length >= MAX_PETS) {
     msg(`로스터 가득(${MAX_PETS}/${MAX_PETS}). 다른 펫과 작별해 슬롯을 비우세요.`, false);
     return;
   }
-  const ok = confirm(`새 펫을 부화시킬까요? (${state.pets.length}/${MAX_PETS} → ${state.pets.length + 1}/${MAX_PETS})\n도감/레이팅은 유지되고 현재 펫은 보존돼요.`);
+  const ok = await customConfirm(`새 펫을 부화시킬까요? (${state.pets.length}/${MAX_PETS} → ${state.pets.length + 1}/${MAX_PETS})\n도감/레이팅은 유지되고 현재 펫은 보존돼요.`, "새 펫 부화");
   if (!ok) return;
   pendingRebirth = true;
   renderEggs();
@@ -1958,7 +1960,7 @@ async function tryClaimChampion() {
   checkAchievements();
   save();
   Online.uploadSnapshot(mySnapshot());
-  alert(`🏆 지난주 토너먼트 챔피언!\n보상: 🪙${reward.coins} + 칭호 "${reward.title}"`);
+  customAlert(`🏆 지난주 토너먼트 챔피언!\n보상: 🪙${reward.coins} + 칭호 "${reward.title}"`, "챔피언");
 }
 
 // ---------- 소셜: 도발 / 받은함 / 친선 재대결 ----------
@@ -2018,6 +2020,41 @@ async function refreshInbox() {
     msgs.map((m) => `<div class="inbox-row"><b>${m.fromName}</b>: ${m.text}</div>`).join("");
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
+
+// ---------- 범용 다이얼로그 (alert/confirm/prompt/select) ----------
+// 브라우저 네이티브 다이얼로그 대체 — 게임 톤에 맞는 커스텀 모달. 모두 Promise 반환.
+let _dialogResolve = null;
+function _closeDialog(value) {
+  $("dialog-backdrop").classList.add("hidden");
+  if (_dialogResolve) { const r = _dialogResolve; _dialogResolve = null; r(value); }
+}
+function openCustomDialog(opts) {
+  return new Promise((resolve) => {
+    if (_dialogResolve) _dialogResolve(null); // 이전 미해결 cancel
+    _dialogResolve = resolve;
+    $("dialog-title").textContent = opts.title || "알림";
+    $("dialog-text").textContent = opts.text || "";
+    const inp = $("dialog-input");
+    inp.classList.toggle("hidden", !opts.input);
+    if (opts.input) { inp.value = opts.defaultValue || ""; setTimeout(() => inp.focus(), 50); }
+    const choicesEl = $("dialog-choices");
+    choicesEl.classList.toggle("hidden", !opts.choices);
+    if (opts.choices) {
+      choicesEl.innerHTML = opts.choices.map((c, i) => `<button data-choice-i="${i}">${c.label}</button>`).join("");
+    }
+    const cancelBtn = $("dialog-cancel");
+    cancelBtn.classList.toggle("hidden", !opts.cancelText);
+    cancelBtn.textContent = opts.cancelText || "취소";
+    const confirmBtn = $("dialog-confirm");
+    confirmBtn.classList.toggle("hidden", !!opts.choices); // 선택 모드면 confirm 숨김
+    confirmBtn.textContent = opts.confirmText || "확인";
+    $("dialog-backdrop").classList.remove("hidden");
+  });
+}
+function customAlert(text, title) { return openCustomDialog({ title: title || "알림", text, confirmText: "확인" }); }
+function customConfirm(text, title) { return openCustomDialog({ title: title || "확인", text, cancelText: "취소", confirmText: "확인" }).then((v) => v === true); }
+function customPrompt(text, defaultValue, title) { return openCustomDialog({ title: title || "입력", text, input: true, defaultValue, cancelText: "취소", confirmText: "확인" }).then((v) => typeof v === "string" ? v : null); }
+function customSelect(text, choices, title) { return openCustomDialog({ title: title || "선택", text, choices, cancelText: "취소" }).then((v) => typeof v === "number" ? choices[v] : null); }
 
 // ---------- 펫 자랑 카드 (Canvas → 이미지 다운로드) ----------
 function generateShareCard() {
@@ -2476,7 +2513,8 @@ $("auth-password").addEventListener("keydown", (e) => { if (e.key === "Enter") d
 
 async function doLogout() {
   if (!Online.status.loggedIn) return;
-  if (!confirm("로그아웃할까요? (이 기기의 진행은 남고, 다시 로그인하면 이어집니다)")) return;
+  const ok = await customConfirm("이 기기의 진행은 남고, 다시 로그인하면 이어집니다.", "로그아웃할까요?");
+  if (!ok) return;
   await Online.logout();
   renderAccount();
   authMsg("", true);
@@ -2517,6 +2555,17 @@ $("profile-body").addEventListener("click", (e) => {
 $("share-close").addEventListener("click", closeShareCard);
 $("share-download").addEventListener("click", downloadShareCard);
 $("share-backdrop").addEventListener("click", (e) => { if (e.target.id === "share-backdrop") closeShareCard(); });
+$("dialog-confirm").addEventListener("click", () => {
+  const inp = $("dialog-input");
+  _closeDialog(!inp.classList.contains("hidden") ? (inp.value || "") : true);
+});
+$("dialog-cancel").addEventListener("click", () => _closeDialog(null));
+$("dialog-input").addEventListener("keydown", (e) => { if (e.key === "Enter") $("dialog-confirm").click(); });
+$("dialog-choices").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-choice-i]");
+  if (b) _closeDialog(Number(b.dataset.choiceI));
+});
+$("dialog-backdrop").addEventListener("click", (e) => { if (e.target.id === "dialog-backdrop") _closeDialog(null); });
 $("dex-close").addEventListener("click", closeDex);
 $("dex-backdrop").addEventListener("click", (e) => { if (e.target.id === "dex-backdrop") closeDex(); });
 $("visit-close").addEventListener("click", closeVisit);
@@ -2729,7 +2778,7 @@ async function tryClaimSeason() {
   state.claimedSeasonMonth = reward.monthId;
   save();
   Online.uploadSnapshot(mySnapshot());
-  alert(`🏅 ${reward.monthId} 시즌 ${reward.tier} 보상!\n🪙 +${reward.coins}` + (reward.title ? `\n칭호: ${reward.title}` : ""));
+  customAlert(`🏅 ${reward.monthId} 시즌 ${reward.tier} 보상!\n🪙 +${reward.coins}` + (reward.title ? `\n칭호: ${reward.title}` : ""), "시즌 보상");
 }
 
 async function openSeason() {
@@ -2785,7 +2834,7 @@ async function tryClaimBoss() {
   if (reward.title && !state.titles.includes(reward.title)) state.titles.push(reward.title);
   save();
   Online.uploadSnapshot(mySnapshot());
-  alert(`${reward.bossIcon || "🐲"} ${reward.bossName || "보스"} 정산!\n순위 ${reward.rank}위 · 누적 ${reward.damage} 데미지\n보상: 🪙 ${reward.coins}${reward.title ? "\n칭호: " + reward.title : ""}`);
+  customAlert(`${reward.bossIcon || "🐲"} ${reward.bossName || "보스"} 정산!\n순위 ${reward.rank}위 · 누적 ${reward.damage} 데미지\n보상: 🪙 ${reward.coins}${reward.title ? "\n칭호: " + reward.title : ""}`, "보스 보상");
 }
 
 async function openBoss() {
@@ -3002,7 +3051,8 @@ async function tryAddFriend() {
   await refreshFriends();
 }
 async function removeFriendClick(friendId, name) {
-  if (!confirm(`'${name}' 친구를 삭제할까요?`)) return;
+  const ok = await customConfirm(`'${name}' 친구를 삭제할까요?`, "친구 삭제");
+  if (!ok) return;
   await Online.removeFriend(friendId);
   await refreshFriends();
 }
@@ -3064,13 +3114,9 @@ async function giftFriend(friendId, name) {
   await refreshFriends();
 }
 async function tauntFriend(friendId, name) {
-  // 친구 1명을 향해 도발 프리셋 선택 → 보내기
-  const presetIds = TAUNTS.map((t) => t.id);
-  const lines = TAUNTS.map((t, i) => `${i + 1}. ${t.text}`).join("\n");
-  const pick = prompt(`'${name}'에게 보낼 메시지 번호:\n\n${lines}`);
-  const idx = Number(pick);
-  if (!Number.isFinite(idx) || idx < 1 || idx > presetIds.length) return;
-  const ok = await Online.sendTaunt(friendId, presetIds[idx - 1]);
+  const choice = await customSelect(`'${name}'에게 보낼 메시지`, TAUNTS.map((t) => ({ id: t.id, label: t.text })), "도발");
+  if (!choice) return;
+  const ok = await Online.sendTaunt(friendId, choice.id);
   msg(ok ? "메시지를 보냈어요 📨" : "전송 실패", ok);
 }
 async function fightFriend(friendId) {
@@ -3152,7 +3198,7 @@ async function enterGameFromState() {
     const r = state.cosmeticRefundPending;
     delete state.cosmeticRefundPending;
     save();
-    setTimeout(() => alert(`등/꼬리 장식은 머리(모자) 슬롯으로 통합됐어요.\n기존에 구매하신 등/꼬리 아이템 가격은 모두 환불됐습니다: 🪙 +${r}`), 400);
+    setTimeout(() => customAlert(`등/꼬리 장식은 머리(모자) 슬롯으로 통합됐어요.\n기존에 구매하신 등/꼬리 아이템 가격은 모두 환불됐습니다: 🪙 +${r}`, "장식 슬롯 통합"), 400);
   }
 }
 

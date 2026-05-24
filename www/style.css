@@ -668,6 +668,23 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 범용 다이얼로그 */
+.dialog-sheet { max-width: 320px; }
+.dialog-text { white-space: pre-wrap; color: var(--accent2); font-size: 13px; line-height: 1.5; margin: 8px 0; text-align: center; }
+.dialog-input {
+  width: 100%; padding: 10px; margin: 8px 0;
+  background: var(--panel2); color: var(--accent2);
+  border: 2px solid var(--accent); font-size: 14px; font-family: inherit;
+}
+.dialog-choices { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.dialog-choices button {
+  padding: 10px; text-align: left; background: var(--panel2); color: var(--accent2);
+  border: 2px solid var(--accent); font-size: 13px; cursor: pointer; font-family: inherit;
+}
+.dialog-choices button:hover { background: var(--bg); }
+.dialog-nav { display: flex; gap: 6px; }
+.dialog-nav button { flex: 1; }
+
 /* 펫 자랑 카드 */
 .share-sheet { max-width: 360px; }
 .share-preview { text-align: center; margin: 10px 0; }
