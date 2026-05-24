@@ -907,7 +907,9 @@ function train(kind) {
 }
 
 function gainExp(amount) {
-  state.exp += Math.round(amount * evEffect("expMult", 1)); // 일일 이벤트(풍요의 날) 반영
+  const realAmt = Math.round(amount * evEffect("expMult", 1));
+  state.exp += realAmt;
+  if (realAmt > 0) floatNumberFromSelector("#exp-fill", `+${realAmt} EXP`, "var(--accent2)");
   while (state.exp >= expToNext(state.level)) {
     const prevStage = stageIndex(state.level);
     state.exp -= expToNext(state.level);
@@ -917,12 +919,38 @@ function gainExp(amount) {
     const evolved = stageIndex(state.level) !== prevStage;
     playFx("playLevelUp");
     sparkle($("pet-sprite"));
+    floatNumberFromSelector("#pet-sprite", `✨ LV ${state.level} UP!`, "var(--gold)", true);
     if (evolved) {
       playFx("playEvolve");
       haptic([35, 35, 60]);
       sparkle($("pet-sprite"));
+      floatNumberFromSelector("#pet-sprite", "🎉 진화!", "var(--gold)", true);
     }
     questProgress("levelup");
+  }
+}
+
+// 마이크로 인터랙션 — 대상 요소 위쪽으로 +N 떠오르는 텍스트
+function floatNumber(rect, text, color, big) {
+  if (!rect || !rect.width) return;
+  const el = document.createElement("div");
+  el.className = "float-num" + (big ? " big" : "");
+  el.textContent = text;
+  if (color) el.style.color = color;
+  el.style.left = (rect.left + rect.width / 2) + "px";
+  el.style.top = rect.top + "px";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+function floatNumberFromSelector(sel, text, color, big) {
+  // 화면에 보이는 첫 요소를 대상으로 — 여러 같은 셀렉터(예: .coin-balance) 케이스 처리
+  const list = document.querySelectorAll(sel);
+  for (const el of list) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0 && r.top >= 0 && r.top < window.innerHeight) {
+      floatNumber(r, text, color, big);
+      return;
+    }
   }
 }
 
@@ -1691,7 +1719,14 @@ function dismissWelcome() {
 }
 
 // ---------- 코인 / 상점 / 칭호 ----------
-function addCoins(n) { if (state) state.coins = Math.max(0, (state.coins || 0) + n); }
+function addCoins(n) {
+  if (!state) return;
+  state.coins = Math.max(0, (state.coins || 0) + n);
+  if (n !== 0) {
+    const text = (n > 0 ? "+" : "") + n + "🪙";
+    floatNumberFromSelector(".coin-balance", text, n > 0 ? "var(--gold)" : "var(--bad)");
+  }
+}
 
 // 상점 품목(클라 전용 — QoL/코스메틱, 영구 스탯 판매 없음)
 // 스태미너는 무한 펌프 방지를 위해 가격↑ + 하루 5회 캡(STAMINA_BUY_DAILY_MAX).

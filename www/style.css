@@ -668,6 +668,23 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 마이크로 인터랙션 — 보상 획득 시 플로팅 +N */
+.float-num {
+  position: fixed; left: 0; top: 0;
+  font-weight: 900; font-size: 16px;
+  text-shadow: 2px 2px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  pointer-events: none; white-space: nowrap;
+  animation: float-up 1.2s ease-out forwards;
+  z-index: 200;
+}
+.float-num.big { font-size: 24px; }
+@keyframes float-up {
+  0%   { opacity: 0; transform: translate(-50%, 8px) scale(.7); }
+  15%  { opacity: 1; transform: translate(-50%, -4px) scale(1.2); }
+  60%  { opacity: 1; transform: translate(-50%, -36px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60px) scale(.85); }
+}
+
 /* 범용 다이얼로그 */
 .dialog-sheet { max-width: 320px; }
 .dialog-text { white-space: pre-wrap; color: var(--accent2); font-size: 13px; line-height: 1.5; margin: 8px 0; text-align: center; }
