@@ -149,7 +149,7 @@ body {
    bob 애니메이션은 transform을 덮어쓰니 코스메틱엔 적용 안 함(고정 표시).
    정확한 슬롯 위치는 JS에서 종/단계 이모지에 따라 inline으로 조정. */
 .cos { position: absolute; pointer-events: none; line-height: 1; font-size: 22px;
-       filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); }
+       filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); z-index: 2; }
 .cos:empty { display: none; }
 .cos-head { top: -4px; left: 50%; margin-left: -13px; font-size: 26px; }
 
@@ -165,6 +165,7 @@ body {
   position: absolute; top: -2px; left: 50%; margin-left: -10px;
   font-size: 20px; pointer-events: none;
   filter: drop-shadow(0 1px 0 rgba(0,0,0,.45));
+  z-index: 2;
 }
 .cos-preview-label { color: var(--accent2); font-size: 12px; margin-top: 6px; font-weight: 700; }
 .shop-row[data-cos-preview] { cursor: pointer; }
