@@ -2108,8 +2108,9 @@ $("add-friend-btn").addEventListener("click", tryAddFriend);
 $("friend-code-input").addEventListener("keydown", (e) => { if (e.key === "Enter") tryAddFriend(); });
 $("friend-list").addEventListener("click", (e) => {
   const b = e.target.closest("button");
-  if (!b) return;
-  if (b.dataset.friendTaunt) tauntFriend(b.dataset.friendTaunt, b.dataset.friendName);
+  if (!b || b.disabled) return;
+  if (b.dataset.friendGift) giftFriend(b.dataset.friendGift, b.dataset.friendName);
+  else if (b.dataset.friendTaunt) tauntFriend(b.dataset.friendTaunt, b.dataset.friendName);
   else if (b.dataset.friendFight) fightFriend(b.dataset.friendFight);
   else if (b.dataset.friendRemove) removeFriendClick(b.dataset.friendRemove, b.dataset.friendName);
 });
@@ -2474,12 +2475,13 @@ async function openFriends() {
   await refreshFriends();
 }
 async function refreshFriends() {
-  const friends = await Online.friendsList();
+  const [friends, sentToday] = await Promise.all([Online.friendsList(), Online.giftsSentToday()]);
   $("friend-count").textContent = `(${friends.length}명)`;
   if (!friends.length) {
     $("friend-list").innerHTML = `<li class="muted">아직 친구가 없어요. 코드를 공유하거나 친구 코드를 입력해보세요!</li>`;
     return;
   }
+  const sentSet = new Set(sentToday || []);
   // 본인 + 친구 통합 레이팅 정렬 → 친구 사이 내 순위 시각화
   const mySp = SPECIES[state.species] || SPECIES.ember;
   const meRow = {
@@ -2515,6 +2517,7 @@ async function refreshFriends() {
         <div class="friend-meta">Lv ${f.level || 1} · ${ELEMENTS[sp.type].icon} ${ELEMENTS[sp.type].label} · 레이팅 ${f.rating}</div>
       </div>
       <div class="friend-actions">
+        <button data-friend-gift="${f.playerId}" data-friend-name="${f.name}" ${sentSet.has(f.playerId) ? "disabled" : ""} title="선물(하루 1회)">🎁</button>
         <button data-friend-taunt="${f.playerId}" data-friend-name="${f.name}">💬</button>
         <button data-friend-fight="${f.playerId}">⚔️</button>
         <button class="danger" data-friend-remove="${f.playerId}" data-friend-name="${f.name}">✕</button>
@@ -2542,6 +2545,19 @@ async function tryAddFriend() {
 async function removeFriendClick(friendId, name) {
   if (!confirm(`'${name}' 친구를 삭제할까요?`)) return;
   await Online.removeFriend(friendId);
+  await refreshFriends();
+}
+async function giftFriend(friendId, name) {
+  if (!Online.status.reachable) { msg("오프라인", false); return; }
+  const r = await Online.sendGift(friendId);
+  if (!r.ok) {
+    if (r.error === "already_sent") msg(`${name}에게 오늘 이미 보냈어요`, false);
+    else if (r.error === "not_friend") msg("친구만 가능", false);
+    else msg("선물 보내기 실패", false);
+    return;
+  }
+  msg(`${name}에게 🎁 선물 보냄!`, true);
+  haptic(10);
   await refreshFriends();
 }
 async function tauntFriend(friendId, name) {
@@ -2593,7 +2609,7 @@ const AUTH_ERR = {
 };
 
 // state(클라우드/로컬)로 게임 진입. state 있으면 홈, 없으면 부화.
-function enterGameFromState() {
+async function enterGameFromState() {
   if (state) {
     migrateState();
     if (!state.quests) state.quests = generateQuests();
@@ -2610,6 +2626,18 @@ function enterGameFromState() {
   }
   renderAccount();
   if (state) Online.uploadSnapshot(mySnapshot());
+  // 받은 선물 자동 수령
+  if (state && Online.status.reachable) {
+    const gifts = await Online.claimGifts();
+    if (gifts && gifts.length) {
+      const total = gifts.reduce((s, g) => s + (g.coins || 0), 0);
+      addCoins(total);
+      save();
+      const names = gifts.map((g) => g.fromName).slice(0, 3).join(", ");
+      const more = gifts.length > 3 ? ` 외 ${gifts.length - 3}명` : "";
+      setTimeout(() => msg(`🎁 ${names}${more}님이 보낸 선물 +🪙${total}`, true), 300);
+    }
+  }
   // 폐기 코스메틱(등/꼬리) 환불 알림 — 1회성
   if (state && state.cosmeticRefundPending) {
     const r = state.cosmeticRefundPending;

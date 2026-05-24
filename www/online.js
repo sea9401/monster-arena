@@ -160,6 +160,23 @@ const Online = (() => {
     const r = await call(`/players/${encodeURIComponent(id)}`);
     return r && !r._error ? r : null;
   }
+  async function sendGift(friendId) {
+    if (!status.reachable || !status.playerId) return { ok: false, error: "NETWORK" };
+    const r = await call("/gifts/send", { method: "POST", body: JSON.stringify({ playerId: status.playerId, friendId }) });
+    if (!r) return { ok: false, error: "NETWORK" };
+    if (r._error) return { ok: false, error: r.error || ("ERR_" + r._error) };
+    return r;
+  }
+  async function claimGifts() {
+    if (!status.reachable || !status.playerId) return [];
+    const r = await call(`/gifts?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && r.gifts ? r.gifts : [];
+  }
+  async function giftsSentToday() {
+    if (!status.reachable || !status.playerId) return [];
+    const r = await call(`/gifts/sent-today?playerId=${encodeURIComponent(status.playerId)}`);
+    return r && r.sent ? r.sent : [];
+  }
   async function bossState() {
     if (!status.reachable) return null;
     const r = await call(`/boss/state?playerId=${encodeURIComponent(status.playerId)}`);
@@ -194,5 +211,6 @@ const Online = (() => {
     uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event,
     claimChampion, sendTaunt, getMessages, ackMessages, season, claimSeason,
     bossState, bossAttack, bossClaim,
-    myCode, friendsList, addFriend, removeFriend, getPlayer };
+    myCode, friendsList, addFriend, removeFriend, getPlayer,
+    sendGift, claimGifts, giftsSentToday };
 })();

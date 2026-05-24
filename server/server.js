@@ -38,6 +38,8 @@ function load() {
   if (!db.season.lastResults) db.season.lastResults = {};
   if (!db.season.claimedBy) db.season.claimedBy = {};
   if (!db.shareCodes) db.shareCodes = {};  // code -> playerId (친구 코드 룩업)
+  if (!db.gifts) db.gifts = {};            // recipientId -> [{from,fromName,coins,at}]
+  if (!db.giftSent) db.giftSent = {};      // senderId -> { recipientId: "YYYY-MM-DD" }
   if (!db.boss) db.boss = { weekId: weekInfo().weekId, boss: bossFor(weekInfo().weekId), contributions: {}, attackLog: {}, lastResults: {}, claimedBy: {} };
   if (!db.boss.attackLog) db.boss.attackLog = {};
   if (!db.boss.lastResults) db.boss.lastResults = {};
@@ -617,6 +619,40 @@ const server = http.createServer(async (req, res) => {
     const f = db.players[friendId];
     return send(res, 200, { ok: true, friend: { playerId: f.playerId, name: f.name, species: f.species, level: f.level, rating: f.rating, title: f.title || "", seeded: !!f.seeded } });
   }
+  if (url === "/gifts/send" && method === "POST") {
+    const b = await readBody(req);
+    const from = String(b.playerId || ""), to = String(b.friendId || "");
+    const fromP = db.players[from], toP = db.players[to];
+    if (!fromP || !toP) return send(res, 404, { error: "no_player" });
+    if (from === to) return send(res, 400, { error: "self" });
+    // 친구로 등록된 사이만(스팸 방지)
+    if (!Array.isArray(fromP.friends) || !fromP.friends.includes(to)) return send(res, 403, { error: "not_friend" });
+    const today = kstDateStr(now());
+    if (!db.giftSent[from]) db.giftSent[from] = {};
+    if (db.giftSent[from][to] === today) return send(res, 409, { error: "already_sent" });
+    db.giftSent[from][to] = today;
+    if (!db.gifts[to]) db.gifts[to] = [];
+    db.gifts[to].push({ from, fromName: fromP.name, coins: 30, at: now() });
+    save();
+    return send(res, 200, { ok: true });
+  }
+  if (url === "/gifts" && method === "GET") {
+    const pid = String(query.playerId || "");
+    if (!db.players[pid]) return send(res, 404, { error: "no_player" });
+    const list = db.gifts[pid] || [];
+    db.gifts[pid] = []; // 한 번 가져가면 비움(수령 처리)
+    if (list.length) save();
+    return send(res, 200, { gifts: list });
+  }
+  if (url === "/gifts/sent-today" && method === "GET") {
+    const pid = String(query.playerId || "");
+    if (!db.players[pid]) return send(res, 404, { error: "no_player" });
+    const today = kstDateStr(now());
+    const sentMap = db.giftSent[pid] || {};
+    const sentIds = Object.entries(sentMap).filter(([_, d]) => d === today).map(([id]) => id);
+    return send(res, 200, { sent: sentIds });
+  }
+
   if (url === "/friends/remove" && method === "POST") {
     const b = await readBody(req);
     const pid = String(b.playerId || ""), fid = String(b.friendId || "");
