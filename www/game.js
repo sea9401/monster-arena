@@ -2397,10 +2397,35 @@ async function refreshFriends() {
     $("friend-list").innerHTML = `<li class="muted">아직 친구가 없어요. 코드를 공유하거나 친구 코드를 입력해보세요!</li>`;
     return;
   }
-  $("friend-list").innerHTML = friends.map((f) => {
+  // 본인 + 친구 통합 레이팅 정렬 → 친구 사이 내 순위 시각화
+  const mySp = SPECIES[state.species] || SPECIES.ember;
+  const meRow = {
+    playerId: Online.status.playerId,
+    name: state.name + " (나)",
+    species: state.species,
+    level: state.level,
+    rating: state.rating,
+    title: state.title || "",
+    isMe: true,
+  };
+  const all = [meRow, ...friends].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  $("friend-list").innerHTML = all.map((f, i) => {
+    const rank = i + 1;
     const sp = SPECIES[f.species] || SPECIES.ember;
     const emoji = sp.stages[Math.min(stageIndex(f.level || 1), sp.stages.length - 1)];
+    const rankBadge = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
+    if (f.isMe) {
+      return `<li class="friend-row friend-me">
+        <span class="friend-rank">${rankBadge}</span>
+        <span class="friend-emoji">${emoji}</span>
+        <div class="friend-info">
+          <div class="friend-name">${f.name}${f.title ? ' <span class="shop-desc">' + f.title + '</span>' : ''}</div>
+          <div class="friend-meta">Lv ${f.level || 1} · ${ELEMENTS[sp.type].icon} ${ELEMENTS[sp.type].label} · 레이팅 ${f.rating}</div>
+        </div>
+      </li>`;
+    }
     return `<li class="friend-row" data-friend-id="${f.playerId}">
+      <span class="friend-rank">${rankBadge}</span>
       <span class="friend-emoji">${emoji}</span>
       <div class="friend-info">
         <div class="friend-name">${f.name}${f.title ? ' <span class="shop-desc">' + f.title + '</span>' : ''}</div>
