@@ -1381,6 +1381,7 @@ async function findMatch() {
 
 function startBattle() {
   if (!friendlyMode) { questProgress("pvp_play"); state.lifetime.pvp++; } // 친선전은 카운트 안 함
+  _battleEvents = []; // 리플레이용 로그 초기화
   $("match-find").classList.add("hidden");
   $("match-battle").classList.remove("hidden");
 
@@ -1495,7 +1496,9 @@ function hitAnim(who) {
   setTimeout(() => s.classList.remove("hit"), 300);
 }
 
+let _battleEvents = []; // 현재 전투의 이벤트 누적(리플레이용)
 function blog(text, type) {
+  _battleEvents.push({ text, type });
   const el = document.createElement("p");
   el.className = "entry " + (type === "me" ? "me" : type === "foe" ? "foe" : "system");
   el.textContent = text;
@@ -1504,6 +1507,16 @@ function blog(text, type) {
 }
 
 async function resolve(won) {
+  // 직전 전투를 리플레이용으로 저장(친선전 포함). 최근 1개만 유지.
+  if (state) {
+    state.lastReplay = {
+      events: _battleEvents.slice(),
+      won, friendly: friendlyMode,
+      meName: state.name, foeName: currentOpponent?.name || "상대",
+      foeEmoji: currentOpponent?.emoji || "👹",
+      at: Date.now(),
+    };
+  }
   // 친선 재대결: 기록·보상·레이팅 없이 결과화면만 표시
   if (friendlyMode) {
     friendlyMode = false;
@@ -1877,6 +1890,34 @@ async function refreshInbox() {
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
 
+// ---------- 전투 리플레이 ----------
+let _replayTimer = null;
+function playReplay() {
+  const r = state && state.lastReplay;
+  if (!r || !r.events || !r.events.length) { msg("리플레이 없음", false); return; }
+  $("replay-title").textContent = `🎬 ${r.foeEmoji} ${r.foeName} 전 (${r.won ? "승" : "패"})`;
+  const list = $("replay-log");
+  list.innerHTML = "";
+  $("replay-backdrop").classList.remove("hidden");
+  clearTimeout(_replayTimer);
+  let i = 0;
+  const tick = () => {
+    if (i >= r.events.length) return;
+    const e = r.events[i++];
+    const p = document.createElement("p");
+    p.className = "entry " + (e.type === "me" ? "me" : e.type === "foe" ? "foe" : "system");
+    p.textContent = e.text;
+    list.appendChild(p);
+    list.scrollTop = list.scrollHeight;
+    _replayTimer = setTimeout(tick, 320);
+  };
+  tick();
+}
+function closeReplay() {
+  clearTimeout(_replayTimer);
+  $("replay-backdrop").classList.add("hidden");
+}
+
 // 친선 재대결: 메모리의 직전 상대와 다시 싸움(보상·기록·레이팅 없음)
 function friendlyRematch() {
   if (!currentOpponent) return;
@@ -1986,6 +2027,10 @@ $("go-pvp").addEventListener("click", enterArena);
 $("back-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
 $("fight-btn").addEventListener("click", startBattle);
 $("again-btn").addEventListener("click", freshMatch);   // 다시 대전 = 새 매칭 세션(리롤 리셋)
+$("replay-btn").addEventListener("click", playReplay);
+$("replay-close").addEventListener("click", closeReplay);
+$("replay-restart").addEventListener("click", playReplay);
+$("replay-backdrop").addEventListener("click", (e) => { if (e.target.id === "replay-backdrop") closeReplay(); });
 $("rematch-btn").addEventListener("click", rerollMatch); // 다른 상대 = 리롤(최대 2회)
 $("leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "arena"; openLeaderboard(); });
 $("home-leaderboard-btn").addEventListener("click", () => { leaderboardReturn = "home-arena"; openLeaderboard(); });

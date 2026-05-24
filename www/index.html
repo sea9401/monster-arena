@@ -227,6 +227,7 @@
         <div id="result-social" class="social-bar hidden"></div>
         <div class="nav">
           <button id="again-btn" class="primary">다시 대전</button>
+          <button id="replay-btn" class="ghost">🎬 리플레이</button>
         </div>
       </div>
     </section>
@@ -355,6 +356,18 @@
         <li><b>🪙 코인</b> — 전투·퀘스트·출석으로 모아 상점에서 사용.</li>
       </ul>
       <button id="welcome-close" class="primary">시작하기</button>
+    </div>
+  </div>
+
+  <!-- 전투 리플레이 모달 -->
+  <div id="replay-backdrop" class="welcome-backdrop hidden">
+    <div class="welcome-sheet replay-sheet">
+      <h2 id="replay-title">🎬 직전 전투</h2>
+      <div class="log" id="replay-log"></div>
+      <div class="nav">
+        <button id="replay-restart" class="ghost">⏮ 다시</button>
+        <button id="replay-close" class="primary">닫기</button>
+      </div>
     </div>
   </div>
 

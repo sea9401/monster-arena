@@ -639,6 +639,10 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+.replay-sheet { max-width: 360px; }
+.replay-sheet .log { max-height: 50vh; overflow-y: auto; background: var(--bg); padding: 8px; border: 2px solid var(--accent); margin: 8px 0; }
+.replay-sheet .nav { display: flex; gap: 6px; }
+.replay-sheet .nav button { flex: 1; }
 .welcome-list { list-style: none; padding: 0; margin: 0 0 16px; }
 .welcome-list li { font-size: 13px; line-height: 1.6; color: var(--accent2); margin-bottom: 8px; text-transform: none; letter-spacing: normal; }
 .welcome-list b { color: var(--gold); }
