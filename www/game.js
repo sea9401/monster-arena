@@ -1543,7 +1543,10 @@ const OBSOLETE_COSMETICS = {
   tail_ribbon: 60, tail_bell: 90, tail_flame: 180,
 };
 
+let _shopPreviewHat = null; // null = 현재 장착 중인 모자 표시
+
 function openShop() {
+  _shopPreviewHat = null;
   show("shop");
   renderShop();
 }
@@ -1564,20 +1567,22 @@ function renderShop() {
       <button class="shop-buy" data-buy="${it.id}" ${disabled ? "disabled" : ""}>${label}</button>
     </li>`;
   }).join("");
-  // 코스메틱 장비(모자)
+  // 코스메틱 장비(모자) — 행을 탭하면 미리보기에 임시 장착
   $("shop-cosmetics").innerHTML = COSMETIC_ITEMS.map((c) => {
     const owned = state.cosmetics.owned.includes(c.id);
     const equipped = state.cosmetics.equipped[c.slot] === c.id;
+    const previewing = _shopPreviewHat === c.id;
     let btn;
     if (equipped) btn = `<button class="shop-buy" data-cos-unequip="${c.slot}">해제</button>`;
     else if (owned) btn = `<button class="shop-buy" data-cos-equip="${c.id}">장착</button>`;
     else btn = `<button class="shop-buy" data-cos-buy="${c.id}" ${state.coins < c.cost ? "disabled" : ""}>🪙${c.cost}</button>`;
-    return `<li class="shop-row">
+    return `<li class="shop-row${previewing ? " cos-active" : ""}" data-cos-preview="${c.id}">
       <span class="shop-icon">${c.icon}</span>
       <span class="shop-info"><b>${c.name}</b>${owned ? ' <span class="shop-desc">· 보유</span>' : ''}</span>
       ${btn}
     </li>`;
   }).join("");
+  renderShopPreview();
   // 칭호
   $("shop-titles").innerHTML = SHOP_TITLES.map((t) => {
     const owned = (state.titles || []).includes(t.text);
@@ -1697,6 +1702,31 @@ function unequipCosmetic(slot) {
   save();
   renderShop();
   renderHome();
+}
+// 상점 미리보기 — 현재 종/단계 펫에 임시로 모자 얹어보기
+function renderShopPreview() {
+  if (!state) return;
+  const petEl = $("cos-preview-pet"), hatEl = $("cos-preview-hat"), labelEl = $("cos-preview-label");
+  if (!petEl || !hatEl) return;
+  const sp = SPECIES[state.species];
+  const emoji = sp ? sp.stages[stageIndex(state.level)] : "🐲";
+  petEl.textContent = emoji;
+  // 종 정면에 맞춘 모자 X 위치(머리 슬롯 정합 로직과 동일)
+  const facing = EMOJI_FACING[emoji] || "center";
+  hatEl.style.left = ""; hatEl.style.marginLeft = "";
+  if (facing === "right") { hatEl.style.left = "72%"; hatEl.style.marginLeft = "-10px"; }
+  else if (facing === "left") { hatEl.style.left = "28%"; hatEl.style.marginLeft = "-10px"; }
+  // 미리보기 ID = 탭한 모자 우선, 없으면 현재 장착, 둘 다 없으면 빈
+  const previewId = _shopPreviewHat || state.cosmetics.equipped.head;
+  const c = previewId ? cosmeticById(previewId) : null;
+  hatEl.textContent = c ? c.icon : "";
+  if (_shopPreviewHat) {
+    labelEl.textContent = c ? `미리보기: ${c.name}` : "미리보기";
+  } else if (state.cosmetics.equipped.head) {
+    labelEl.textContent = c ? `현재 장착: ${c.name}` : "장식 없음";
+  } else {
+    labelEl.textContent = "행을 탭하면 미리 써볼 수 있어요";
+  }
 }
 
 // 지난주 챔피언 보상 수령(서버 멱등 + 클라 기록)
@@ -1899,14 +1929,23 @@ $("shop-btn").addEventListener("click", openShop);
 $("shop-back").addEventListener("click", () => { renderHome(); showHomeTab("daily"); show("home"); });
 $("shop-screen").addEventListener("click", (e) => {
   const b = e.target.closest("button");
-  if (!b) return;
-  if (b.dataset.buy) buyItem(b.dataset.buy);
-  else if (b.dataset.title) buyTitle(b.dataset.title, Number(b.dataset.cost));
-  else if (b.dataset.equip) equipTitle(b.dataset.equip);
-  else if (b.dataset.unequip) equipTitle("");
-  else if (b.dataset.cosBuy) buyCosmetic(b.dataset.cosBuy);
-  else if (b.dataset.cosEquip) equipCosmetic(b.dataset.cosEquip);
-  else if (b.dataset.cosUnequip) unequipCosmetic(b.dataset.cosUnequip);
+  if (b) {
+    if (b.dataset.buy) buyItem(b.dataset.buy);
+    else if (b.dataset.title) buyTitle(b.dataset.title, Number(b.dataset.cost));
+    else if (b.dataset.equip) equipTitle(b.dataset.equip);
+    else if (b.dataset.unequip) equipTitle("");
+    else if (b.dataset.cosBuy) buyCosmetic(b.dataset.cosBuy);
+    else if (b.dataset.cosEquip) equipCosmetic(b.dataset.cosEquip);
+    else if (b.dataset.cosUnequip) unequipCosmetic(b.dataset.cosUnequip);
+    return;
+  }
+  // 버튼 외 영역 클릭 — 모자 행이면 미리보기로 전환(같은 행 재탭 시 해제)
+  const row = e.target.closest("[data-cos-preview]");
+  if (row) {
+    const id = row.dataset.cosPreview;
+    _shopPreviewHat = _shopPreviewHat === id ? null : id;
+    renderShop();
+  }
 });
 
 // 소셜(결과화면): 친선 재대결 + 도발
