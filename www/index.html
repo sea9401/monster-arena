@@ -146,6 +146,7 @@
         </div>
 
         <div class="dex-bar">
+          <button id="profile-open" class="dex-btn">📊 내 프로필</button>
           <button id="dex-open" class="dex-btn">📖 도감 <span id="dex-count">0/14</span></button>
         </div>
         <div class="achievements">
@@ -291,6 +292,15 @@
       <p class="muted tourney-note">코인은 전투(승+20/패+5)·퀘스트(+10)·출석(+15)으로 모아요</p>
       <div class="nav">
         <button id="shop-back" class="ghost">← 돌아가기</button>
+      </div>
+    </section>
+
+    <!-- 10. 내 프로필 -->
+    <section id="profile-screen" class="screen hidden">
+      <h2><button class="screen-back" data-back-target="profile-back" aria-label="뒤로가기">←</button>📊 내 프로필</h2>
+      <div id="profile-body"></div>
+      <div class="nav">
+        <button id="profile-back" class="ghost">← 일일로</button>
       </div>
     </section>
 

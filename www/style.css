@@ -680,8 +680,27 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .visit-sheet .nav button { flex: 1; }
 .friend-row { cursor: pointer; }
 
+/* 내 프로필 */
+.profile-section {
+  background: var(--panel); border: 2px solid var(--bg);
+  padding: 12px 14px; margin: 12px 0;
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,.2);
+}
+.profile-section h3 {
+  margin: 0 0 8px; color: var(--accent2); font-size: 14px;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.profile-section h3 b { color: var(--gold); font-size: 16px; }
+.profile-bar { height: 8px; background: var(--bg); border: 1px solid var(--accent); margin: 6px 0; overflow: hidden; }
+.profile-bar > div { height: 100%; background: linear-gradient(to right, var(--accent), var(--gold)); transition: width .3s; }
+.profile-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 6px; font-size: 11px; color: var(--accent2); }
+.profile-stats > div { background: var(--bg); padding: 6px 8px; border: 1px solid var(--bg); }
+.profile-stats > div b { color: var(--gold); display: block; font-size: 14px; }
+.profile-title-row { color: var(--accent2); font-size: 12px; margin-top: 6px; }
+.profile-title-row b { color: var(--gold); }
+
 /* 도감 */
-.dex-bar { margin: 12px 0; }
+.dex-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 12px 0; }
 .dex-btn {
   width: 100%; padding: 10px;
   background: var(--panel); color: var(--accent2); border: 2px solid var(--accent);

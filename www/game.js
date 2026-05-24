@@ -348,6 +348,7 @@ const screens = {
   season: $("season-screen"),
   boss: $("boss-screen"),
   friends: $("friends-screen"),
+  profile: $("profile-screen"),
 };
 let tooltipEl = null;
 
@@ -2017,6 +2018,70 @@ async function refreshInbox() {
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
 
+// ---------- 내 프로필 (계정 진행도 한눈에) ----------
+async function openProfile() {
+  show("profile");
+  await renderProfile();
+}
+async function renderProfile() {
+  if (!state) return;
+  const body = $("profile-body");
+  const totalSpecies = Object.keys(SPECIES).length;
+  const seenN = (state.lifetime.speciesSeen || []).length;
+  const achTotal = ACHIEVEMENTS.length;
+  const achUnlocked = Object.keys(state.achievements || {}).length;
+  const hatTotal = COSMETIC_ITEMS.length;
+  const hatOwned = (state.cosmetics.owned || []).length;
+  const friendCount = Online.status.reachable ? (await Online.friendsList()).length : "?";
+  const wins = state.wins || 0, losses = state.losses || 0;
+  const total = wins + losses;
+  const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+  const pct = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
+  body.innerHTML = `
+    <div class="profile-section">
+      <h3>🐲 펫 컬렉션 <b>${seenN}/${totalSpecies}</b></h3>
+      <div class="profile-bar"><div style="width:${pct(seenN, totalSpecies)}%"></div></div>
+      <div class="profile-title-row">현재 로스터: <b>${(state.pets || []).length}/${MAX_PETS}</b> · ${(state.pets || []).map((p) => SPECIES[p.species]?.stages[stageIndex(p.level)] || "🥚").join(" ")}</div>
+    </div>
+    <div class="profile-section">
+      <h3>🏆 업적 <b>${achUnlocked}/${achTotal}</b></h3>
+      <div class="profile-bar"><div style="width:${pct(achUnlocked, achTotal)}%"></div></div>
+    </div>
+    <div class="profile-section">
+      <h3>🎩 모자 <b>${hatOwned}/${hatTotal}</b></h3>
+      <div class="profile-bar"><div style="width:${pct(hatOwned, hatTotal)}%"></div></div>
+      <div class="profile-title-row">착용: ${state.cosmetics.equipped.head ? cosmeticById(state.cosmetics.equipped.head)?.icon + " " + cosmeticById(state.cosmetics.equipped.head)?.name : "<span class='muted'>없음</span>"}</div>
+    </div>
+    <div class="profile-section">
+      <h3>👥 친구 <b>${friendCount}</b></h3>
+      <div class="profile-title-row">친구 화면에서 코드 공유로 추가</div>
+    </div>
+    <div class="profile-section">
+      <h3>⚔️ 아레나 전적 <b>${wins}승 ${losses}패</b></h3>
+      <div class="profile-title-row">레이팅 <b>${state.rating}</b> · 승률 ${winRate}% · 자이언트킬 ${state.lifetime.upsets || 0}회</div>
+    </div>
+    <div class="profile-section">
+      <h3>📈 평생 통계</h3>
+      <div class="profile-stats">
+        <div><b>${state.lifetime.trains || 0}</b>훈련</div>
+        <div><b>${state.lifetime.feeds || 0}</b>먹이</div>
+        <div><b>${state.lifetime.plays || 0}</b>놀이</div>
+        <div><b>${state.lifetime.pvp || 0}</b>PvP</div>
+        <div><b>${state.dayCount || 1}</b>일차</div>
+        <div><b>${state.streak || 1}</b>연속</div>
+      </div>
+    </div>
+    <div class="profile-section">
+      <h3>💰 자산</h3>
+      <div class="profile-stats">
+        <div><b>${state.coins || 0}</b>🪙 코인</div>
+        <div><b>${(state.titles || []).length}</b>칭호</div>
+      </div>
+      ${state.title ? `<div class="profile-title-row">착용 칭호: <b>${state.title}</b></div>` : ""}
+    </div>
+  `;
+}
+
 // ---------- 도감 (사이드 컨텐츠 — 컬렉션 진행도) ----------
 function dexUnlocked() {
   const seen = (state && state.lifetime && state.lifetime.speciesSeen) || [];
@@ -2340,6 +2405,8 @@ $("walk-body").addEventListener("click", (e) => {
   else if (b.classList.contains("walk-claim")) claimWalk();
 });
 $("dex-open").addEventListener("click", openDex);
+$("profile-open").addEventListener("click", openProfile);
+$("profile-back").addEventListener("click", () => { renderHome(); showHomeTab("daily"); show("home"); });
 $("dex-close").addEventListener("click", closeDex);
 $("dex-backdrop").addEventListener("click", (e) => { if (e.target.id === "dex-backdrop") closeDex(); });
 $("visit-close").addEventListener("click", closeVisit);
