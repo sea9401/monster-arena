@@ -2132,14 +2132,16 @@ function renderLuckyButton() {
   $("lucky-status").textContent = avail ? "오늘 1회" : "내일 다시";
 }
 function openLucky() {
-  const wheel = $("lucky-wheel");
-  if (!wheel) return;
-  // 섹터 렌더 (1회만 — 회전이 누적되므로 매번 그릴 필요 X. 비어있을 때만)
-  if (!wheel.children.length) {
-    wheel.innerHTML = LUCKY_REWARDS.map((r, i) => {
-      // 각 섹터: 중심(50%,50%)에서 angle 방향으로 반지름 78만큼 떨어진 곳에 라벨
-      const a = i * 45;
-      return `<div class="lucky-sector" style="transform: rotate(${a}deg) translate(-50%, -88px) rotate(${-a}deg);">${r.label}</div>`;
+  const ring = $("lucky-ring");
+  if (!ring) return;
+  // 8개 라벨을 원형 좌표에 고정 배치 (회전 X). 위(angle 0)부터 시계방향.
+  if (!ring.children.length) {
+    const R = 96; // 라벨 반지름
+    ring.innerHTML = LUCKY_REWARDS.map((r, i) => {
+      const rad = (i * 45) * Math.PI / 180;
+      const x = Math.sin(rad) * R;
+      const y = -Math.cos(rad) * R;
+      return `<div class="lucky-label" style="--x: ${x.toFixed(1)}px; --y: ${y.toFixed(1)}px;">${r.label}</div>`;
     }).join("");
   }
   $("lucky-result").textContent = "";
@@ -2153,10 +2155,10 @@ function spinLucky() {
   _luckySpinning = true;
   $("lucky-spin").disabled = true;
   const idx = Math.floor(Math.random() * LUCKY_REWARDS.length);
-  // 휠을 5바퀴 돌고 idx 섹터가 상단(포인터 위치)으로 오게 회전 (CCW)
-  _luckyRotation -= 360 * 5 + idx * 45;
-  const wheel = $("lucky-wheel");
-  wheel.style.transform = `rotate(${_luckyRotation}deg)`;
+  // 화살표를 5바퀴 + idx 각도만큼 시계방향 회전(CW) → idx 섹터 가리킴
+  _luckyRotation += 360 * 5 + idx * 45;
+  const arrow = $("lucky-arrow");
+  arrow.style.transform = `rotate(${_luckyRotation}deg)`;
   state.luckyRollDate = todayStr();
   setTimeout(() => {
     const r = LUCKY_REWARDS[idx];

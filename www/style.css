@@ -739,24 +739,44 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .lucky-btn.done { background: var(--panel); color: var(--accent); }
 .lucky-status { font-size: 11px; opacity: .85; }
 .lucky-sheet { max-width: 320px; }
-.lucky-wheel-wrap { position: relative; width: 220px; height: 220px; margin: 16px auto; }
-.lucky-pointer {
-  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
-  font-size: 22px; color: var(--bad); z-index: 3; text-shadow: 1px 1px 0 #000;
-}
-.lucky-wheel {
+.lucky-wheel-wrap { position: relative; width: 240px; height: 240px; margin: 16px auto; }
+/* 고정 라벨 링 — 회전 안 함, 라벨 항상 똑바로 */
+.lucky-ring {
   position: absolute; inset: 0;
   border: 4px solid var(--gold); border-radius: 50%;
-  background: radial-gradient(circle, var(--panel) 50%, var(--panel2) 100%);
+  background: radial-gradient(circle, var(--panel) 55%, var(--panel2) 100%);
   box-shadow: 0 0 0 4px var(--bg), inset 0 0 0 2px var(--accent);
-  transition: transform 3s cubic-bezier(.18,.7,.2,1);
 }
-.lucky-sector {
-  position: absolute; top: 50%; left: 50%;
-  transform-origin: 0 0;
+.lucky-label {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y)));
   font-size: 13px; font-weight: 900; color: var(--gold);
   text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
-  white-space: nowrap;
+  white-space: nowrap; padding: 0 2px;
+}
+/* 중심에서 위로 뻗은 화살표 — 회전 대상 */
+.lucky-arrow {
+  position: absolute; left: 50%; top: 50%;
+  width: 8px; height: 80px;
+  margin-left: -4px; margin-top: -80px;
+  background: linear-gradient(to top, transparent, var(--bad) 30%);
+  transform-origin: 50% 100%; /* 회전 중심 = 휠 중앙 */
+  transition: transform 3s cubic-bezier(.18,.7,.2,1);
+  z-index: 2;
+}
+.lucky-arrow::before {
+  content: ""; position: absolute; top: -10px; left: -6px;
+  width: 0; height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 14px solid var(--bad);
+}
+.lucky-center {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--bg); border: 2px solid var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; z-index: 3;
 }
 .lucky-result { text-align: center; min-height: 24px; color: var(--accent2); font-weight: 700; }
 .lucky-sheet .nav { display: flex; gap: 6px; }
