@@ -2722,7 +2722,7 @@ $("mute-btn").addEventListener("click", () => {
 async function openLeaderboard() {
   show("leaderboard");
   const list = $("leaderboard-list");
-  list.innerHTML = `<li class="muted">불러오는 중...</li>`;
+  list.innerHTML = `<li class="loading-row"><span class="spinner"></span>불러오는 중...</li>`;
   const rows = await Online.leaderboard(20);
   if (!rows) {
     list.innerHTML = `<li class="muted">서버에 연결할 수 없어요. (오프라인)</li>`;
@@ -2750,7 +2750,7 @@ async function openTournament() {
   show("tournament");
   await tryClaimChampion(); // 지난주 챔피언이면 보상 수령
   const list = $("tournament-list");
-  list.innerHTML = `<li class="muted">불러오는 중...</li>`;
+  list.innerHTML = `<li class="loading-row"><span class="spinner"></span>불러오는 중...</li>`;
   $("tourney-me").textContent = "";
   $("tourney-champion").innerHTML = "";
   $("tourney-countdown").textContent = "";
@@ -2883,7 +2883,7 @@ async function openBoss() {
   $("boss-total-dmg").textContent = "0";
   $("boss-participants").textContent = "0";
   $("boss-my-dmg").textContent = "0";
-  $("boss-top").innerHTML = `<li class="muted">불러오는 중...</li>`;
+  $("boss-top").innerHTML = `<li class="loading-row"><span class="spinner"></span>불러오는 중...</li>`;
   $("boss-last-result").innerHTML = "";
   $("boss-attack-btn").disabled = true;
   await refreshBoss();
@@ -3010,7 +3010,7 @@ function startBossCountdown(endsAt) {
 async function openFriends() {
   show("friends");
   $("my-friend-code").textContent = "...";
-  $("friend-list").innerHTML = `<li class="muted">불러오는 중...</li>`;
+  $("friend-list").innerHTML = `<li class="loading-row"><span class="spinner"></span>불러오는 중...</li>`;
   $("friend-count").textContent = "";
   const code = await Online.myCode();
   $("my-friend-code").textContent = code || "오프라인";
@@ -3093,8 +3093,14 @@ async function removeFriendClick(friendId, name) {
 }
 let _visitFriendId = null;
 async function visitFriend(friendId) {
+  // 로딩 즉시 표시 — 네트워크 대기 동안 빈 모달 방지
+  $("visit-title").textContent = "불러오는 중...";
+  $("visit-pet").innerHTML = `<div class="loading-row"><span class="spinner"></span>친구 펫 정보 불러오는 중</div>`;
+  $("visit-pat").disabled = true;
+  $("visit-pat").textContent = "🤲 쓰다듬기";
+  $("visit-backdrop").classList.remove("hidden");
   const snap = await Online.getPlayer(friendId);
-  if (!snap) { msg("친구 정보를 가져올 수 없어요", false); return; }
+  if (!snap) { closeVisit(); msg("친구 정보를 가져올 수 없어요", false); return; }
   _visitFriendId = friendId;
   const sp = SPECIES[snap.species] || SPECIES.ember;
   const emoji = sp.stages[Math.min(stageIndex(snap.level || 1), sp.stages.length - 1)];

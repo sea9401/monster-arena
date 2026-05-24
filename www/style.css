@@ -668,6 +668,21 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+/* 로딩 스피너 */
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid var(--accent); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+  vertical-align: middle; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-row {
+  color: var(--accent); padding: 16px 12px; text-align: center;
+  font-size: 13px; list-style: none;
+  animation: loading-pulse 1.5s ease-in-out infinite;
+}
+@keyframes loading-pulse { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
+
 /* 마이크로 인터랙션 — 보상 획득 시 플로팅 +N */
 .float-num {
   position: fixed; left: 0; top: 0;
