@@ -2050,11 +2050,12 @@ function closeDex() { $("dex-backdrop").classList.add("hidden"); }
 
 // ---------- 펫 산책 (사이드 컨텐츠 — idle 진행, 스태미너 무관) ----------
 // 산책 시간이 길수록 시간당 효율 ↑ (긴 commit 보상).
+// EXP는 상점 EXP포션과 중복이라 제외, 대신 포만/행복 회복으로 상점 간식 대체 가치.
 const WALK_OPTIONS = [
-  { min: 15,  coins: 15,  exp: 10  },
-  { min: 30,  coins: 35,  exp: 25  },
-  { min: 60,  coins: 80,  exp: 60  },
-  { min: 120, coins: 200, exp: 150 },
+  { min: 15,  label: "🥾 산책",     coins: 30,  food: 10, happy: 15 },
+  { min: 30,  label: "🌳 소풍",     coins: 70,  food: 20, happy: 25 },
+  { min: 60,  label: "🗺️ 탐험",     coins: 160, food: 30, happy: 40 },
+  { min: 120, label: "⛰️ 대원정",   coins: 400, food: 50, happy: 50 },
 ];
 function walkPhase() {
   if (!state || !state.walkStart) return "idle";
@@ -2077,12 +2078,13 @@ function claimWalk() {
   const minLasted = Math.round(state.walkDur / 60000);
   const opt = WALK_OPTIONS.find((o) => o.min === minLasted) || WALK_OPTIONS[0];
   addCoins(opt.coins);
-  gainExp(opt.exp);
+  state.food = clamp(state.food + opt.food, 0, 100);
+  state.happy = clamp(state.happy + opt.happy, 0, 100);
   state.walkStart = null;
   state.walkDur = 0;
   save();
   renderHome();
-  msg(`🥾 산책 완료! +🪙${opt.coins} +EXP${opt.exp}`, true);
+  msg(`${opt.label} 완료! +🪙${opt.coins} 🍖+${opt.food} 💛+${opt.happy}`, true);
   playFx("playReward");
   haptic(20);
 }
@@ -2093,7 +2095,7 @@ function renderWalk() {
   if (phase === "idle") {
     body.innerHTML = `<div class="walk-options">` + WALK_OPTIONS.map((o) => {
       const hm = o.min < 60 ? `${o.min}분` : `${o.min/60}시간`;
-      return `<button data-walk-min="${o.min}"><b>${hm}</b>🪙${o.coins} + EXP${o.exp}</button>`;
+      return `<button data-walk-min="${o.min}"><b>${o.label} · ${hm}</b>🪙${o.coins} · 🍖+${o.food} 💛+${o.happy}</button>`;
     }).join("") + `</div>`;
   } else if (phase === "walking") {
     const remain = state.walkStart + state.walkDur - Date.now();
