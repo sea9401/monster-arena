@@ -438,11 +438,46 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 }
 @keyframes update-slide-in { from { transform: translateY(-100%);} to { transform: translateY(0);} }
 
-/* 주간 보스 HP 바 */
-.boss-hp-wrap { text-align: center; margin: 12px 0 16px; }
-.boss-hp-bar { height: 18px; background: #0f380f; border: 2px solid var(--accent); border-radius: 0; box-shadow: inset 2px 2px 0 #000; overflow: hidden; }
-.boss-hp-fill { height: 100%; width: 100%; background: linear-gradient(to right, #e74c3c, #f0c040); transition: width .25s; }
-.boss-hp-text { color: var(--accent2); font-size: 12px; margin-top: 4px; font-weight: 700; }
+/* 주간 보스 — 누적 데미지 기반 */
+.boss-target-wrap { position: relative; text-align: center; margin: 16px 0; height: 110px; }
+.boss-target {
+  font-size: 84px; line-height: 1; display: inline-block;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,.35));
+  animation: boss-idle 2.2s ease-in-out infinite;
+}
+.boss-target.hit { animation: boss-hit .35s cubic-bezier(.36,.07,.19,.97); }
+@keyframes boss-idle { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes boss-hit {
+  0%   { transform: translate(0,0)   rotate(0); }
+  20%  { transform: translate(-6px,-2px) rotate(-3deg); filter: brightness(1.6) drop-shadow(0 3px 0 rgba(0,0,0,.35)); }
+  40%  { transform: translate(7px,3px)   rotate(3deg); filter: brightness(1.4) drop-shadow(0 3px 0 rgba(0,0,0,.35)); }
+  60%  { transform: translate(-4px,-1px) rotate(-2deg); }
+  80%  { transform: translate(3px,2px)   rotate(1deg); }
+  100% { transform: translate(0,0)   rotate(0); }
+}
+.boss-float-area { position: absolute; inset: 0; pointer-events: none; }
+.boss-float-dmg {
+  position: absolute; left: 50%; top: 30%;
+  color: var(--gold); font-weight: 900; font-size: 26px;
+  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  animation: dmg-float 1s cubic-bezier(.2,.7,.2,1) forwards;
+  white-space: nowrap;
+}
+@keyframes dmg-float {
+  0%   { opacity: 0; transform: translate(-50%, 0)    scale(.6); }
+  18%  { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+  60%  { opacity: 1; transform: translate(-50%, -42px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -68px) scale(.9); }
+}
+.boss-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  background: var(--panel); border: 2px solid #0f380f; padding: 10px;
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,.25);
+  margin: 4px 0 12px;
+}
+.boss-stat { text-align: center; color: var(--accent2); font-size: 11px; }
+.boss-stat-label { display: block; color: var(--accent); font-size: 10px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.boss-stat b { font-size: 16px; color: var(--gold); }
 
 /* 월간 시즌 결과 카드 */
 .season-lastresult {

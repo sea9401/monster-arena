@@ -195,10 +195,11 @@ const BOSSES = [
 ];
 function bossFor(weekId) {
   const idx = djb2(String(weekId)) % BOSSES.length;
-  const def = BOSSES[idx];
-  return { ...def, hp: def.hpMax };
+  // 보스는 죽지 않으므로 hp 추적 안 함. id/name/icon/element만 의미 있음.
+  const { id, name, icon, element } = BOSSES[idx];
+  return { id, name, icon, element };
 }
-const BOSS_ATTACKS_PER_WEEK = 15;
+const BOSS_ATTACKS_PER_WEEK = 80;
 function calcBossDamage(p) {
   const base = (p.atk || 10) + (p.level || 1) * 2;
   const r = 0.85 + Math.random() * 0.30; // 0.85x ~ 1.15x
@@ -533,17 +534,17 @@ const server = http.createServer(async (req, res) => {
     const { endsAt } = weekInfo();
     const pid = query.playerId || "";
     const myC = pid ? (db.boss.contributions[pid] || { damage: 0, attacks: 0 }) : { damage: 0, attacks: 0 };
-    const top = Object.values(db.boss.contributions)
-      .filter((c) => c.damage > 0)
-      .sort((a, b) => b.damage - a.damage)
-      .slice(0, 10)
-      .map((c, i) => ({ rank: i + 1, playerId: c.playerId, name: c.name, species: c.species, title: c.title || "", damage: c.damage }));
+    const all = Object.values(db.boss.contributions).filter((c) => c.damage > 0).sort((a, b) => b.damage - a.damage);
+    const totalDamage = all.reduce((sum, c) => sum + c.damage, 0);
+    const top = all.slice(0, 10).map((c, i) => ({ rank: i + 1, playerId: c.playerId, name: c.name, species: c.species, title: c.title || "", damage: c.damage }));
+    const myRank = pid ? (all.findIndex((c) => c.playerId === pid) + 1) : 0;
     const lr = pid ? db.boss.lastResults[pid] : null;
     const claimed = !!(pid && lr && db.boss.claimedBy[pid] === lr.weekId);
     return send(res, 200, {
       weekId, endsAt,
-      boss: db.boss.boss,
+      boss: { id: db.boss.boss.id, name: db.boss.boss.name, icon: db.boss.boss.icon, element: db.boss.boss.element },
       myDamage: myC.damage, myAttacks: myC.attacks,
+      myRank, totalDamage, participants: all.length,
       attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - myC.attacks),
       top,
       lastResult: lr || null,
@@ -561,13 +562,13 @@ const server = http.createServer(async (req, res) => {
     // 멱등 — 같은 attackId 재요청은 이전 결과 반환
     const prev = db.boss.attackLog[attackId];
     if (prev) {
-      return send(res, 200, { ok: true, idempotent: true, damage: prev.damage, bossHp: db.boss.boss.hp, attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - (db.boss.contributions[pid]?.attacks || 0)), killed: db.boss.boss.hp <= 0 });
+      const cur = db.boss.contributions[pid] || { attacks: 0, damage: 0 };
+      return send(res, 200, { ok: true, idempotent: true, damage: prev.damage, attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - cur.attacks), totalDamage: cur.damage });
     }
     const c = db.boss.contributions[pid] || { playerId: pid, name: p.name, species: p.species, title: p.title || "", damage: 0, attacks: 0, lastAttackAt: 0 };
     if (c.attacks >= BOSS_ATTACKS_PER_WEEK) return send(res, 409, { error: "out_of_attacks", attacksLeft: 0 });
-    if (db.boss.boss.hp <= 0) return send(res, 409, { error: "boss_dead", bossHp: 0 });
-    const dmg = Math.min(calcBossDamage(p), db.boss.boss.hp); // 오버킬 잘림
-    db.boss.boss.hp -= dmg;
+    // 보스는 죽지 않음 — 순위는 주간 누적 데미지로만 결정. 늦게 들어와도 끝까지 경쟁 가능.
+    const dmg = calcBossDamage(p);
     c.damage += dmg;
     c.attacks += 1;
     c.lastAttackAt = now();
@@ -575,7 +576,7 @@ const server = http.createServer(async (req, res) => {
     db.boss.contributions[pid] = c;
     db.boss.attackLog[attackId] = { playerId: pid, damage: dmg, at: now() };
     save();
-    return send(res, 200, { ok: true, damage: dmg, bossHp: db.boss.boss.hp, attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - c.attacks), killed: db.boss.boss.hp <= 0 });
+    return send(res, 200, { ok: true, damage: dmg, attacksLeft: Math.max(0, BOSS_ATTACKS_PER_WEEK - c.attacks), totalDamage: c.damage });
   }
   if (url === "/boss/claim" && method === "POST") {
     rolloverBoss();

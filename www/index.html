@@ -265,9 +265,14 @@
         <div id="boss-countdown" class="tourney-countdown">--</div>
         <div id="boss-me" class="tourney-me"></div>
       </div>
-      <div class="boss-hp-wrap">
-        <div class="boss-hp-bar"><div class="boss-hp-fill" id="boss-hp-fill"></div></div>
-        <div class="boss-hp-text" id="boss-hp-text">--</div>
+      <div class="boss-target-wrap">
+        <div class="boss-target" id="boss-target">🐲</div>
+        <div id="boss-float-area" class="boss-float-area"></div>
+      </div>
+      <div class="boss-stats">
+        <div class="boss-stat"><span class="boss-stat-label">전체 누적</span><b id="boss-total-dmg">0</b></div>
+        <div class="boss-stat"><span class="boss-stat-label">참가자</span><b id="boss-participants">0</b>명</div>
+        <div class="boss-stat"><span class="boss-stat-label">내 데미지</span><b id="boss-my-dmg">0</b></div>
       </div>
       <div id="boss-last-result" class="season-lastresult"></div>
       <div class="nav">
@@ -275,7 +280,7 @@
       </div>
       <h3 class="quests-title">상위 기여자</h3>
       <ol class="leaderboard" id="boss-top"></ol>
-      <p class="muted tourney-note">매주 월요일 0시(KST) 리셋 · 1주 최대 15회 공격 · 보상: 1위 🪙300+칭호 / 2-3위 🪙150 / 4-10위 🪙80 / 참가 🪙30</p>
+      <p class="muted tourney-note">매주 월요일 0시(KST) 리셋 · 누적 데미지로 순위 · 1주 최대 80회 공격 · 보상: 1위 🪙300+칭호 / 2-3위 🪙150 / 4-10위 🪙80 / 참가 🪙30</p>
       <div class="nav">
         <button id="boss-back" class="ghost">← 아레나로</button>
       </div>

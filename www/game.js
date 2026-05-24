@@ -2091,10 +2091,12 @@ async function openBoss() {
   await tryClaimBoss();
   $("boss-name").textContent = "...";
   $("boss-icon").textContent = "🐲";
+  $("boss-target").textContent = "🐲";
   $("boss-countdown").textContent = "";
   $("boss-me").textContent = "";
-  $("boss-hp-fill").style.width = "0%";
-  $("boss-hp-text").textContent = "불러오는 중...";
+  $("boss-total-dmg").textContent = "0";
+  $("boss-participants").textContent = "0";
+  $("boss-my-dmg").textContent = "0";
   $("boss-top").innerHTML = `<li class="muted">불러오는 중...</li>`;
   $("boss-last-result").innerHTML = "";
   $("boss-attack-btn").disabled = true;
@@ -2105,23 +2107,20 @@ async function refreshBoss() {
   const data = await Online.bossState();
   if (!data) {
     $("boss-name").textContent = "오프라인";
-    $("boss-hp-text").textContent = "서버에 연결할 수 없어요";
     $("boss-top").innerHTML = `<li class="muted">접속 후 다시 시도해 주세요.</li>`;
     return;
   }
   startBossCountdown(data.endsAt);
   $("boss-name").textContent = data.boss.name + (data.boss.element ? ` ${ELEM_LABEL[data.boss.element] || ""}` : "");
   $("boss-icon").textContent = data.boss.icon || "🐲";
-  const pct = Math.max(0, Math.min(100, (data.boss.hp / data.boss.hpMax) * 100));
-  $("boss-hp-fill").style.width = pct + "%";
-  $("boss-hp-text").textContent = `HP ${data.boss.hp.toLocaleString()} / ${data.boss.hpMax.toLocaleString()}`;
-  const myId = Online.status.playerId;
-  const rank = data.top.findIndex((r) => r.playerId === myId);
-  const rankTxt = rank >= 0 ? `${rank + 1}위` : "순위권 외";
-  $("boss-me").textContent = `내 누적 데미지 ${data.myDamage.toLocaleString()} (${rankTxt}) · 남은 공격 ${data.attacksLeft}회`;
-  $("boss-attack-btn").disabled = bossBusy || data.attacksLeft <= 0 || data.boss.hp <= 0 || !Online.status.reachable;
-  if (data.boss.hp <= 0) $("boss-attack-btn").textContent = "💀 보스 처치됨 — 주말 정산 대기";
-  else if (data.attacksLeft <= 0) $("boss-attack-btn").textContent = "오늘 공격 한도 ⛔";
+  $("boss-target").textContent = data.boss.icon || "🐲";
+  $("boss-total-dmg").textContent = (data.totalDamage || 0).toLocaleString();
+  $("boss-participants").textContent = (data.participants || 0);
+  $("boss-my-dmg").textContent = (data.myDamage || 0).toLocaleString();
+  const rankTxt = data.myRank > 0 ? `${data.myRank}위` : "순위권 외";
+  $("boss-me").textContent = `${rankTxt} · 남은 공격 ${data.attacksLeft}회`;
+  $("boss-attack-btn").disabled = bossBusy || data.attacksLeft <= 0 || !Online.status.reachable;
+  if (data.attacksLeft <= 0) $("boss-attack-btn").textContent = "이번 주 공격 한도 ⛔";
   else $("boss-attack-btn").textContent = `⚔️ 보스 공격 (스태미너 1)`;
   if (data.lastResult) {
     const lr = data.lastResult;
@@ -2171,15 +2170,31 @@ async function attackBoss() {
     renderStamina();
     const err = res && res.error;
     if (err === "out_of_attacks") msg("이번 주 공격 한도를 모두 소진했어요.", false);
-    else if (err === "boss_dead") msg("보스는 이미 쓰러졌어요.", false);
     else msg("공격 실패 — 잠시 후 다시 시도해 주세요.", false);
   } else {
-    if (res.killed) playFx("playReward");
-    else playFx("playHit");
-    msg(`⚔️ ${res.damage} 데미지!` + (res.killed ? " 보스 처치!" : ""), true);
+    playFx("playHit");
+    haptic(15);
+    spawnBossHit(res.damage);
+    // 낙관적 카운터 업데이트(서버 응답 그대로 반영)
+    if (typeof res.totalDamage === "number") $("boss-my-dmg").textContent = res.totalDamage.toLocaleString();
   }
   bossBusy = false;
   await refreshBoss();
+}
+
+// 공격 시각 피드백: 보스 셰이크 + 플로팅 데미지 숫자
+function spawnBossHit(dmg) {
+  const t = $("boss-target");
+  if (t) { t.classList.remove("hit"); void t.offsetWidth; t.classList.add("hit"); }
+  const area = $("boss-float-area");
+  if (!area) return;
+  const el = document.createElement("div");
+  el.className = "boss-float-dmg";
+  el.textContent = `-${dmg}`;
+  // X 위치를 살짝 무작위로(연속 공격 시 겹침 방지)
+  el.style.left = `calc(50% + ${(Math.random() * 40 - 20).toFixed(0)}px)`;
+  area.appendChild(el);
+  setTimeout(() => el.remove(), 1100);
 }
 
 function startBossCountdown(endsAt) {
