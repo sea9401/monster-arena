@@ -1418,10 +1418,11 @@ function pickFoeType(myType, strong) {
   return type;
 }
 
-function makeOpponent() {
+function makeOpponent(options = {}) {
   const myPower = power(state);
   // 레이팅 기반으로 ±변동, 가끔 강적
-  const factor = rand(80, 108) / 100;
+  const forceStrong = !!options.forceStrong;
+  const factor = forceStrong ? rand(106, 116) / 100 : rand(80, 108) / 100;
   const tp = Math.max(40, Math.round(myPower * factor));
   const idx = clamp(Math.floor(state.dayCount / 2 + rand(0, 1)), 0, RIVAL_NAMES.length - 1);
 
@@ -1435,11 +1436,27 @@ function makeOpponent() {
   const typeKeys = Object.keys(SPECIES).filter((k) => SPECIES[k].type === type);
   const species = typeKeys[Math.floor(Math.random() * typeKeys.length)] || "ember";
 
-  return {
+  const opponent = {
     name: RIVAL_NAMES[idx], emoji: RIVAL_EMOJI[idx], type, species,
     hp: Math.max(40, stat("hp")), atk: Math.max(6, stat("atk")),
     def: Math.max(4, stat("def")), spd: Math.max(4, stat("spd")),
   };
+  if (forceStrong && power(opponent) <= myPower) {
+    const scale = (myPower + 8) / Math.max(1, power(opponent));
+    opponent.hp = Math.ceil(opponent.hp * scale);
+    opponent.atk = Math.ceil(opponent.atk * scale);
+    opponent.def = Math.ceil(opponent.def * scale);
+    opponent.spd = Math.ceil(opponent.spd * scale);
+  }
+  return opponent;
+}
+
+function hasOpenQuest(track) {
+  return !!(state && state.quests && state.quests.some((q) => q.track === track && !q.claimed && q.progress < q.target));
+}
+
+function isUpsetTarget(o) {
+  return !!(o && power(o) > power(state));
 }
 
 function enterArena() {
@@ -1496,7 +1513,7 @@ function opponentFromSnapshot(o) {
   const sp = SPECIES[o.species] || SPECIES.ember;
   return {
     playerId: o.playerId, name: o.name, species: o.species, type: sp.type, emoji: sp.stages[stageIndex(o.level)],
-    atk: o.atk, def: o.def, spd: o.spd, hp: o.hp, ghost: true,
+    atk: o.atk, def: o.def, spd: o.spd, hp: o.hp, rating: o.rating, ghost: true,
     seeded: typeof o.playerId === "string" && o.playerId.startsWith("ghost-"),
   };
 }
@@ -1509,11 +1526,16 @@ async function findMatch() {
 
   // 온라인 고스트 시도 → 실패 시 AI 폴백
   const m = await Online.findMatch(state.rating);
+  const needsUpsetTarget = hasOpenQuest("pvp_upset");
   if (m && m.opponent) {
     currentOpponent = opponentFromSnapshot(m.opponent);
     currentMatchId = m.matchId;
+    if (needsUpsetTarget && !isUpsetTarget(currentOpponent)) {
+      currentOpponent = makeOpponent({ forceStrong: true });
+      currentMatchId = null;
+    }
   } else {
-    currentOpponent = makeOpponent();
+    currentOpponent = makeOpponent({ forceStrong: needsUpsetTarget });
     currentMatchId = null;
   }
   updateOnlineStatus();
