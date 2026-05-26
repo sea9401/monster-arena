@@ -2,7 +2,7 @@
 // game.js의 핵심 수식을 그대로 복제해 헤드리스로 육성/전투를 수천 판 돌린다.
 // 실행: node sim.js   /   POLICY=balanced node sim.js
 const POLICY = process.env.POLICY || "balanced";
-const DMG_K = Number(process.env.DMG_K || 0.6);
+const DMG_K = Number(process.env.DMG_K || 0.3);
 
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -10,13 +10,13 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 // ---- game.js와 동일한 상수/수식 ----
 // 14종 중 type별 대표 1종으로 검증(밸런스는 type-level이 결정적, within-type은 sig 차이만).
 const SPECIES = {
-  ember:     { type: "fire",     base: { atk: 12, def: 8,  spd: 9,  hp: 60 }, primary: "atk" },
-  aqua:      { type: "water",    base: { atk: 8,  def: 13, spd: 7,  hp: 80 }, primary: "def" },
-  spark:     { type: "electric", base: { atk: 10, def: 7,  spd: 14, hp: 55 }, primary: "spd" },
-  unicorn:   { type: "light",    base: { atk: 12, def: 8,  spd: 11, hp: 56 }, primary: "atk" },
-  wolf:      { type: "dark",     base: { atk: 13, def: 8,  spd: 9,  hp: 58 }, primary: "atk" },
-  armadillo: { type: "earth",    base: { atk: 8,  def: 15, spd: 6,  hp: 78 }, primary: "def" },
-  toad:      { type: "poison",   base: { atk: 9,  def: 13, spd: 7,  hp: 76 }, primary: "def" },
+  ember:     { type: "fire",     base: { atk: 12, def: 8,  spd: 9,  hp: 30 }, primary: "atk" },
+  aqua:      { type: "water",    base: { atk: 8,  def: 13, spd: 7,  hp: 40 }, primary: "def" },
+  spark:     { type: "electric", base: { atk: 10, def: 7,  spd: 14, hp: 28 }, primary: "spd" },
+  unicorn:   { type: "light",    base: { atk: 12, def: 8,  spd: 11, hp: 28 }, primary: "atk" },
+  wolf:      { type: "dark",     base: { atk: 13, def: 8,  spd: 9,  hp: 29 }, primary: "atk" },
+  armadillo: { type: "earth",    base: { atk: 8,  def: 15, spd: 6,  hp: 39 }, primary: "def" },
+  toad:      { type: "poison",   base: { atk: 9,  def: 13, spd: 7,  hp: 38 }, primary: "def" },
 };
 // 종별 시그니처 스킬 (game.js SPECIES_SKILLS — 대표종만)
 const SPECIES_SKILLS = {
@@ -84,7 +84,7 @@ const SKILL_KITS = {
   ],
 };
 const expToNext = (level) => 80 + level * 40;
-const PW = { hp: 0.5, atk: 1.75, def: 1.70, spd: 1.75 };
+const PW = { hp: 1.0, atk: 1.75, def: 1.70, spd: 1.75 };
 const power = (p) => Math.round(p.hp * PW.hp + p.atk * PW.atk + p.def * PW.def + p.spd * PW.spd);
 
 // ---- 육성 시뮬레이션 ----
@@ -93,14 +93,14 @@ function gainExp(t, amount) {
   while (t.exp >= expToNext(t.level)) {
     t.exp -= expToNext(t.level);
     t.level += 1;
-    t.atk += 2; t.def += 2; t.spd += 1; t.hp += 8;
+    t.atk += 2; t.def += 2; t.spd += 1; t.hp += 4;
   }
 }
 function trainOnce(t, kind) {
   const condition = (t.food / 100) * 0.5 + (t.happy / 100) * 0.5;
   const streakBonus = 1 + Math.min(t.streak - 1, 14) * 0.03;
   const mult = (0.6 + condition * 0.8) * streakBonus;
-  if (kind === "feed") { t.food = clamp(t.food + rand(22, 32), 0, 100); t.hp += rand(2, 4); gainExp(t, 6); }
+  if (kind === "feed") { t.food = clamp(t.food + rand(22, 32), 0, 100); t.hp += rand(1, 2); gainExp(t, 6); }
   else if (kind === "play") { t.happy = clamp(t.happy + rand(18, 28), 0, 100); t.spd += Math.round(rand(0, 1) * mult); gainExp(t, 8); }
   else {
     const gain = Math.max(1, Math.round(rand(2, 4) * mult));
@@ -197,11 +197,11 @@ function runMatch(me, foe) {
   return { win: me.hp >= foe.hp, round };
 }
 function fighterFrom(t) {
-  const maxHp = t.hp + t.level * 6;
+  const maxHp = t.hp + t.level * 3;
   return buildFighter({ species: t.species, type: SPECIES[t.species].type, atk: t.atk, def: t.def, spd: t.spd, hp: maxHp, maxHp });
 }
 function fixedFighter(speciesKey) {
-  return buildFighter({ species: speciesKey, type: SPECIES[speciesKey].type, atk: 70, def: 70, spd: 70, hp: 200, maxHp: 200 });
+  return buildFighter({ species: speciesKey, type: SPECIES[speciesKey].type, atk: 70, def: 70, spd: 70, hp: 100, maxHp: 100 });
 }
 
 // 라이벌 생성 (game.js makeOpponent과 동일: 배분 합=1 정규화, factor 0.82~1.12)
@@ -217,16 +217,17 @@ function pickFoeType(myType, strong) {
   lastUnfav = type === beatsMe;
   return type;
 }
-function makeOpponent(myPower, myType) {
+function makeOpponent(myPower, myType, myLevel) {
   const factor = rand(80, 108) / 100;
   const tp = Math.max(40, Math.round(myPower * factor));
   const type = pickFoeType(myType, factor >= 1.05);
   // 같은 type 안에서 대표 species 선택(같은 sig 적용)
   const speciesKey = Object.keys(SPECIES).find((k) => SPECIES[k].type === type) || "ember";
-  const sh = { hp: rand(23, 31), atk: rand(26, 35), def: rand(19, 27), spd: rand(15, 22) };
+  const sh = { hp: rand(14, 21), atk: rand(26, 35), def: rand(19, 27), spd: rand(15, 22) };
   const sum = sh.hp + sh.atk + sh.def + sh.spd;
   const stat = (k) => Math.round(((sh[k] / sum) * tp) / PW[k]);
-  const maxHp = Math.max(40, stat("hp"));
+  // 시드 NPC/실유저 고스트와 동일하게 maxHp 형식(level*3 보너스 포함)
+  const maxHp = Math.max(20, stat("hp")) + (myLevel || 1) * 3;
   return buildFighter({ species: speciesKey, type, atk: Math.max(6, stat("atk")), def: Math.max(4, stat("def")), spd: Math.max(4, stat("spd")), hp: maxHp, maxHp });
 }
 
@@ -265,7 +266,7 @@ for (const k of keys) {
   const M = 12000;
   for (let i = 0; i < M; i++) {
     const t = raise(k, days);
-    const foe = makeOpponent(power(t), myType);
+    const foe = makeOpponent(power(t), myType, t.level);
     const m = typeMult(myType, foe.type);
     const rel = m > 1 ? "fav" : m < 1 ? "unf" : "neu";
     const win = runMatch(fighterFrom(t), foe).win ? 1 : 0;

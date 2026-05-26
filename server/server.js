@@ -63,7 +63,7 @@ const VALID_SPECIES = ["ember", "aqua", "spark", "lion", "crab", "hare", "wolf",
 
 // ---------- 매칭 풀 시드 (실제 플레이어가 적을 때 NPC 상대 제공) ----------
 // 모든 14종 커버 + 브론즈~챔피언 레이팅 분포. 신규 풀 적용 시 SEED_VERSION을 올리면 재시드.
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 const SEED_POOL = [
   // 브론즈 (~1100 미만)
   { name: "도전자 한",     species: "ember",     rating: 920,  level: 3,  bias: "atk" },
@@ -89,7 +89,7 @@ const SEED_POOL = [
 // 레벨/편향에 따른 시드 스탯 계산 — 실제 플레이어 진행도와 비슷한 곡선.
 function seedStats(level, bias) {
   const base = 12 + level * 4;
-  const hp = 70 + level * 12;
+  const hp = 35 + level * 6;   // HP 곡선 50% 인하 (PW.hp 0.5→1.0 + DMG_K 0.3과 비율 보존)
   const s = { atk: base, def: base, spd: base, hp };
   if (bias === "atk")      { s.atk = Math.round(base * 1.30); s.def = Math.round(base * 0.92); }
   else if (bias === "def") { s.def = Math.round(base * 1.30); s.hp  = Math.round(hp   * 1.15); s.spd = Math.round(base * 0.92); }
@@ -847,6 +847,15 @@ const server = http.createServer(async (req, res) => {
 });
 
 load();
+// 1회성: HP 곡선 50% 인하 패치(2026-05) — 비시드 플레이어 hp /=2
+if (!db.hpHalvedV1) {
+  for (const p of Object.values(db.players)) {
+    if (p.seeded) continue;
+    if (typeof p.hp === "number") p.hp = Math.max(20, Math.round(p.hp / 2));
+  }
+  db.hpHalvedV1 = true;
+  save();
+}
 seedGhosts();
 server.listen(PORT, () => {
   console.log(`몬스터 아레나 서버 실행 중: http://localhost:${PORT}`);

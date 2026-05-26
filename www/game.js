@@ -10,59 +10,59 @@ const STAMINA_REGEN_MS = 15 * 60 * 1000;
 const SPECIES = {
   ember: {
     name: "불꽃 도마뱀", egg: "🥚", stages: ["🦎", "🐊", "🦖"], type: "fire",
-    base: { atk: 12, def: 8, spd: 9, hp: 60 }, bias: "공격형",
+    base: { atk: 12, def: 8, spd: 9, hp: 30 }, bias: "공격형",
   },
   aqua: {
     name: "물방울 거북", egg: "🥚", stages: ["🐟", "🐢", "🐋"], type: "water",
-    base: { atk: 8, def: 13, spd: 7, hp: 80 }, bias: "방어형",
+    base: { atk: 8, def: 13, spd: 7, hp: 40 }, bias: "방어형",
   },
   spark: {
     name: "번개 다람쥐", egg: "🥚", stages: ["🐤", "🐔", "🦅"], type: "electric",
-    base: { atk: 10, def: 7, spd: 14, hp: 55 }, bias: "속도형",
+    base: { atk: 10, def: 7, spd: 14, hp: 28 }, bias: "속도형",
   },
   lion: {
     name: "맹수 사자", egg: "🥚", stages: ["🐈", "🦁", "🐅"], type: "fire",
-    base: { atk: 12, def: 9, spd: 8, hp: 62 }, bias: "공격형",
+    base: { atk: 12, def: 9, spd: 8, hp: 31 }, bias: "공격형",
   },
   crab: {
     name: "갑각 게", egg: "🥚", stages: ["🦐", "🦀", "🦞"], type: "water",
-    base: { atk: 7, def: 15, spd: 6, hp: 78 }, bias: "방어형",
+    base: { atk: 7, def: 15, spd: 6, hp: 39 }, bias: "방어형",
   },
   hare: {
     name: "질풍 토끼", egg: "🥚", stages: ["🐰", "🐇", "🦘"], type: "electric",
-    base: { atk: 9, def: 7, spd: 15, hp: 54 }, bias: "속도형",
+    base: { atk: 9, def: 7, spd: 15, hp: 27 }, bias: "속도형",
   },
   wolf: {
     name: "그림자 늑대", egg: "🥚", stages: ["🐕", "🦊", "🐺"], type: "dark",
-    base: { atk: 13, def: 8, spd: 9, hp: 58 }, bias: "공격형",
+    base: { atk: 13, def: 8, spd: 9, hp: 29 }, bias: "공격형",
   },
   bat: {
     name: "심연 박쥐", egg: "🥚", stages: ["🐀", "🦇", "🐉"], type: "dark",
-    base: { atk: 12, def: 7, spd: 12, hp: 55 }, bias: "공격형",
+    base: { atk: 12, def: 7, spd: 12, hp: 28 }, bias: "공격형",
   },
   armadillo: {
     name: "바위 아르마딜로", egg: "🥚", stages: ["🐹", "🦔", "🦏"], type: "earth",
-    base: { atk: 8, def: 15, spd: 6, hp: 78 }, bias: "방어형",
+    base: { atk: 8, def: 15, spd: 6, hp: 39 }, bias: "방어형",
   },
   bear: {
     name: "대지 곰", egg: "🥚", stages: ["🐨", "🐻", "🦬"], type: "earth",
-    base: { atk: 10, def: 13, spd: 6, hp: 82 }, bias: "방어형",
+    base: { atk: 10, def: 13, spd: 6, hp: 41 }, bias: "방어형",
   },
   unicorn: {
     name: "광휘 유니콘", egg: "🥚", stages: ["🐎", "🦌", "🦄"], type: "light",
-    base: { atk: 12, def: 8, spd: 11, hp: 56 }, bias: "공격형",
+    base: { atk: 12, def: 8, spd: 11, hp: 28 }, bias: "공격형",
   },
   swan: {
     name: "성광 백조", egg: "🥚", stages: ["🐥", "🦩", "🦢"], type: "light",
-    base: { atk: 11, def: 8, spd: 13, hp: 54 }, bias: "속도형",
+    base: { atk: 11, def: 8, spd: 13, hp: 27 }, bias: "속도형",
   },
   toad: {
     name: "맹독 두꺼비", egg: "🥚", stages: ["🐛", "🦂", "🐸"], type: "poison",
-    base: { atk: 9, def: 13, spd: 7, hp: 76 }, bias: "방어형",
+    base: { atk: 9, def: 13, spd: 7, hp: 38 }, bias: "방어형",
   },
   viper: {
     name: "맹독 살무사", egg: "🥚", stages: ["🐛", "🐍", "🐉"], type: "poison",
-    base: { atk: 13, def: 8, spd: 11, hp: 58 }, bias: "공격형",
+    base: { atk: 13, def: 8, spd: 11, hp: 29 }, bias: "공격형",
   },
 };
 
@@ -80,7 +80,7 @@ const ELEMENTS = {
 const BEATS = { water: "fire", fire: "electric", electric: "light", light: "dark", dark: "earth", earth: "poison", poison: "water" };
 const TYPE_ADV = 1.12;  // 유리
 const TYPE_DIS = 0.90;  // 불리
-const DMG_K = 0.6;      // 전역 데미지 계수(전투 길이 조절)
+const DMG_K = 0.3;      // 전역 데미지 계수(HP 곡선 50% 인하 패치에 맞춰 dmg도 비율 보존)
 
 // 종 패시브 (속성별). 새 속성은 기존 역할 틀 재활용 — 어둠/빛=공격형, 땅/독=방어형.
 const PASSIVE = {
@@ -274,7 +274,7 @@ const ATTENDANCE_REWARDS = [
   { icon: "💪", short: "스태미너+1",  reward: { action: 1 } },
   { icon: "⭐", short: "EXP+35",      reward: { exp: 35 } },
   { icon: "🧡", short: "포만·행복+15", reward: { food: 15, happy: 15 } },
-  { icon: "🏆", short: "영구스탯↑",   reward: { stat: { atk: 1, def: 1, spd: 1, hp: 4 } } },
+  { icon: "🏆", short: "영구스탯↑",   reward: { stat: { atk: 1, def: 1, spd: 1, hp: 2 } } },
 ];
 
 const REWARD_LABEL = {
@@ -621,6 +621,12 @@ function migrateState() {
     state.activePetIdx = 0;
   }
   if (!Number.isFinite(state.activePetIdx) || !state.pets[state.activePetIdx]) state.activePetIdx = 0;
+  // 1회성: HP 곡선 50% 인하 패치(2026-05) — state.hp와 pets[*].hp 일괄 /=2
+  if (!state.hpHalvedV1) {
+    state.hp = Math.max(20, Math.round((state.hp || 0) / 2));
+    state.pets.forEach((p) => { if (p && typeof p.hp === "number") p.hp = Math.max(20, Math.round(p.hp / 2)); });
+    state.hpHalvedV1 = true;
+  }
   // 일회성 보정: 구매 카운트 중복 가산 버그로 한도 초과된 유저 복구
   if (!state.staminaBuyResetV1) {
     state.staminaBuyDate = null;
@@ -729,7 +735,7 @@ const STAGE_NAMES = ["아기", "청소년", "성체"];
 
 function expToNext(level) { return 80 + level * 40; }
 
-const PW = { hp: 0.5, atk: 1.75, def: 1.70, spd: 1.75 };
+const PW = { hp: 1.0, atk: 1.75, def: 1.70, spd: 1.75 };
 function power(p) {
   return Math.round(p.hp * PW.hp + p.atk * PW.atk + p.def * PW.def + p.spd * PW.spd);
 }
@@ -890,7 +896,7 @@ function train(kind) {
   let text = "";
   if (kind === "feed") {
     state.food = clamp(state.food + Math.round(rand(22, 32) * careMult), 0, 100);
-    state.hp += Math.max(1, Math.round(rand(2, 4) * soft));
+    state.hp += Math.max(1, Math.round(rand(1, 2) * soft));
     gainExp(Math.max(1, Math.round(6 * soft)));
     text = "냠냠! 포만감이 올랐어요.";
   } else if (kind === "play") {
@@ -936,7 +942,7 @@ function gainExp(amount) {
     state.exp -= expToNext(state.level);
     state.level += 1;
     // 레벨업 보너스 스탯
-    state.atk += 2; state.def += 2; state.spd += 1; state.hp += 8;
+    state.atk += 2; state.def += 2; state.spd += 1; state.hp += 4;
     const evolved = stageIndex(state.level) !== prevStage;
     playFx("playLevelUp");
     sparkle($("pet-sprite"));
@@ -1192,7 +1198,7 @@ function renderStatRadar() {
   const el = $("stat-radar");
   if (!el || !state) return;
   const cx = 60, cy = 60, R = 46;
-  const MAX = { atk: 160, def: 140, spd: 140, hp: 380 };
+  const MAX = { atk: 160, def: 140, spd: 140, hp: 190 };
   const norm = (v, m) => Math.max(0.06, Math.min(1, (v || 0) / m)); // 최소 6%로 0 회피
   const a = norm(state.atk, MAX.atk);
   const sp = norm(state.spd, MAX.spd);
@@ -1297,7 +1303,8 @@ function renderHome() {
   $("stat-atk").textContent = state.atk;
   $("stat-def").textContent = state.def;
   $("stat-spd").textContent = state.spd;
-  $("stat-hp").textContent = state.hp;
+  // 전투 시 실제 maxHp는 state.hp + level*3 — 상대 카드 ❤️와 의미 일치시킴
+  $("stat-hp").textContent = state.hp + state.level * 3;
   renderStatRadar();
   renderLuckyButton();
   renderWalk();
@@ -1394,7 +1401,7 @@ let lastFoeUnfavorable = false; // 불리 매칭 2연속 방지용 (저장 안 �
 // 내 현재 상태를 서버 스냅샷 형태로
 function mySnapshot() {
   return { name: state.name, species: state.species, level: state.level,
-    atk: state.atk, def: state.def, spd: state.spd, hp: state.hp + state.level * 6,
+    atk: state.atk, def: state.def, spd: state.spd, hp: state.hp + state.level * 3,
     dayCount: state.dayCount, rating: state.rating, title: state.title || "" };
 }
 
@@ -1427,7 +1434,8 @@ function makeOpponent(options = {}) {
   const idx = clamp(Math.floor(state.dayCount / 2 + rand(0, 1)), 0, RIVAL_NAMES.length - 1);
 
   // 파워 배분 비율을 합=1로 정규화 → 실제 전투력이 tp에 맞도록 (HP 과배분 방지)
-  const sh = { hp: rand(23, 31), atk: rand(26, 35), def: rand(19, 27), spd: rand(15, 22) };
+  // hp share는 maxHp 보너스(level*6) 합산을 고려해 낮게 잡음 — 시드/실유저 ghost와 동등 난이도
+  const sh = { hp: rand(14, 21), atk: rand(26, 35), def: rand(19, 27), spd: rand(15, 22) };
   const sum = sh.hp + sh.atk + sh.def + sh.spd;
   const stat = (k) => Math.round(((sh[k] / sum) * tp) / PW[k]);
 
@@ -1436,9 +1444,12 @@ function makeOpponent(options = {}) {
   const typeKeys = Object.keys(SPECIES).filter((k) => SPECIES[k].type === type);
   const species = typeKeys[Math.floor(Math.random() * typeKeys.length)] || "ember";
 
+  const level = state.level;
   const opponent = {
-    name: RIVAL_NAMES[idx], emoji: RIVAL_EMOJI[idx], type, species,
-    hp: Math.max(40, stat("hp")), atk: Math.max(6, stat("atk")),
+    name: RIVAL_NAMES[idx], emoji: RIVAL_EMOJI[idx], type, species, level,
+    // 시드 NPC/실유저 고스트와 동일하게 maxHp 형식(level*3 보너스 포함)
+    hp: Math.max(20, stat("hp")) + level * 3,
+    atk: Math.max(6, stat("atk")),
     def: Math.max(4, stat("def")), spd: Math.max(4, stat("spd")),
   };
   if (forceStrong && power(opponent) <= myPower) {
@@ -1565,7 +1576,7 @@ function startBattle() {
 
   const sp = SPECIES[state.species];
   const me = buildFighter({ name: state.name, species: state.species, emoji: sp.stages[stageIndex(state.level)], type: sp.type,
-               hp: state.hp + state.level * 6, maxHp: state.hp + state.level * 6,
+               hp: state.hp + state.level * 3, maxHp: state.hp + state.level * 3,
                atk: state.atk, def: state.def, spd: state.spd });
   const foe = buildFighter({ ...currentOpponent, maxHp: currentOpponent.hp });
 
@@ -2194,7 +2205,7 @@ function generateShareCard() {
   ctx.strokeStyle = "#9bbc0f"; ctx.lineWidth = 2;
   ctx.strokeRect(60, 485, W - 120, 60);
   ctx.fillStyle = "#9bbc0f"; ctx.font = "bold 18px sans-serif";
-  ctx.fillText(`🗡️ ${state.atk}    🛡️ ${state.def}    💨 ${state.spd}    ❤️ ${state.hp}`, W / 2, 515);
+  ctx.fillText(`🗡️ ${state.atk}    🛡️ ${state.def}    💨 ${state.spd}    ❤️ ${state.hp + state.level * 3}`, W / 2, 515);
 
   // 시그니처 스킬
   if (sig) {
