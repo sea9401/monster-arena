@@ -3138,6 +3138,7 @@ async function refreshBoss() {
     $("boss-top").innerHTML = `<li class="muted">접속 후 다시 시도해 주세요.</li>`;
     return;
   }
+  const myId = Online.status.playerId;
   startBossCountdown(data.endsAt);
   $("boss-name").textContent = data.boss.name + (data.boss.element ? ` ${ELEM_LABEL[data.boss.element] || ""}` : "");
   $("boss-icon").textContent = data.boss.icon || "🐲";
