@@ -33,9 +33,13 @@
 
   let LOCALE = detectLocale();
 
+  // {name} 과 ${name} 두 형태 모두 치환(키가 게임의 템플릿 리터럴 원문과 일치하도록).
+  // 키 토큰은 식별자/점 표기 허용([\w.]+). 일반(따옴표) 문자열 안의 ${a}는 리터럴이라 키로 그대로 쓰임.
   function interpolate(str, params) {
-    if (!params) return str;
-    return str.replace(/\{(\w+)\}/g, (m, k) => (k in params ? params[k] : m));
+    if (!params || typeof str !== "string") return str;
+    return str
+      .replace(/\$\{([\w.]+)\}/g, (m, k) => (k in params ? params[k] : m))
+      .replace(/\{([\w.]+)\}/g, (m, k) => (k in params ? params[k] : m));
   }
 
   // 번역 함수. ko 로케일이면 원문 그대로(+보간). 그 외엔 사전 룩업 후 폴백.

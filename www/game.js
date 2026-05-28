@@ -104,9 +104,9 @@ function typeMult(a, d) {
 // 내 속성(mine) 기준 상대(foe)와의 상성 안내 문구
 function matchupHint(mine, foe) {
   const m = typeMult(mine, foe);
-  if (m > 1) return "🟢 속성 유리 — 내 공격이 강해진다";
-  if (m < 1) return "🔴 속성 불리 — 내 공격이 약해진다";
-  return "⚪ 속성 중립";
+  if (m > 1) return t("🟢 속성 유리 — 내 공격이 강해진다");
+  if (m < 1) return t("🔴 속성 불리 — 내 공격이 약해진다");
+  return t("⚪ 속성 중립");
 }
 
 // 종(속성)별 스킬 키트. 각 스킬은 자체 type/power/cd 보유.
@@ -279,10 +279,11 @@ const ATTENDANCE_REWARDS = [
 
 const REWARD_LABEL = {
   exp: (a) => `EXP +${a}`,
-  action: (a) => `스태미너 +${a}`,
-  happy: (a) => `행복 +${a}`,
-  food: (a) => `포만 +${a}`,
+  action: (a) => t("스태미너 +${a}", { a }),
+  happy: (a) => t("행복 +${a}", { a }),
+  food: (a) => t("포만 +${a}", { a }),
 };
+// (위 t() 키의 ${a}는 일반 문자열 리터럴 — i18n 사전 키와 정확히 일치, interpolate가 a 치환)
 
 // 업적: 평생 1회 해금되는 마일스톤. cur(state)가 goal 이상이면 달성.
 // reward는 옵셔널(있으면 1회성 지급). check는 cur>=goal로 파생되며 state를 변경하지 않는다.
@@ -774,8 +775,8 @@ function renderEggs() {
     card.className = "card";
     card.innerHTML = `
       <div class="emoji">${sp.egg}</div>
-      <h3>${sp.name}</h3>
-      <div class="stats">${sp.bias}<br>🗡️${sp.base.atk} 🛡️${sp.base.def} 💨${sp.base.spd} ❤️${sp.base.hp}</div>
+      <h3>${t(sp.name)}</h3>
+      <div class="stats">${t(sp.bias)}<br>🗡️${sp.base.atk} 🛡️${sp.base.def} 💨${sp.base.spd} ❤️${sp.base.hp}</div>
     `;
     card.addEventListener("click", () => hatch(key));
     roster.appendChild(card);
@@ -991,7 +992,7 @@ function floatNumberFromSelector(sel, text, color, big) {
 
 function msg(text, good) {
   const el = $("train-msg");
-  el.textContent = text;
+  el.textContent = t(text);
   el.style.color = good ? "var(--good)" : "var(--accent)";
 }
 
@@ -1118,8 +1119,8 @@ function flushAchToasts() {
   el.className = "ach-toast";
   const rewardText = a.reward ? ` · 🎁 ${REWARD_LABEL[a.reward.type](a.reward.amt)}` : "";
   el.innerHTML = `<span class="ach-toast-icon">${a.icon}</span>
-    <div><div class="ach-toast-head">🏆 업적 달성!</div>
-    <div class="ach-toast-name">${a.name}${rewardText}</div></div>`;
+    <div><div class="ach-toast-head">${t("🏆 업적 달성!")}</div>
+    <div class="ach-toast-name">${t(a.name)}${rewardText}</div></div>`;
   document.body.appendChild(el);
   playFx("playReward");
   haptic([20, 30, 40]);
@@ -1143,8 +1144,8 @@ function renderAchievements() {
     return `<li class="ach-item ${got ? "unlocked" : ""}">
       <span class="ach-icon">${got ? a.icon : "🔒"}</span>
       <div class="ach-body">
-        <div class="ach-name">${a.name}</div>
-        <div class="ach-desc">${a.desc}</div>
+        <div class="ach-name">${t(a.name)}</div>
+        <div class="ach-desc">${t(a.desc)}</div>
         ${got ? "" : `<div class="ach-bar"><div style="width:${pct}%"></div></div>`}
       </div>
       ${got ? `<span class="ach-check">✔</span>` : `<span class="ach-frac">${cur}/${a.goal}</span>`}
@@ -1177,14 +1178,14 @@ function renderQuests() {
   const total = state.quests.length;
   const cleared = state.quests.filter((q) => q.claimed).length;
   const progEl = $("quest-progress");
-  if (progEl) progEl.textContent = total ? `(${cleared}/${total} 완료)` : "";
+  if (progEl) progEl.textContent = total ? t("(${cleared}/${total} 완료)", { cleared, total }) : "";
   state.quests.forEach((q, idx) => {
     const done = q.progress >= q.target;
     const li = document.createElement("li");
     li.className = "quest-item";
     li.innerHTML = `
       <div class="quest-body">
-        <div class="quest-label ${q.claimed ? "cleared" : ""}">${q.label}</div>
+        <div class="quest-label ${q.claimed ? "cleared" : ""}">${t(q.label)}</div>
         <div class="quest-meta">
           <span>${Math.min(q.progress, q.target)}/${q.target}</span>
           <span class="quest-bar"><div style="width:${q.progress / q.target * 100}%"></div></span>
@@ -1192,7 +1193,7 @@ function renderQuests() {
         </div>
       </div>
       <button class="quest-claim" data-quest="${idx}" ${(!done || q.claimed) ? "disabled" : ""}>
-        ${q.claimed ? "완료" : done ? "받기" : "진행중"}
+        ${q.claimed ? t("완료") : done ? t("받기") : t("진행중")}
       </button>
     `;
     list.appendChild(li);
@@ -1277,7 +1278,7 @@ function renderEventBanner() {
   if (!el) return;
   if (currentEvent) {
     el.classList.remove("hidden");
-    el.innerHTML = `<span class="event-icon">${currentEvent.icon}</span><span class="event-text"><b>${currentEvent.name}</b> · ${currentEvent.desc}</span>`;
+    el.innerHTML = `<span class="event-icon">${currentEvent.icon}</span><span class="event-text"><b>${t(currentEvent.name)}</b> · ${t(currentEvent.desc)}</span>`;
   } else {
     el.classList.add("hidden");
     el.innerHTML = "";
@@ -1296,10 +1297,10 @@ function renderHome() {
   const titleEl = $("pet-title");
   if (titleEl) { titleEl.textContent = state.title || ""; titleEl.classList.toggle("hidden", !state.title); }
   document.querySelectorAll(".coin-balance").forEach((el) => { el.textContent = state.coins || 0; });
-  $("pet-stage").textContent = STAGE_NAMES[stage];
+  $("pet-stage").textContent = t(STAGE_NAMES[stage]);
   const petEl = ELEMENTS[sp.type];
   const elBadge = $("pet-element");
-  elBadge.textContent = `${petEl.icon} ${petEl.label}`;
+  elBadge.textContent = `${petEl.icon} ${t(petEl.label)}`;
   elBadge.className = "elem-badge " + sp.type;
 
   $("pet-level").textContent = state.level;
@@ -1325,10 +1326,10 @@ function renderHome() {
   const sig = SPECIES_SKILLS[state.species];
   if (sig) allSkills.push(sig);
   $("pet-skills").innerHTML =
-    `<div class="passive-line">${PASSIVE[sp.type].label}</div>` +
-    "보유 스킬 " + allSkills.map((s) => {
+    `<div class="passive-line">${t(PASSIVE[sp.type].label)}</div>` +
+    t("보유 스킬 ") + allSkills.map((s) => {
       const isSig = sig && s.id === sig.id;
-      return `<span class="skill-chip${isSig ? " sig" : ""}">${ELEMENTS[s.type].icon} ${s.name}${isSig ? " ⭐" : ""}</span>`;
+      return `<span class="skill-chip${isSig ? " sig" : ""}">${ELEMENTS[s.type].icon} ${t(s.name)}${isSig ? " ⭐" : ""}</span>`;
     }).join(" ");
 
   const noActions = state.stamina <= 0;
@@ -1565,15 +1566,15 @@ async function findMatch() {
   const tag = o.seeded
     ? `<span class="ghost-tag npc">🤖 NPC</span>`
     : o.ghost
-      ? `<span class="ghost-tag">👤 실제 플레이어</span>`
+      ? `<span class="ghost-tag">${t("👤 실제 플레이어")}</span>`
       : `<span class="ghost-tag ai">🤖 AI</span>`;
   $("opponent-card").innerHTML = `
     <div class="emoji">${o.emoji}</div>
-    <h3>${o.name} <span class="elem-badge ${o.type}">${el.icon} ${el.label}</span></h3>
+    <h3>${t(o.name)} <span class="elem-badge ${o.type}">${el.icon} ${t(el.label)}</span></h3>
     ${tag}
-    <div class="stats">🗡️${o.atk} 🛡️${o.def} 💨${o.spd} ❤️${o.hp}<br>전투력 약 ${power(o)}</div>
+    <div class="stats">🗡️${o.atk} 🛡️${o.def} 💨${o.spd} ❤️${o.hp}<br>${t("전투력 약 ${p}", { p: power(o) })}</div>
     <div class="matchup">${matchupHint(SPECIES[state.species].type, o.type)}</div>
-    <div class="skills-line"><span class="passive-line">${PASSIVE[o.type].label}</span><br>스킬: ${SKILL_KITS[o.type].map((s) => s.name).join(" · ")}${o.species && SPECIES_SKILLS[o.species] ? ` · <b>${SPECIES_SKILLS[o.species].name} ⭐</b>` : ""}</div>
+    <div class="skills-line"><span class="passive-line">${t(PASSIVE[o.type].label)}</span><br>${t("스킬")}: ${SKILL_KITS[o.type].map((s) => t(s.name)).join(" · ")}${o.species && SPECIES_SKILLS[o.species] ? ` · <b>${t(SPECIES_SKILLS[o.species].name)} ⭐</b>` : ""}</div>
   `;
 }
 
@@ -2045,13 +2046,13 @@ function renderShop() {
   $("shop-items").innerHTML = SHOP_ITEMS.map((it) => {
     const capped = it.id === "stamina" && staminaBuysRemaining() <= 0;
     const disabled = state.coins < it.cost || capped;
-    const label = capped ? "오늘 한도 ⛔" : `🪙${it.cost}`;
+    const label = capped ? t("오늘 한도 ⛔") : `🪙${it.cost}`;
     const desc = it.id === "stamina"
-      ? `${it.desc} · 오늘 ${staminaBuysToday()}/${STAMINA_BUY_DAILY_MAX}회`
-      : it.desc;
+      ? t("${d} · 오늘 ${n}/${max}회", { d: t(it.desc), n: staminaBuysToday(), max: STAMINA_BUY_DAILY_MAX })
+      : t(it.desc);
     return `<li class="shop-row">
       <span class="shop-icon">${it.icon}</span>
-      <span class="shop-info"><b>${it.name}</b><br><span class="shop-desc">${desc}</span></span>
+      <span class="shop-info"><b>${t(it.name)}</b><br><span class="shop-desc">${desc}</span></span>
       <button class="shop-buy" data-buy="${it.id}" ${disabled ? "disabled" : ""}>${label}</button>
     </li>`;
   }).join("");
@@ -2061,27 +2062,27 @@ function renderShop() {
     const equipped = state.cosmetics.equipped[c.slot] === c.id;
     const previewing = _shopPreviewHat === c.id;
     let btn;
-    if (equipped) btn = `<button class="shop-buy" data-cos-unequip="${c.slot}">해제</button>`;
-    else if (owned) btn = `<button class="shop-buy" data-cos-equip="${c.id}">장착</button>`;
+    if (equipped) btn = `<button class="shop-buy" data-cos-unequip="${c.slot}">${t("해제")}</button>`;
+    else if (owned) btn = `<button class="shop-buy" data-cos-equip="${c.id}">${t("장착")}</button>`;
     else btn = `<button class="shop-buy" data-cos-buy="${c.id}" ${state.coins < c.cost ? "disabled" : ""}>🪙${c.cost}</button>`;
     return `<li class="shop-row${previewing ? " cos-active" : ""}" data-cos-preview="${c.id}">
       <span class="shop-icon">${c.icon}</span>
-      <span class="shop-info"><b>${c.name}</b>${owned ? ' <span class="shop-desc">· 보유</span>' : ''}</span>
+      <span class="shop-info"><b>${t(c.name)}</b>${owned ? ` <span class="shop-desc">· ${t("보유")}</span>` : ''}</span>
       ${btn}
     </li>`;
   }).join("");
   renderShopPreview();
   // 칭호
-  $("shop-titles").innerHTML = SHOP_TITLES.map((t) => {
-    const owned = (state.titles || []).includes(t.text);
-    const equipped = state.title === t.text;
+  $("shop-titles").innerHTML = SHOP_TITLES.map((tt) => {
+    const owned = (state.titles || []).includes(tt.text);
+    const equipped = state.title === tt.text;
     let btn;
-    if (equipped) btn = `<button class="shop-buy" data-unequip="1">해제</button>`;
-    else if (owned) btn = `<button class="shop-buy" data-equip="${t.text}">장착</button>`;
-    else btn = `<button class="shop-buy" data-title="${t.text}" data-cost="${t.cost}" ${state.coins < t.cost ? "disabled" : ""}>🪙${t.cost}</button>`;
+    if (equipped) btn = `<button class="shop-buy" data-unequip="1">${t("해제")}</button>`;
+    else if (owned) btn = `<button class="shop-buy" data-equip="${tt.text}">${t("장착")}</button>`;
+    else btn = `<button class="shop-buy" data-title="${tt.text}" data-cost="${tt.cost}" ${state.coins < tt.cost ? "disabled" : ""}>🪙${tt.cost}</button>`;
     return `<li class="shop-row">
       <span class="shop-icon">👑</span>
-      <span class="shop-info"><b>${t.text}</b>${owned ? ' <span class="shop-desc">(보유)</span>' : ""}</span>
+      <span class="shop-info"><b>${t(tt.text)}</b>${owned ? ` <span class="shop-desc">(${t("보유")})</span>` : ""}</span>
       ${btn}
     </li>`;
   }).join("");
@@ -2326,22 +2327,22 @@ function openCustomDialog(opts) {
   return new Promise((resolve) => {
     if (_dialogResolve) _dialogResolve(null); // 이전 미해결 cancel
     _dialogResolve = resolve;
-    $("dialog-title").textContent = opts.title || "알림";
-    $("dialog-text").textContent = opts.text || "";
+    $("dialog-title").textContent = t(opts.title || "알림");
+    $("dialog-text").textContent = t(opts.text || "");
     const inp = $("dialog-input");
     inp.classList.toggle("hidden", !opts.input);
     if (opts.input) { inp.value = opts.defaultValue || ""; setTimeout(() => inp.focus(), 50); }
     const choicesEl = $("dialog-choices");
     choicesEl.classList.toggle("hidden", !opts.choices);
     if (opts.choices) {
-      choicesEl.innerHTML = opts.choices.map((c, i) => `<button data-choice-i="${i}">${c.label}</button>`).join("");
+      choicesEl.innerHTML = opts.choices.map((c, i) => `<button data-choice-i="${i}">${t(c.label)}</button>`).join("");
     }
     const cancelBtn = $("dialog-cancel");
     cancelBtn.classList.toggle("hidden", !opts.cancelText);
-    cancelBtn.textContent = opts.cancelText || "취소";
+    cancelBtn.textContent = t(opts.cancelText || "취소");
     const confirmBtn = $("dialog-confirm");
     confirmBtn.classList.toggle("hidden", !!opts.choices); // 선택 모드면 confirm 숨김
-    confirmBtn.textContent = opts.confirmText || "확인";
+    confirmBtn.textContent = t(opts.confirmText || "확인");
     $("dialog-backdrop").classList.remove("hidden");
   });
 }
@@ -2537,9 +2538,9 @@ function openDex() {
     const sig = SPECIES_SKILLS[key];
     return `<div class="dex-card${got ? "" : " locked"}">
       <span class="dex-emoji">${got ? stage3 : "🥚"}</span>
-      <span class="dex-name">${got ? sp.name : "???"}</span>
-      <span class="dex-type">${el.icon} ${el.label}</span>
-      <span class="dex-sig">${got && sig ? "⭐ " + sig.name : got ? "" : "🔒"}</span>
+      <span class="dex-name">${got ? t(sp.name) : "???"}</span>
+      <span class="dex-type">${el.icon} ${t(el.label)}</span>
+      <span class="dex-sig">${got && sig ? "⭐ " + t(sig.name) : got ? "" : "🔒"}</span>
     </div>`;
   }).join("");
   $("dex-backdrop").classList.remove("hidden");
