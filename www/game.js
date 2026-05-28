@@ -441,20 +441,21 @@ function haptic(pattern) {
   if (SFX && typeof SFX.haptic === "function") SFX.haptic(pattern);
 }
 
+// 설정 모달의 사운드/진동 토글 상태 갱신
 function updateMuteButton() {
-  const btn = $("mute-btn");
-  if (btn && SFX.isMuted) {
+  const sBtn = $("set-sound");
+  if (sBtn && SFX.isMuted) {
     const muted = SFX.isMuted();
-    btn.textContent = muted ? "🔇" : "🔊";
-    btn.classList.toggle("off", muted);
-    btn.setAttribute("aria-label", muted ? "사운드 켜기" : "음소거");
+    sBtn.textContent = muted ? "꺼짐" : "켜짐";
+    sBtn.classList.toggle("on", !muted);
+    sBtn.classList.toggle("off", muted);
   }
-  const hBtn = $("haptic-btn");
+  const hBtn = $("set-haptic");
   if (hBtn && SFX.isHapticMuted) {
     const off = SFX.isHapticMuted();
-    hBtn.textContent = off ? "🚫" : "📳";
+    hBtn.textContent = off ? "꺼짐" : "켜짐";
+    hBtn.classList.toggle("on", !off);
     hBtn.classList.toggle("off", off);
-    hBtn.setAttribute("aria-label", off ? "진동 켜기" : "진동 끄기");
   }
 }
 
@@ -1858,18 +1859,25 @@ async function currentPushSub() {
   } catch { return null; }
 }
 async function refreshPushButton() {
-  const btn = $("push-btn");
+  const btn = $("set-push");
   if (!btn) return;
-  if (!pushSupported() || !Online.status.reachable) { btn.classList.add("hidden"); return; }
-  btn.classList.remove("hidden");
+  if (!pushSupported() || !Online.status.reachable) {
+    btn.textContent = "미지원";
+    btn.classList.remove("on"); btn.classList.add("off");
+    btn.disabled = true;
+    return;
+  }
   if (Notification.permission === "denied") {
-    btn.textContent = "🔕 알림 차단됨";
+    btn.textContent = "차단됨";
+    btn.classList.remove("on"); btn.classList.add("off");
     btn.disabled = true;
     return;
   }
   btn.disabled = false;
   const sub = await currentPushSub();
-  btn.textContent = sub ? "🔔 알림 끄기" : "🔔 알림 켜기";
+  btn.textContent = sub ? "켜짐" : "꺼짐";
+  btn.classList.toggle("on", !!sub);
+  btn.classList.toggle("off", !sub);
 }
 async function togglePush() {
   if (!pushSupported()) { customAlert("이 브라우저는 알림을 지원하지 않아요.", "알림"); return; }
@@ -1905,6 +1913,27 @@ async function togglePush() {
     customAlert("알림 구독에 실패했어요.", "알림");
   }
   refreshPushButton();
+}
+
+// ---------- 설정 모달 ----------
+function openSettings() {
+  renderSettings();
+  $("settings-backdrop").classList.remove("hidden");
+}
+function closeSettings() {
+  $("settings-backdrop").classList.add("hidden");
+}
+function renderSettings() {
+  updateMuteButton();      // 사운드/진동 토글
+  refreshPushButton();     // 알림 토글
+  // 계정/로그아웃 — 로그인 상태일 때만 노출
+  const row = $("set-logout-row");
+  if (Online.status.loggedIn) {
+    row.classList.remove("hidden");
+    $("set-account-name").textContent = Online.status.username || "계정";
+  } else {
+    row.classList.add("hidden");
+  }
 }
 
 // ---------- 복귀 보상 ----------
@@ -2718,7 +2747,7 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b || b.disabled) return;
-  if (b.matches("[data-train], .quest-claim, #att-claim, #mute-btn, #haptic-btn")) return;
+  if (b.matches("[data-train], .quest-claim, #att-claim, #set-sound, #set-haptic")) return;
   playFx("playTick");
   haptic(8);
 });
@@ -2785,7 +2814,6 @@ $("lobby-account").addEventListener("click", (e) => {
   if (b.dataset.act === "login") { authMsg("", true); show("auth"); }
   else if (b.dataset.act === "logout") doLogout();
 });
-$("logout-btn").addEventListener("click", doLogout);
 
 $("go-pvp").addEventListener("click", enterArena);
 $("back-home").addEventListener("click", () => { renderHome(); showHomeTab("arena"); show("home"); });
@@ -2892,7 +2920,6 @@ $("welcome-close").addEventListener("click", dismissWelcome);
 $("welcome-backdrop").addEventListener("click", (e) => { if (e.target.id === "welcome-backdrop") dismissWelcome(); });
 $("coach-next").addEventListener("click", nextCoach);
 $("coach-skip").addEventListener("click", endCoach);
-$("push-btn").addEventListener("click", togglePush);
 window.addEventListener("resize", () => {
   if ($("coach-overlay").classList.contains("hidden")) return;
   const step = COACH_STEPS[coachIdx];
@@ -2950,15 +2977,22 @@ $("lb-back").addEventListener("click", () => {
   }
 });
 
-$("haptic-btn").addEventListener("click", () => {
+// ---------- 설정 모달 배선 ----------
+$("settings-btn").addEventListener("click", openSettings);
+$("settings-close").addEventListener("click", closeSettings);
+$("settings-backdrop").addEventListener("click", (e) => { if (e.target.id === "settings-backdrop") closeSettings(); });
+$("set-haptic").addEventListener("click", () => {
   if (SFX.toggleHapticMute) SFX.toggleHapticMute();
   updateMuteButton();
+  haptic(12);
 });
-$("mute-btn").addEventListener("click", () => {
+$("set-sound").addEventListener("click", () => {
   if (SFX.toggleMute) SFX.toggleMute();
   updateMuteButton();
   playFx("playTick");
 });
+$("set-push").addEventListener("click", togglePush);
+$("set-logout").addEventListener("click", () => { closeSettings(); doLogout(); });
 
 // ---------- 리더보드 ----------
 async function openLeaderboard() {
@@ -3430,8 +3464,6 @@ async function fightFriend(friendId) {
 
 // ---------- 계정 UI ----------
 function renderAccount() {
-  const logoutBtn = $("logout-btn");
-  if (logoutBtn) logoutBtn.classList.toggle("hidden", !Online.status.loggedIn);
   const el = $("lobby-account");
   if (!el) return;
   if (Online.status.loggedIn) {

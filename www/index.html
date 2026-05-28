@@ -16,9 +16,7 @@
 <body>
   <div id="scanlines" aria-hidden="true"></div>
   <div id="app">
-    <button id="mute-btn" class="mute-btn" type="button" aria-label="음소거 전환">🔊</button>
-    <button id="haptic-btn" class="mute-btn haptic-btn" type="button" aria-label="진동 전환">📳</button>
-    <button id="logout-btn" class="logout-btn hidden" type="button">🚪 로그아웃</button>
+    <button id="settings-btn" class="mute-btn" type="button" aria-label="설정">⚙️</button>
 
     <!-- 0. 로그인 / 회원가입 -->
     <section id="auth-screen" class="screen hidden">
@@ -132,7 +130,6 @@
       <div class="home-tab-content hidden" data-home-tab="daily">
         <div class="shop-bar">
           <span class="shop-bar-coins">🪙 <b class="coin-balance">0</b></span>
-          <button id="push-btn" class="ghost hidden">🔔 알림 켜기</button>
           <button id="help-btn" class="ghost">ℹ️ 도움말</button>
           <button id="shop-btn" class="primary">🛒 상점</button>
         </div>
@@ -402,6 +399,32 @@
         <li><b>🎩 모자</b> — 13종 상점 모자. 펫 머리 위 장식. PvP에 영향 없음.</li>
       </ul>
       <button id="welcome-close" class="primary">시작하기</button>
+    </div>
+  </div>
+
+  <!-- 설정 모달 -->
+  <div id="settings-backdrop" class="welcome-backdrop hidden">
+    <div class="welcome-sheet settings-sheet">
+      <h2>⚙️ 설정</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">🔊 사운드</span>
+          <button id="set-sound" class="settings-toggle" type="button"></button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">📳 진동</span>
+          <button id="set-haptic" class="settings-toggle" type="button"></button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">🔔 알림</span>
+          <button id="set-push" class="settings-toggle" type="button"></button>
+        </div>
+        <div class="settings-row hidden" id="set-logout-row">
+          <span class="settings-label">👤 <b id="set-account-name"></b></span>
+          <button id="set-logout" class="settings-toggle danger" type="button">로그아웃</button>
+        </div>
+      </div>
+      <button id="settings-close" class="primary">닫기</button>
     </div>
   </div>
 
