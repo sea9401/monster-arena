@@ -20,33 +20,33 @@
 
     <!-- 0. 로그인 / 회원가입 -->
     <section id="auth-screen" class="screen hidden">
-      <h2>몬스터 아레나</h2>
-      <p class="muted">로그인하면 어느 기기에서든 내 몬스터를 이어서 키울 수 있어요.</p>
+      <h2 data-i18n>몬스터 아레나</h2>
+      <p class="muted" data-i18n>로그인하면 어느 기기에서든 내 몬스터를 이어서 키울 수 있어요.</p>
       <div class="auth-box">
-        <input id="auth-username" type="text" placeholder="아이디 (영문/숫자 3~16)" autocomplete="username" autocapitalize="off" />
-        <input id="auth-password" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" />
+        <input id="auth-username" type="text" placeholder="아이디 (영문/숫자 3~16)" data-i18n-ph autocomplete="username" autocapitalize="off" />
+        <input id="auth-password" type="password" placeholder="비밀번호 (6자 이상)" data-i18n-ph autocomplete="current-password" />
         <p class="auth-msg" id="auth-msg"></p>
         <div class="nav">
-          <button id="auth-login" class="primary">로그인</button>
-          <button id="auth-register" class="primary">회원가입</button>
+          <button id="auth-login" class="primary" data-i18n>로그인</button>
+          <button id="auth-register" class="primary" data-i18n>회원가입</button>
         </div>
-        <button id="auth-guest" class="ghost">게스트로 계속 (이 기기에만 저장)</button>
+        <button id="auth-guest" class="ghost" data-i18n>게스트로 계속 (이 기기에만 저장)</button>
       </div>
     </section>
 
     <!-- 1. 알 부화 / 시작 화면 -->
     <section id="hatch-screen" class="screen hidden">
-      <h2>알을 골라 부화시키세요</h2>
-      <p class="muted">한번 정하면 이 친구를 매일 키우게 됩니다.</p>
+      <h2 data-i18n>알을 골라 부화시키세요</h2>
+      <p class="muted" data-i18n>한번 정하면 이 친구를 매일 키우게 됩니다.</p>
       <div id="egg-roster" class="roster"></div>
     </section>
 
     <!-- 2. 홈(육성) 화면 -->
     <section id="home-screen" class="screen hidden">
       <nav class="home-tabbar" aria-label="홈 탭">
-        <button class="home-tab-btn active" data-tab="grow">🐲<span>육성</span></button>
-        <button class="home-tab-btn" data-tab="daily">📅<span>일일</span></button>
-        <button class="home-tab-btn" data-tab="arena">⚔️<span>아레나</span></button>
+        <button class="home-tab-btn active" data-tab="grow">🐲<span data-i18n>육성</span></button>
+        <button class="home-tab-btn" data-tab="daily">📅<span data-i18n>일일</span></button>
+        <button class="home-tab-btn" data-tab="arena">⚔️<span data-i18n>아레나</span></button>
       </nav>
 
       <div class="home-tab-content active" data-home-tab="grow">
@@ -80,10 +80,10 @@
 
           <div class="stat-row">
             <div class="stat-grid">
-              <div><span>🗡️ 공격</span><br><b id="stat-atk">0</b></div>
-              <div><span>🛡️ 방어</span><br><b id="stat-def">0</b></div>
-              <div><span>💨 속도</span><br><b id="stat-spd">0</b></div>
-              <div><span>❤️ 체력</span><br><b id="stat-hp">0</b></div>
+              <div><span data-i18n>🗡️ 공격</span><br><b id="stat-atk">0</b></div>
+              <div><span data-i18n>🛡️ 방어</span><br><b id="stat-def">0</b></div>
+              <div><span data-i18n>💨 속도</span><br><b id="stat-spd">0</b></div>
+              <div><span data-i18n>❤️ 체력</span><br><b id="stat-hp">0</b></div>
             </div>
             <div class="stat-radar" id="stat-radar"></div>
           </div>
@@ -101,28 +101,28 @@
         <div class="training">
           <p class="muted">스태미너: <b id="stamina-left">10</b>/<b id="stamina-max">10</b> · 다음 충전 <b id="stamina-timer">15:00</b></p>
           <div class="train-grid" id="train-grid">
-            <button data-train="feed">🍖 먹이주기</button>
-            <button data-train="atk">🗡️ 근력훈련</button>
-            <button data-train="def">🛡️ 방어훈련</button>
-            <button data-train="spd">💨 민첩훈련</button>
-            <button data-train="play">🎲 놀아주기</button>
+            <button data-train="feed" data-i18n>🍖 먹이주기</button>
+            <button data-train="atk" data-i18n>🗡️ 근력훈련</button>
+            <button data-train="def" data-i18n>🛡️ 방어훈련</button>
+            <button data-train="spd" data-i18n>💨 민첩훈련</button>
+            <button data-train="play" data-i18n>🎲 놀아주기</button>
           </div>
           <p class="train-msg" id="train-msg"></p>
         </div>
 
         <div class="walk-card" id="walk-card">
-          <h3 class="quests-title">🥾 펫 산책 <span class="quest-progress">스태미너 무관 · idle 보상</span></h3>
+          <h3 class="quests-title"><span data-i18n>🥾 펫 산책</span> <span class="quest-progress" data-i18n>스태미너 무관 · idle 보상</span></h3>
           <div id="walk-body"></div>
         </div>
 
         <div class="stat-chart-card">
-          <h3 class="quests-title">📈 전투력 성장</h3>
+          <h3 class="quests-title" data-i18n>📈 전투력 성장</h3>
           <div id="stat-chart" class="stat-chart"></div>
           <p id="stat-chart-note" class="stat-chart-note muted"></p>
         </div>
 
         <div class="rebirth-bar">
-          <button id="rebirth-btn" class="ghost">🥚 새 펫 부화 (로스터 +1)</button>
+          <button id="rebirth-btn" class="ghost" data-i18n>🥚 새 펫 부화 (로스터 +1)</button>
         </div>
 
       </div>
@@ -130,36 +130,36 @@
       <div class="home-tab-content hidden" data-home-tab="daily">
         <div class="shop-bar">
           <span class="shop-bar-coins">🪙 <b class="coin-balance">0</b></span>
-          <button id="help-btn" class="ghost">ℹ️ 도움말</button>
-          <button id="shop-btn" class="primary">🛒 상점</button>
+          <button id="help-btn" class="ghost" data-i18n>ℹ️ 도움말</button>
+          <button id="shop-btn" class="primary" data-i18n>🛒 상점</button>
         </div>
 
-        <h3 class="section-divider">📅 오늘 할 일</h3>
+        <h3 class="section-divider" data-i18n>📅 오늘 할 일</h3>
         <div class="lucky-bar">
-          <button id="lucky-open" class="lucky-btn">🎰 <span>행운의 룰렛</span><span id="lucky-status" class="lucky-status">오늘 1회</span></button>
+          <button id="lucky-open" class="lucky-btn">🎰 <span data-i18n>행운의 룰렛</span><span id="lucky-status" class="lucky-status" data-i18n>오늘 1회</span></button>
         </div>
         <div class="attendance">
           <div class="att-head">
-            <h3 class="att-title">📅 출석 보상</h3>
-            <span class="att-streak">🔥 <b id="att-streak">1</b>일째</span>
+            <h3 class="att-title" data-i18n>📅 출석 보상</h3>
+            <span class="att-streak">🔥 <b id="att-streak">1</b><span data-i18n>일째</span></span>
           </div>
           <div class="att-calendar" id="att-calendar"></div>
-          <button id="att-claim" class="att-claim">오늘의 출석 보상 받기</button>
+          <button id="att-claim" class="att-claim" data-i18n>오늘의 출석 보상 받기</button>
         </div>
 
         <div class="quests">
-          <h3 class="quests-title">📋 데일리 퀘스트 <span class="quest-progress" id="quest-progress"></span></h3>
+          <h3 class="quests-title"><span data-i18n>📋 데일리 퀘스트</span> <span class="quest-progress" id="quest-progress"></span></h3>
           <ul class="quest-list" id="quest-list"></ul>
         </div>
 
-        <h3 class="section-divider">📚 내 진행도</h3>
+        <h3 class="section-divider" data-i18n>📚 내 진행도</h3>
         <div class="dex-bar">
-          <button id="profile-open" class="dex-btn">📊 내 프로필</button>
-          <button id="dex-open" class="dex-btn">📖 도감 <span id="dex-count">0/14</span></button>
+          <button id="profile-open" class="dex-btn" data-i18n>📊 내 프로필</button>
+          <button id="dex-open" class="dex-btn">📖 <span data-i18n>도감</span> <span id="dex-count">0/14</span></button>
         </div>
         <div class="achievements">
           <div class="att-head">
-            <h3 class="quests-title">🏆 업적</h3>
+            <h3 class="quests-title" data-i18n>🏆 업적</h3>
             <span class="att-streak"><b id="ach-count">0/0</b></span>
           </div>
           <ul class="ach-list" id="achievement-list"></ul>
@@ -169,22 +169,22 @@
       <div class="home-tab-content hidden" data-home-tab="arena">
         <div class="arena-actions">
           <button id="go-pvp" class="action-tab primary">
-            <span class="action-icon">⚔️</span><span class="action-label">매칭</span>
+            <span class="action-icon">⚔️</span><span class="action-label" data-i18n>매칭</span>
           </button>
           <button id="home-tournament-btn" class="action-tab">
-            <span class="action-icon">🏅</span><span class="action-label">토너먼트</span>
+            <span class="action-icon">🏅</span><span class="action-label" data-i18n>토너먼트</span>
           </button>
           <button id="home-season-btn" class="action-tab">
-            <span class="action-icon">🗓️</span><span class="action-label">시즌</span>
+            <span class="action-icon">🗓️</span><span class="action-label" data-i18n>시즌</span>
           </button>
           <button id="home-boss-btn" class="action-tab">
-            <span class="action-icon">🐲</span><span class="action-label">보스</span>
+            <span class="action-icon">🐲</span><span class="action-label" data-i18n>보스</span>
           </button>
           <button id="home-friends-btn" class="action-tab">
-            <span class="action-icon">👥</span><span class="action-label">친구</span>
+            <span class="action-icon">👥</span><span class="action-label" data-i18n>친구</span>
           </button>
           <button id="home-leaderboard-btn" class="action-tab">
-            <span class="action-icon">🏆</span><span class="action-label">랭킹</span>
+            <span class="action-icon">🏆</span><span class="action-label" data-i18n>랭킹</span>
           </button>
         </div>
 
@@ -199,7 +199,7 @@
         <div id="inbox" class="inbox hidden"></div>
 
         <div class="battle-history">
-          <h3 class="quests-title">최근 전투 기록</h3>
+          <h3 class="quests-title" data-i18n>최근 전투 기록</h3>
           <ul class="history-list" id="history-list"></ul>
         </div>
       </div>
@@ -210,7 +210,7 @@
     <section id="arena-screen" class="screen hidden">
       <div class="arena-topbar">
         <button id="back-home" class="screen-back" aria-label="홈으로">←</button>
-        <button id="leaderboard-btn" class="topbar-ghost">🏆 랭킹</button>
+        <button id="leaderboard-btn" class="topbar-ghost" data-i18n>🏆 랭킹</button>
       </div>
       <div class="rank-banner">
         <span id="rank-tier">🥉 브론즈</span>
@@ -220,11 +220,11 @@
       </div>
 
       <div id="match-find">
-        <h2>상대 매칭</h2>
+        <h2 data-i18n>상대 매칭</h2>
         <div class="opponent-card" id="opponent-card"></div>
         <div class="nav">
-          <button id="fight-btn" class="primary">⚔️ 대전 시작</button>
-          <button id="rematch-btn" class="ghost">🔄 다른 상대</button>
+          <button id="fight-btn" class="primary" data-i18n>⚔️ 대전 시작</button>
+          <button id="rematch-btn" class="ghost" data-i18n>🔄 다른 상대</button>
         </div>
       </div>
 
@@ -250,44 +250,44 @@
         <p id="result-detail"></p>
         <div id="result-social" class="social-bar hidden"></div>
         <div class="nav">
-          <button id="again-btn" class="primary">다시 대전</button>
-          <button id="replay-btn" class="ghost">🎬 리플레이</button>
+          <button id="again-btn" class="primary" data-i18n>다시 대전</button>
+          <button id="replay-btn" class="ghost" data-i18n>🎬 리플레이</button>
         </div>
       </div>
     </section>
 
     <!-- 4. 리더보드 화면 -->
     <section id="leaderboard-screen" class="screen hidden">
-      <h2><button class="screen-back" data-back-target="lb-back" aria-label="뒤로가기">←</button>🏆 글로벌 리더보드</h2>
+      <h2><button class="screen-back" data-back-target="lb-back" aria-label="뒤로가기">←</button><span data-i18n>🏆 글로벌 리더보드</span></h2>
       <ol class="leaderboard" id="leaderboard-list"></ol>
       <div class="nav">
-        <button id="lb-back" class="ghost">← 아레나로</button>
+        <button id="lb-back" class="ghost" data-i18n>← 아레나로</button>
       </div>
     </section>
 
     <!-- 5. 주간 토너먼트 -->
     <section id="tournament-screen" class="screen hidden">
-      <h2><button class="screen-back" data-back-target="tourney-back" aria-label="뒤로가기">←</button>🏅 주간 토너먼트</h2>
+      <h2><button class="screen-back" data-back-target="tourney-back" aria-label="뒤로가기">←</button><span data-i18n>🏅 주간 토너먼트</span></h2>
       <div class="tourney-head">
-        <div id="tourney-countdown" class="tourney-countdown">남은 시간 --</div>
+        <div id="tourney-countdown" class="tourney-countdown" data-i18n>남은 시간 --</div>
         <div id="tourney-me" class="tourney-me"></div>
         <div id="tourney-champion" class="tourney-champion"></div>
       </div>
       <ol class="leaderboard" id="tournament-list"></ol>
-      <p class="muted tourney-note">온라인 매치만 점수가 반영돼요 · 승리 +10점 · 패배 +3점 · 매주 월요일 0시(KST) 리셋</p>
+      <p class="muted tourney-note" data-i18n>온라인 매치만 점수가 반영돼요 · 승리 +10점 · 패배 +3점 · 매주 월요일 0시(KST) 리셋</p>
       <div class="nav">
-        <button id="tourney-back" class="ghost">← 아레나로</button>
+        <button id="tourney-back" class="ghost" data-i18n>← 아레나로</button>
       </div>
     </section>
 
     <!-- 6. 상점 -->
     <section id="shop-screen" class="screen hidden">
-      <h2><button class="screen-back" data-back-target="shop-back" aria-label="뒤로가기">←</button>🛒 상점</h2>
-      <div class="shop-coins-bar">보유 코인 🪙 <b id="shop-coins">0</b></div>
+      <h2><button class="screen-back" data-back-target="shop-back" aria-label="뒤로가기">←</button><span data-i18n>🛒 상점</span></h2>
+      <div class="shop-coins-bar"><span data-i18n>보유 코인</span> 🪙 <b id="shop-coins">0</b></div>
       <div class="shop-tabs">
-        <button class="shop-tab active" data-shop-tab="items">🧪 아이템</button>
-        <button class="shop-tab" data-shop-tab="hats">🎩 모자</button>
-        <button class="shop-tab" data-shop-tab="titles">👑 칭호</button>
+        <button class="shop-tab active" data-shop-tab="items" data-i18n>🧪 아이템</button>
+        <button class="shop-tab" data-shop-tab="hats" data-i18n>🎩 모자</button>
+        <button class="shop-tab" data-shop-tab="titles" data-i18n>👑 칭호</button>
       </div>
       <div class="shop-tab-content" data-shop-content="items">
         <ul class="shop-list" id="shop-items"></ul>
@@ -298,45 +298,45 @@
             <span class="cos-preview-hat" id="cos-preview-hat"></span>
             <div class="cos-preview-pet" id="cos-preview-pet">🐲</div>
           </div>
-          <div class="cos-preview-label" id="cos-preview-label">행을 탭하면 미리 써볼 수 있어요</div>
+          <div class="cos-preview-label" id="cos-preview-label" data-i18n>행을 탭하면 미리 써볼 수 있어요</div>
         </div>
         <ul class="shop-list" id="shop-cosmetics"></ul>
       </div>
       <div class="shop-tab-content hidden" data-shop-content="titles">
         <ul class="shop-list" id="shop-titles"></ul>
       </div>
-      <p class="muted tourney-note">코인은 전투(승+20/패+5)·퀘스트(+10)·출석(+15)으로 모아요</p>
+      <p class="muted tourney-note" data-i18n>코인은 전투(승+20/패+5)·퀘스트(+10)·출석(+15)으로 모아요</p>
       <div class="nav">
-        <button id="shop-back" class="ghost">← 돌아가기</button>
+        <button id="shop-back" class="ghost" data-i18n>← 돌아가기</button>
       </div>
     </section>
 
     <!-- 10. 내 프로필 -->
     <section id="profile-screen" class="screen hidden">
-      <h2><button class="screen-back" data-back-target="profile-back" aria-label="뒤로가기">←</button>📊 내 프로필</h2>
+      <h2><button class="screen-back" data-back-target="profile-back" aria-label="뒤로가기">←</button><span data-i18n>📊 내 프로필</span></h2>
       <div id="profile-body"></div>
       <div class="nav">
-        <button id="profile-back" class="ghost">← 일일로</button>
+        <button id="profile-back" class="ghost" data-i18n>← 일일로</button>
       </div>
     </section>
 
     <!-- 9. 친구 -->
     <section id="friends-screen" class="screen hidden">
-      <h2><button class="screen-back" data-back-target="friends-back" aria-label="뒤로가기">←</button>👥 친구</h2>
+      <h2><button class="screen-back" data-back-target="friends-back" aria-label="뒤로가기">←</button><span data-i18n>👥 친구</span></h2>
       <div class="friend-code-box">
-        <div class="friend-code-label">내 친구 코드</div>
+        <div class="friend-code-label" data-i18n>내 친구 코드</div>
         <div class="friend-code" id="my-friend-code">------</div>
-        <button id="copy-code-btn" class="ghost">📋 복사</button>
+        <button id="copy-code-btn" class="ghost" data-i18n>📋 복사</button>
       </div>
       <div class="friend-add-bar">
-        <input id="friend-code-input" type="text" inputmode="latin" maxlength="8" placeholder="친구 코드 입력 (예: A7K2BR)" />
-        <button id="add-friend-btn" class="primary">추가</button>
+        <input id="friend-code-input" type="text" inputmode="latin" maxlength="8" placeholder="친구 코드 입력 (예: A7K2BR)" data-i18n-ph />
+        <button id="add-friend-btn" class="primary" data-i18n>추가</button>
       </div>
-      <h3 class="quests-title">내 친구 <span class="quest-progress" id="friend-count"></span></h3>
+      <h3 class="quests-title"><span data-i18n>내 친구</span> <span class="quest-progress" id="friend-count"></span></h3>
       <ul class="friend-list" id="friend-list"></ul>
-      <p class="muted tourney-note">친구에게 도발 메시지 보내기 / 친선전(보상 없음)으로 다시 만나기</p>
+      <p class="muted tourney-note" data-i18n>친구에게 도발 메시지 보내기 / 친선전(보상 없음)으로 다시 만나기</p>
       <div class="nav">
-        <button id="friends-back" class="ghost">← 아레나로</button>
+        <button id="friends-back" class="ghost" data-i18n>← 아레나로</button>
       </div>
     </section>
 
@@ -353,19 +353,19 @@
         <div id="boss-float-area" class="boss-float-area"></div>
       </div>
       <div class="boss-stats">
-        <div class="boss-stat"><span class="boss-stat-label">전체 누적</span><b id="boss-total-dmg">0</b></div>
-        <div class="boss-stat"><span class="boss-stat-label">참가자</span><b id="boss-participants">0</b>명</div>
-        <div class="boss-stat"><span class="boss-stat-label">내 데미지</span><b id="boss-my-dmg">0</b></div>
+        <div class="boss-stat"><span class="boss-stat-label" data-i18n>전체 누적</span><b id="boss-total-dmg">0</b></div>
+        <div class="boss-stat"><span class="boss-stat-label" data-i18n>참가자</span><b id="boss-participants">0</b><span data-i18n>명</span></div>
+        <div class="boss-stat"><span class="boss-stat-label" data-i18n>내 데미지</span><b id="boss-my-dmg">0</b></div>
       </div>
       <div id="boss-last-result" class="season-lastresult"></div>
       <div class="nav">
-        <button id="boss-attack-btn" class="primary">⚔️ 보스 공격 (스태미너 1)</button>
+        <button id="boss-attack-btn" class="primary" data-i18n>⚔️ 보스 공격 (스태미너 1)</button>
       </div>
-      <h3 class="quests-title">상위 기여자</h3>
+      <h3 class="quests-title" data-i18n>상위 기여자</h3>
       <ol class="leaderboard" id="boss-top"></ol>
-      <p class="muted tourney-note">매주 월요일 0시(KST) 리셋 · 누적 데미지로 순위 · 1주 최대 80회 공격 · 보상: 1위 🪙300+칭호 / 2-3위 🪙150 / 4-10위 🪙80 / 참가 🪙30</p>
+      <p class="muted tourney-note" data-i18n>매주 월요일 0시(KST) 리셋 · 누적 데미지로 순위 · 1주 최대 80회 공격 · 보상: 1위 🪙300+칭호 / 2-3위 🪙150 / 4-10위 🪙80 / 참가 🪙30</p>
       <div class="nav">
-        <button id="boss-back" class="ghost">← 아레나로</button>
+        <button id="boss-back" class="ghost" data-i18n>← 아레나로</button>
       </div>
     </section>
 
@@ -377,9 +377,9 @@
         <div id="season-mytier" class="tourney-me"></div>
       </div>
       <div id="season-lastresult" class="season-lastresult"></div>
-      <p class="muted tourney-note">매월 1일 0시(KST) 시즌 종료 시 레이팅에 따른 티어 보상 — 브론즈🪙50 / 실버🪙100 / 골드🪙200+칭호 / 플래티넘🪙350+칭호 / 챔피언🪙600+칭호</p>
+      <p class="muted tourney-note" data-i18n>매월 1일 0시(KST) 시즌 종료 시 레이팅에 따른 티어 보상 — 브론즈🪙50 / 실버🪙100 / 골드🪙200+칭호 / 플래티넘🪙350+칭호 / 챔피언🪙600+칭호</p>
       <div class="nav">
-        <button id="season-back" class="ghost">← 아레나로</button>
+        <button id="season-back" class="ghost" data-i18n>← 아레나로</button>
       </div>
     </section>
 
@@ -388,17 +388,17 @@
   <!-- 환영 / 도움말 모달 -->
   <div id="welcome-backdrop" class="welcome-backdrop hidden">
     <div class="welcome-sheet">
-      <h2>🎮 환영합니다!</h2>
+      <h2 data-i18n>🎮 환영합니다!</h2>
       <ul class="welcome-list">
-        <li><b>🐲 육성</b> — 먹이/훈련으로 키워요. 스태미너는 15분당 1씩 회복. 최대 3마리 로스터.</li>
-        <li><b>📅 일일</b> — 출석·퀘스트·업적·상점·룰렛(1일 1회)·도감·내 프로필.</li>
-        <li><b>⚔️ 아레나</b> — 비동기 PvP, 주간 토너먼트·주간 보스·월간 시즌·랭킹·친구.</li>
-        <li><b>🏅 일일 이벤트</b> — 매일 다른 보너스(EXP/회피/회복 등).</li>
-        <li><b>🥾 산책</b> — 스태미너 없을 때 시간 단위로 펫을 보내면 코인+포만/행복.</li>
-        <li><b>👥 친구</b> — 6자 코드로 추가, 도발/친선전/선물(🎁)/쓰다듬기(🤲) 가능.</li>
-        <li><b>🎩 모자</b> — 13종 상점 모자. 펫 머리 위 장식. PvP에 영향 없음.</li>
+        <li data-i18n-html><b>🐲 육성</b> — 먹이/훈련으로 키워요. 스태미너는 15분당 1씩 회복. 최대 3마리 로스터.</li>
+        <li data-i18n-html><b>📅 일일</b> — 출석·퀘스트·업적·상점·룰렛(1일 1회)·도감·내 프로필.</li>
+        <li data-i18n-html><b>⚔️ 아레나</b> — 비동기 PvP, 주간 토너먼트·주간 보스·월간 시즌·랭킹·친구.</li>
+        <li data-i18n-html><b>🏅 일일 이벤트</b> — 매일 다른 보너스(EXP/회피/회복 등).</li>
+        <li data-i18n-html><b>🥾 산책</b> — 스태미너 없을 때 시간 단위로 펫을 보내면 코인+포만/행복.</li>
+        <li data-i18n-html><b>👥 친구</b> — 6자 코드로 추가, 도발/친선전/선물(🎁)/쓰다듬기(🤲) 가능.</li>
+        <li data-i18n-html><b>🎩 모자</b> — 13종 상점 모자. 펫 머리 위 장식. PvP에 영향 없음.</li>
       </ul>
-      <button id="welcome-close" class="primary">시작하기</button>
+      <button id="welcome-close" class="primary" data-i18n>시작하기</button>
     </div>
   </div>
 
@@ -440,7 +440,7 @@
       <div class="coach-foot">
         <span id="coach-progress" class="coach-progress"></span>
         <div class="coach-btns">
-          <button id="coach-skip" class="ghost">건너뛰기</button>
+          <button id="coach-skip" class="ghost" data-i18n>건너뛰기</button>
           <button id="coach-next" class="primary">다음</button>
         </div>
       </div>
@@ -464,11 +464,11 @@
   <!-- 펫 자랑 카드 -->
   <div id="share-backdrop" class="welcome-backdrop hidden">
     <div class="welcome-sheet share-sheet">
-      <h2>📤 펫 자랑 카드</h2>
+      <h2 data-i18n>📤 펫 자랑 카드</h2>
       <div id="share-preview" class="share-preview"></div>
       <div class="nav">
-        <button id="share-download" class="primary">💾 이미지 저장</button>
-        <button id="share-close" class="ghost">닫기</button>
+        <button id="share-download" class="primary" data-i18n>💾 이미지 저장</button>
+        <button id="share-close" class="ghost" data-i18n>닫기</button>
       </div>
     </div>
   </div>
@@ -479,8 +479,8 @@
       <h2 id="visit-title">친구 펫</h2>
       <div class="visit-pet" id="visit-pet"></div>
       <div class="nav">
-        <button id="visit-pat" class="primary">🤲 쓰다듬기 (+🪙5)</button>
-        <button id="visit-close" class="ghost">닫기</button>
+        <button id="visit-pat" class="primary" data-i18n>🤲 쓰다듬기 (+🪙5)</button>
+        <button id="visit-close" class="ghost" data-i18n>닫기</button>
       </div>
     </div>
   </div>
@@ -488,10 +488,10 @@
   <!-- 도감 모달 -->
   <div id="dex-backdrop" class="welcome-backdrop hidden">
     <div class="welcome-sheet dex-sheet">
-      <h2>📖 몬스터 도감 <span class="dex-progress" id="dex-progress">0/14</span></h2>
+      <h2><span data-i18n>📖 몬스터 도감</span> <span class="dex-progress" id="dex-progress">0/14</span></h2>
       <div class="dex-grid" id="dex-grid"></div>
       <div class="nav">
-        <button id="dex-close" class="primary">닫기</button>
+        <button id="dex-close" class="primary" data-i18n>닫기</button>
       </div>
     </div>
   </div>
@@ -499,8 +499,8 @@
   <!-- 행운의 룰렛 모달 -->
   <div id="lucky-backdrop" class="welcome-backdrop hidden">
     <div class="welcome-sheet lucky-sheet">
-      <h2>🎰 행운의 룰렛</h2>
-      <p class="muted">하루 1회 · KST 자정 리셋</p>
+      <h2 data-i18n>🎰 행운의 룰렛</h2>
+      <p class="muted" data-i18n>하루 1회 · KST 자정 리셋</p>
       <div class="lucky-wheel-wrap">
         <div class="lucky-ring" id="lucky-ring"></div>
         <div class="lucky-arrow" id="lucky-arrow"></div>
@@ -508,8 +508,8 @@
       </div>
       <div id="lucky-result" class="lucky-result"></div>
       <div class="nav">
-        <button id="lucky-spin" class="primary">🎲 돌리기</button>
-        <button id="lucky-close" class="ghost">닫기</button>
+        <button id="lucky-spin" class="primary" data-i18n>🎲 돌리기</button>
+        <button id="lucky-close" class="ghost" data-i18n>닫기</button>
       </div>
     </div>
   </div>
@@ -520,8 +520,8 @@
       <h2 id="replay-title">🎬 직전 전투</h2>
       <div class="log" id="replay-log"></div>
       <div class="nav">
-        <button id="replay-restart" class="ghost">⏮ 다시</button>
-        <button id="replay-close" class="primary">닫기</button>
+        <button id="replay-restart" class="ghost" data-i18n>⏮ 다시</button>
+        <button id="replay-close" class="primary" data-i18n>닫기</button>
       </div>
     </div>
   </div>
