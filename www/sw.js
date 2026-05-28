@@ -10,6 +10,8 @@ const SHELL = [
   "/sound.js",
   "/online.js",
   "/config.js",
+  "/i18n.js",
+  "/i18n-en.js",
   "/manifest.json",
   "/assets/icon.png",
 ];

@@ -75,6 +75,11 @@ body {
 .settings-toggle.off { opacity: .6; }
 .settings-toggle.danger { background: var(--bad); color: #fff; border-color: var(--bad); box-shadow: 2px 2px 0 #0f380f; }
 .settings-toggle[disabled] { opacity: .4; cursor: not-allowed; }
+.settings-select {
+  min-width: 120px; padding: 8px 10px; font: inherit; font-size: 12px; font-weight: 900;
+  border: 2px solid var(--accent); border-radius: 0; cursor: pointer;
+  background: var(--panel); color: var(--accent2);
+}
 
 .muted { color: var(--accent); }
 .hidden { display: none !important; }

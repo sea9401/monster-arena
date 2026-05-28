@@ -1924,6 +1924,15 @@ function closeSettings() {
   $("settings-backdrop").classList.add("hidden");
 }
 function renderSettings() {
+  // 언어 드롭다운
+  const sel = $("set-lang");
+  if (sel) {
+    const cur = I18N.getLocale();
+    sel.innerHTML = I18N.availableLocales().map((loc) => {
+      const m = I18N.localeMeta(loc);
+      return `<option value="${loc}"${loc === cur ? " selected" : ""}>${m.flag} ${m.label}</option>`;
+    }).join("");
+  }
   updateMuteButton();      // 사운드/진동 토글
   refreshPushButton();     // 알림 토글
   // 계정/로그아웃 — 로그인 상태일 때만 노출
@@ -2993,6 +3002,7 @@ $("set-sound").addEventListener("click", () => {
 });
 $("set-push").addEventListener("click", togglePush);
 $("set-logout").addEventListener("click", () => { closeSettings(); doLogout(); });
+$("set-lang").addEventListener("change", (e) => { I18N.setLocale(e.target.value); });
 
 // ---------- 리더보드 ----------
 async function openLeaderboard() {
@@ -3535,8 +3545,22 @@ async function enterGameFromState() {
 }
 
 // ---------- 시작 ----------
+// 로케일 변경 시: 정적 텍스트는 i18n.js가 치환, 동적 화면은 여기서 리렌더.
+function rerenderForLocale() {
+  try {
+    if (state) {
+      renderHome();
+      if (typeof activeHomeTab !== "undefined") showHomeTab(activeHomeTab);
+    }
+    renderAccount();
+    renderSettings();
+  } catch (e) { /* 일부 화면 미초기화 상태 무시 */ }
+}
+
 async function init() {
   state = load();
+  I18N.applyStaticI18n();
+  I18N.onLocaleChange(rerenderForLocale);
   updateMuteButton();
   await Online.init();        // 토큰 복원 → 로그인 상태 결정
   updateOnlineStatus();

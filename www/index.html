@@ -405,26 +405,30 @@
   <!-- 설정 모달 -->
   <div id="settings-backdrop" class="welcome-backdrop hidden">
     <div class="welcome-sheet settings-sheet">
-      <h2>⚙️ 설정</h2>
+      <h2 data-i18n>⚙️ 설정</h2>
       <div class="settings-list">
         <div class="settings-row">
-          <span class="settings-label">🔊 사운드</span>
+          <span class="settings-label" data-i18n>🌐 언어</span>
+          <select id="set-lang" class="settings-select"></select>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label" data-i18n>🔊 사운드</span>
           <button id="set-sound" class="settings-toggle" type="button"></button>
         </div>
         <div class="settings-row">
-          <span class="settings-label">📳 진동</span>
+          <span class="settings-label" data-i18n>📳 진동</span>
           <button id="set-haptic" class="settings-toggle" type="button"></button>
         </div>
         <div class="settings-row">
-          <span class="settings-label">🔔 알림</span>
+          <span class="settings-label" data-i18n>🔔 알림</span>
           <button id="set-push" class="settings-toggle" type="button"></button>
         </div>
         <div class="settings-row hidden" id="set-logout-row">
           <span class="settings-label">👤 <b id="set-account-name"></b></span>
-          <button id="set-logout" class="settings-toggle danger" type="button">로그아웃</button>
+          <button id="set-logout" class="settings-toggle danger" type="button" data-i18n>로그아웃</button>
         </div>
       </div>
-      <button id="settings-close" class="primary">닫기</button>
+      <button id="settings-close" class="primary" data-i18n>닫기</button>
     </div>
   </div>
 
@@ -523,6 +527,8 @@
   </div>
 
   <script src="config.js"></script>
+  <script src="i18n-en.js"></script>
+  <script src="i18n.js"></script>
   <script src="sound.js"></script>
   <script src="online.js"></script>
   <script src="game.js"></script>
