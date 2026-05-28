@@ -685,6 +685,31 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   box-shadow: 5px 5px 0 #0f380f;
 }
 .welcome-sheet h2 { margin: 0 0 12px; color: var(--gold); }
+
+/* 온보딩 코치마크 튜토리얼 */
+.coach-overlay { position: fixed; inset: 0; z-index: 300; }
+.coach-overlay.hidden { display: none; }
+.coach-hole {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 0 9999px rgba(15, 56, 15, 0.82);
+  transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease;
+  pointer-events: none;
+}
+.coach-tip {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 320px;
+  background: var(--panel); color: var(--accent2);
+  border: 3px solid var(--gold); box-shadow: 5px 5px 0 #0f380f;
+  padding: 14px 16px;
+}
+.coach-text { margin: 0 0 12px; font-size: 13px; line-height: 1.55; }
+.coach-text b { color: var(--gold); }
+.coach-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.coach-progress { font-size: 11px; color: var(--accent); font-weight: 900; }
+.coach-btns { display: flex; gap: 8px; }
+.coach-btns button { padding: 8px 14px; font-size: 12px; width: auto; }
+
 /* 로딩 스피너 */
 .spinner {
   display: inline-block; width: 14px; height: 14px;

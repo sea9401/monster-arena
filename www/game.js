@@ -504,6 +504,7 @@ function showHomeTab(tab) {
     renderArenaLobby();
     setTimeout(peekInboxBadge, 1500); // refreshInbox가 ack한 후 배지 갱신
   }
+  if (tab === "daily") refreshPushButton();
   if (prev && prev !== tab) haptic(5);
 }
 
@@ -660,6 +661,7 @@ function migrateState() {
   if (curHead && !state.cosmetics.owned.includes(curHead)) state.cosmetics.equipped.head = null;
   if (state.claimedChampionWeek === undefined) state.claimedChampionWeek = null;
   if (state.onboarded === undefined) state.onboarded = true; // 기존 유저는 이미 익숙 → 스킵
+  if (state.tutorialDone === undefined) state.tutorialDone = true; // 기존 유저는 튜토리얼 스킵
   if (state.claimedSeasonMonth === undefined) state.claimedSeasonMonth = null;
   if (!state.achievements || typeof state.achievements !== "object") state.achievements = {};
   if (!state.lifetime || typeof state.lifetime !== "object") state.lifetime = {};
@@ -814,7 +816,7 @@ async function hatch(speciesKey) {
       attendanceClaimedDate: null, achievements: {},
       coins: 0, titles: [], title: "",
       claimedChampionWeek: null, claimedSeasonMonth: null,
-      onboarded: false,
+      onboarded: false, tutorialDone: false,
       staminaBuyDate: null, staminaBuyCount: 0,
       cosmetics: { owned: [], equipped: { head: null } },
     }, carry || {}, newPet, {
@@ -857,11 +859,16 @@ function checkRollover() {
   if (diff === 1) {
     state.streak += 1; // 연속 출석!
   } else {
-    // 며칠 빼먹음 — 스트릭 리셋 + 방치 페널티
+    // 며칠 빼먹음 — 스트릭 리셋 + 복귀 보상 예약(처벌 대신 환대)
     state.streak = 1;
-    state.happy = clamp(state.happy - diff * 8, 0, 100);
+    state.pendingComeback = {
+      days: diff,
+      coins: Math.min(diff, 14) * 15,    // 부재일수 비례, 14일 캡(최대 210)
+      stamina: Math.min(diff, 5) * 3,    // 최대 15
+      exp: Math.min(diff, 7) * 20,       // 최대 140
+    };
   }
-  // 매일 포만감/행복도 자연 감소
+  // 매일 포만감/행복도 자연 감소(펫이 그리워함 — 복귀 보상의 재회 간식으로 상쇄)
   state.food = clamp(state.food - diff * 18, 0, 100);
   state.happy = clamp(state.happy - diff * 6, 0, 100);
 
@@ -1516,6 +1523,7 @@ function updateOnlineStatus() {
     lobby.textContent = text;
     lobby.className = cls;
   }
+  refreshPushButton();
 }
 
 // 서버 스냅샷 → 전투용 상대 객체.
@@ -1769,7 +1777,162 @@ function showWelcome() { const b = $("welcome-backdrop"); if (b) b.classList.rem
 function dismissWelcome() {
   const b = $("welcome-backdrop");
   if (b) b.classList.add("hidden");
-  if (state && !state.onboarded) { state.onboarded = true; save(); }
+  const firstTime = state && !state.onboarded;
+  if (firstTime) { state.onboarded = true; save(); }
+  // 첫 온보딩이면 환영 모달을 닫는 즉시 인터랙티브 튜토리얼 시작
+  if (state && !state.tutorialDone) setTimeout(startCoach, 300);
+}
+
+// ---------- 온보딩 코치마크 튜토리얼 ----------
+// 첫 부화 후 환영 모달을 닫으면 시작. 홈의 핵심 동선을 단계별로 스포트라이트.
+const COACH_STEPS = [
+  { sel: '#train-grid button[data-train="feed"]', text: '먼저 <b>🍖 먹이주기</b>로 펫을 보살펴요. 포만감·행복도가 높을수록 훈련 효율이 올라가요.' },
+  { sel: '#train-grid button[data-train="atk"]', text: '<b>훈련</b>으로 공격·방어·민첩 스탯과 <b>전투력</b>을 올려요. 스태미너를 소비하며 15분마다 1씩 회복돼요.' },
+  { sel: '.home-tab-btn[data-tab="daily"]', text: '<b>📅 일일</b> 탭에서 출석·퀘스트·룰렛으로 매일 <b>🪙코인</b>과 보상을 챙겨요.' },
+  { sel: '.home-tab-btn[data-tab="arena"]', text: '준비되면 <b>⚔️ 아레나</b>에서 다른 플레이어와 PvP! 랭킹·주간 보스·토너먼트·친구가 모두 여기 있어요.' },
+];
+let coachIdx = 0;
+function startCoach() {
+  if (!state || screens.home.classList.contains("hidden")) return;
+  coachIdx = 0;
+  $("coach-overlay").classList.remove("hidden");
+  renderCoachStep();
+}
+function renderCoachStep() {
+  if (coachIdx >= COACH_STEPS.length) return endCoach();
+  const step = COACH_STEPS[coachIdx];
+  const el = document.querySelector(step.sel);
+  if (!el) { coachIdx++; return renderCoachStep(); } // 요소 없으면 건너뜀
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  $("coach-text").innerHTML = step.text;
+  $("coach-progress").textContent = `${coachIdx + 1} / ${COACH_STEPS.length}`;
+  $("coach-next").textContent = coachIdx === COACH_STEPS.length - 1 ? "시작하기 🎮" : "다음";
+  setTimeout(() => positionCoach(el), 280); // 스크롤 정착 후 위치 계산
+}
+function positionCoach(el) {
+  const r = el.getBoundingClientRect();
+  const pad = 8;
+  const hole = $("coach-hole");
+  hole.style.left = (r.left - pad) + "px";
+  hole.style.top = (r.top - pad) + "px";
+  hole.style.width = (r.width + pad * 2) + "px";
+  hole.style.height = (r.height + pad * 2) + "px";
+  // 툴팁: 타깃 아래 공간이 있으면 아래, 없으면 위
+  const tip = $("coach-tip");
+  const vh = window.innerHeight;
+  if (r.bottom + 170 < vh) {
+    tip.style.top = (r.bottom + 14) + "px";
+    tip.style.bottom = "auto";
+  } else {
+    tip.style.top = "auto";
+    tip.style.bottom = (vh - r.top + 14) + "px";
+  }
+}
+function nextCoach() {
+  coachIdx++;
+  renderCoachStep();
+}
+function endCoach() {
+  $("coach-overlay").classList.add("hidden");
+  if (state && !state.tutorialDone) { state.tutorialDone = true; save(); }
+}
+
+// ---------- 푸시 알림 ----------
+function pushSupported() {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
+    && location.protocol.startsWith("http");
+}
+function urlB64ToUint8Array(b64) {
+  const padding = "=".repeat((4 - (b64.length % 4)) % 4);
+  const base64 = (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+async function currentPushSub() {
+  if (!pushSupported()) return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    return await reg.pushManager.getSubscription();
+  } catch { return null; }
+}
+async function refreshPushButton() {
+  const btn = $("push-btn");
+  if (!btn) return;
+  if (!pushSupported() || !Online.status.reachable) { btn.classList.add("hidden"); return; }
+  btn.classList.remove("hidden");
+  if (Notification.permission === "denied") {
+    btn.textContent = "🔕 알림 차단됨";
+    btn.disabled = true;
+    return;
+  }
+  btn.disabled = false;
+  const sub = await currentPushSub();
+  btn.textContent = sub ? "🔔 알림 끄기" : "🔔 알림 켜기";
+}
+async function togglePush() {
+  if (!pushSupported()) { customAlert("이 브라우저는 알림을 지원하지 않아요.", "알림"); return; }
+  const existing = await currentPushSub();
+  if (existing) {
+    // 끄기
+    try { await existing.unsubscribe(); } catch {}
+    await Online.pushUnsubscribe();
+    msg("🔕 알림을 껐어요.", true);
+    refreshPushButton();
+    return;
+  }
+  // 켜기 — 권한 요청
+  let perm = Notification.permission;
+  if (perm === "default") perm = await Notification.requestPermission();
+  if (perm !== "granted") {
+    if (perm === "denied") customAlert("브라우저 설정에서 이 사이트의 알림을 허용해 주세요.", "알림 차단됨");
+    refreshPushButton();
+    return;
+  }
+  const vapidKey = await Online.pushVapidKey();
+  if (!vapidKey) { customAlert("서버에서 알림 키를 받지 못했어요.", "알림"); return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(vapidKey),
+    });
+    const ok = await Online.pushSubscribe(sub.toJSON());
+    if (ok) msg("🔔 알림을 켰어요! 선물·보스 소식을 받아요.", true);
+    else customAlert("구독 등록에 실패했어요. 잠시 후 다시 시도해 주세요.", "알림");
+  } catch (e) {
+    customAlert("알림 구독에 실패했어요.", "알림");
+  }
+  refreshPushButton();
+}
+
+// ---------- 복귀 보상 ----------
+// checkRollover가 부재(2일+) 감지 시 state.pendingComeback을 예약 → 게임 진입 후 1회 표시·수령.
+function showComeback() {
+  const c = state && state.pendingComeback;
+  if (!c) return;
+  // 보상 지급
+  addCoins(c.coins || 0);
+  if (c.stamina) addStamina(c.stamina);
+  if (c.exp) gainExp(c.exp);
+  // 재회 간식 — 그리워한 펫의 포만/행복 일부 회복
+  state.food = clamp(state.food + 30, 0, 100);
+  state.happy = clamp(state.happy + 40, 0, 100);
+  delete state.pendingComeback;
+  save();
+
+  const rows = [];
+  if (c.coins)   rows.push(`🪙 코인 +${c.coins}`);
+  if (c.stamina) rows.push(`⚡ 스태미너 +${c.stamina}`);
+  if (c.exp)     rows.push(`⭐ EXP +${c.exp}`);
+  rows.push(`🍖 재회 간식 — 포만·행복 회복`);
+  const petName = state.name || "펫";
+  customAlert(
+    `${c.days}일 만이에요! ${petName}이(가) 많이 기다렸어요. 🥹\n\n` + rows.join("\n"),
+    "🎉 다시 만나서 반가워요!"
+  );
+  renderHome();
 }
 
 // ---------- 코인 / 상점 / 칭호 ----------
@@ -2727,6 +2890,15 @@ $("boss-target").addEventListener("click", () => {
 $("help-btn").addEventListener("click", showWelcome);
 $("welcome-close").addEventListener("click", dismissWelcome);
 $("welcome-backdrop").addEventListener("click", (e) => { if (e.target.id === "welcome-backdrop") dismissWelcome(); });
+$("coach-next").addEventListener("click", nextCoach);
+$("coach-skip").addEventListener("click", endCoach);
+$("push-btn").addEventListener("click", togglePush);
+window.addEventListener("resize", () => {
+  if ($("coach-overlay").classList.contains("hidden")) return;
+  const step = COACH_STEPS[coachIdx];
+  const el = step && document.querySelector(step.sel);
+  if (el) positionCoach(el);
+});
 
 // 상점
 $("shop-btn").addEventListener("click", openShop);
@@ -3311,8 +3483,11 @@ async function enterGameFromState() {
       setTimeout(() => msg(`🎁 ${names}${more}님이 보낸 선물 +🪙${total}`, true), 300);
     }
   }
-  // 기존 유저 신규 피처 안내 (1회) — onboarded 됐는데 V2 안내 못 본 경우
-  if (state && state.onboarded && !state.welcomedV2) {
+  // 복귀 보상 — 부재(2일+) 후 첫 진입 시 1회. 다른 안내 모달보다 우선.
+  if (state && state.pendingComeback) {
+    setTimeout(showComeback, 500);
+  } else if (state && state.onboarded && !state.welcomedV2) {
+    // 기존 유저 신규 피처 안내 (1회) — onboarded 됐는데 V2 안내 못 본 경우
     state.welcomedV2 = true;
     save();
     setTimeout(showWelcome, 600);

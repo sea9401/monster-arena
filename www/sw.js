@@ -31,7 +31,7 @@ self.addEventListener("fetch", (e) => {
   // API 호출(/health, /matches, ...)은 네트워크 전용 — 캐시 X
   const url = new URL(req.url);
   if (req.method !== "GET" || url.pathname.startsWith("/api/") ||
-      ["/health","/version","/leaderboard","/tournament","/season","/boss","/friends","/gifts","/pat","/matches","/players","/auth","/save","/event","/messages","/me"].some((p) => url.pathname.startsWith(p))) {
+      ["/health","/version","/leaderboard","/tournament","/season","/boss","/friends","/gifts","/pat","/matches","/players","/auth","/save","/event","/messages","/me","/push"].some((p) => url.pathname.startsWith(p))) {
     return; // 기본 네트워크 처리
   }
   // 정적 자산: network-first, 실패 시 캐시
@@ -44,5 +44,31 @@ self.addEventListener("fetch", (e) => {
       }
       return res;
     }).catch(() => caches.match(req).then((cached) => cached || caches.match("/index.html")))
+  );
+});
+
+// ---------- 푸시 알림 ----------
+self.addEventListener("push", (e) => {
+  let data = { title: "🐲 몬스터 아레나", body: "새 소식이 있어요!", url: "/" };
+  try { if (e.data) data = { ...data, ...e.data.json() }; } catch {}
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/assets/icon.png",
+      badge: "/assets/icon.png",
+      data: { url: data.url || "/" },
+      vibrate: [80, 40, 80],
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) { if ("focus" in c) return c.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
   );
 });

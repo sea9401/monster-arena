@@ -7,6 +7,9 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const webpush = require("./webpush");
+
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@msmsge.com";
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = path.join(__dirname, "..", "www");    // Capacitor webDir(정적 파일)
@@ -46,6 +49,20 @@ function load() {
   if (!db.boss.lastResults) db.boss.lastResults = {};
   if (!db.boss.claimedBy) db.boss.claimedBy = {};
   if (!db.boss.contributions) db.boss.contributions = {};
+  if (!db.pushSubs) db.pushSubs = {};   // playerId -> { endpoint, keys: { p256dh, auth } }
+  if (!db.vapid) db.vapid = webpush.generateVapidKeys(); // {publicKey, privateKey, jwk} — 최초 1회 생성·영속
+}
+
+// ---------- 푸시 발송 헬퍼 ----------
+// 구독 만료(404/410) 시 자동으로 제거. fire-and-forget(응답 흐름 막지 않음).
+function sendPushTo(playerId, notif) {
+  const sub = db.pushSubs[playerId];
+  if (!sub || !db.vapid) return;
+  webpush.sendNotification(sub, JSON.stringify(notif), db.vapid, { subject: VAPID_SUBJECT })
+    .then((r) => {
+      if (r.statusCode === 404 || r.statusCode === 410) { delete db.pushSubs[playerId]; save(); }
+    })
+    .catch(() => {});
 }
 let saveTimer = null;
 function save() {
@@ -281,14 +298,19 @@ function rolloverBoss() {
     };
   });
   // 새 주 진입
+  const newBoss = bossFor(weekId);
   db.boss = {
     weekId,
-    boss: bossFor(weekId),
+    boss: newBoss,
     contributions: {},
     attackLog: {},
     lastResults: db.boss.lastResults,
     claimedBy: db.boss.claimedBy,
   };
+  // 새 보스 시작 — 구독자 전원에게 알림(레이드 참여 유도)
+  Object.keys(db.pushSubs).forEach((pid) => {
+    sendPushTo(pid, { title: `${newBoss.icon} 새 주간 보스 등장!`, body: `${newBoss.name}이(가) 나타났어요. 길드원과 함께 처치하고 보상을 받으세요!`, url: "/" });
+  });
 }
 
 // ---------- 소셜: 프리셋 도발 메시지 ----------
@@ -446,6 +468,36 @@ const server = http.createServer(async (req, res) => {
       "Cache-Control": "no-cache, max-age=0, must-revalidate",
     });
     return res.end(JSON.stringify({ build: BUILD_ID }));
+  }
+
+  // --- 푸시 알림 ---
+  if (url === "/push/vapid" && method === "GET") {
+    return send(res, 200, { publicKey: db.vapid ? db.vapid.publicKey : null });
+  }
+  if (url === "/push/subscribe" && method === "POST") {
+    const b = await readBody(req);
+    const pid = String(b.playerId || "");
+    const sub = b.subscription;
+    if (!pid || !sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+      return send(res, 400, { error: "bad_subscription" });
+    }
+    db.pushSubs[pid] = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
+    save();
+    return send(res, 200, { ok: true });
+  }
+  if (url === "/push/unsubscribe" && method === "POST") {
+    const b = await readBody(req);
+    const pid = String(b.playerId || "");
+    if (db.pushSubs[pid]) { delete db.pushSubs[pid]; save(); }
+    return send(res, 200, { ok: true });
+  }
+  // 테스트용: 본인에게 즉시 푸시(구독 동작 확인)
+  if (url === "/push/test" && method === "POST") {
+    const b = await readBody(req);
+    const pid = String(b.playerId || "");
+    if (!db.pushSubs[pid]) return send(res, 404, { error: "no_subscription" });
+    sendPushTo(pid, { title: "🐲 몬스터 아레나", body: "알림이 정상 동작해요! 🎉", url: "/" });
+    return send(res, 200, { ok: true });
   }
 
   if (url === "/players/register" && method === "POST") {
@@ -635,6 +687,7 @@ const server = http.createServer(async (req, res) => {
     if (!db.gifts[to]) db.gifts[to] = [];
     db.gifts[to].push({ from, fromName: fromP.name, coins: 30, at: now() });
     save();
+    sendPushTo(to, { title: "🎁 선물 도착!", body: `${fromP.name}님이 선물(🪙30)을 보냈어요.`, url: "/" });
     return send(res, 200, { ok: true });
   }
   if (url === "/gifts" && method === "GET") {

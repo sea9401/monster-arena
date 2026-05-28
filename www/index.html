@@ -132,6 +132,7 @@
       <div class="home-tab-content hidden" data-home-tab="daily">
         <div class="shop-bar">
           <span class="shop-bar-coins">🪙 <b class="coin-balance">0</b></span>
+          <button id="push-btn" class="ghost hidden">🔔 알림 켜기</button>
           <button id="help-btn" class="ghost">ℹ️ 도움말</button>
           <button id="shop-btn" class="primary">🛒 상점</button>
         </div>
@@ -401,6 +402,21 @@
         <li><b>🎩 모자</b> — 13종 상점 모자. 펫 머리 위 장식. PvP에 영향 없음.</li>
       </ul>
       <button id="welcome-close" class="primary">시작하기</button>
+    </div>
+  </div>
+
+  <!-- 온보딩 코치마크 튜토리얼 -->
+  <div id="coach-overlay" class="coach-overlay hidden">
+    <div id="coach-hole" class="coach-hole"></div>
+    <div id="coach-tip" class="coach-tip">
+      <p id="coach-text" class="coach-text"></p>
+      <div class="coach-foot">
+        <span id="coach-progress" class="coach-progress"></span>
+        <div class="coach-btns">
+          <button id="coach-skip" class="ghost">건너뛰기</button>
+          <button id="coach-next" class="primary">다음</button>
+        </div>
+      </div>
     </div>
   </div>
 

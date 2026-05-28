@@ -219,11 +219,28 @@ const Online = (() => {
     await call("/messages/ack", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
   }
 
+  // ----- 푸시 알림 -----
+  async function pushVapidKey() {
+    if (!status.reachable) return null;
+    const r = await call("/push/vapid");
+    return r && r.publicKey ? r.publicKey : null;
+  }
+  async function pushSubscribe(subscription) {
+    if (!status.reachable || !status.playerId) return false;
+    const r = await call("/push/subscribe", { method: "POST", body: JSON.stringify({ playerId: status.playerId, subscription }) });
+    return !!(r && r.ok);
+  }
+  async function pushUnsubscribe() {
+    if (!status.reachable || !status.playerId) return;
+    await call("/push/unsubscribe", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
+  }
+
   return { status, init, register, login, logout, loadCloudSave, pushCloudSave,
     uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event,
     claimChampion, sendTaunt, getMessages, ackMessages, season, claimSeason,
     bossState, bossAttack, bossClaim,
     myCode, friendsList, addFriend, removeFriend, getPlayer,
     sendGift, claimGifts, giftsSentToday,
-    patFriend, patSentToday };
+    patFriend, patSentToday,
+    pushVapidKey, pushSubscribe, pushUnsubscribe };
 })();
