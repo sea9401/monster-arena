@@ -595,4 +595,7 @@
   "골드": "Gold",
   "플래티넘": "Platinum",
   "🐲 보스 슬레이어": "🐲 Boss Slayer",
+  "판매": "Sell",
+  "'${name}'을(를) 판매할까요? 환불은 구매가의 5%(🪙${n})뿐이에요.": "Sell '${name}'? You only get back 5% of the purchase price (🪙${n}).",
+  "${name} 판매 완료 (+🪙${n})": "Sold ${name} (+🪙${n})",
 };

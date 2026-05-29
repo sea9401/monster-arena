@@ -952,6 +952,10 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .shop-info { flex: 1; font-size: 13px; color: var(--accent2); text-transform: none; letter-spacing: normal; }
 .shop-desc { color: var(--accent); font-size: 11px; }
 .shop-buy { flex: 0 0 auto; padding: 8px 12px; font-size: 13px; color: var(--gold); white-space: nowrap; }
+/* 보유 아이템: 장착/해제 + 판매 버튼을 세로로(좁은 폭 대응) */
+.shop-btns { flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px; align-items: stretch; }
+.shop-btns .shop-buy { width: 100%; text-align: center; padding: 7px 12px; }
+.shop-sell { padding: 7px 12px; font-size: 11px; color: var(--bad); white-space: nowrap; text-shadow: 2px 2px 0 #0f380f; }
 
 /* 소셜: 받은함 + 도발 */
 .inbox, .social-bar {
