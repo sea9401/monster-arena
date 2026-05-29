@@ -434,14 +434,23 @@ button:disabled,
 .att-title { margin: 0; font-size: 16px; color: var(--accent2); }
 .att-streak { font-size: 13px; color: var(--accent); }
 .att-streak b { color: var(--gold); }
-.att-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+/* 가로 슬라이드 — 영어 등 긴 라벨로 7칸이 화면을 넘지 않도록 좌우 스크롤 */
+.att-calendar {
+  display: flex; gap: 6px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px; margin-bottom: -2px;
+}
+.att-calendar::-webkit-scrollbar { height: 5px; }
+.att-calendar::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 0; }
 .att-cell {
-  background: var(--bg); border-radius: 0; padding: 8px 2px; text-align: center;
+  flex: 0 0 auto; width: 68px; scroll-snap-align: start;
+  background: var(--bg); border-radius: 0; padding: 8px 4px; text-align: center;
   border: 2px solid var(--accent); position: relative;
 }
 .att-cell .att-day { font-size: 10px; color: var(--accent); }
 .att-cell .att-icon { font-size: 20px; line-height: 1.4; }
-.att-cell .att-amt { font-size: 10px; color: var(--accent2); }
+.att-cell .att-amt { font-size: 10px; color: var(--accent2); line-height: 1.25; word-break: keep-all; min-height: 2.4em; }
 .att-cell.jackpot { border-color: var(--gold); }
 .att-cell.today { background: var(--panel); border-color: var(--accent2); }
 .att-cell.done { opacity: .55; }
