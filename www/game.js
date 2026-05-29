@@ -2279,7 +2279,7 @@ function renderResultSocial() {
   let html = t("<button id=\"friendly-rematch-btn\" class=\"ghost\">🔁 친선 재대결 (보상 없음)</button>");
   if (canTaunt) {
     html += t("<div class=\"taunt-title\">💬 ${currentOpponent.name}에게 한마디</div><div class=\"taunt-btns\">", {"currentOpponent.name": currentOpponent.name}) +
-      TAUNTS.map((t) => `<button class="taunt-btn" data-taunt="${t.id}">${t.text}</button>`).join("") + `</div>`;
+      TAUNTS.map((tn) => `<button class="taunt-btn" data-taunt="${tn.id}">${t(tn.text)}</button>`).join("") + `</div>`;
   }
   bar.innerHTML = html;
 }
@@ -2312,7 +2312,7 @@ async function refreshInbox() {
   if (!msgs.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
   box.classList.remove("hidden");
   box.innerHTML = t("<div class=\"inbox-title\">📨 받은 메시지 ${msgs.length}</div>", {"msgs.length": msgs.length}) +
-    msgs.map((m) => `<div class="inbox-row"><b>${m.fromName}</b>: ${m.text}</div>`).join("");
+    msgs.map((m) => `<div class="inbox-row"><b>${m.fromName}</b>: ${t(m.text)}</div>`).join("");
   Online.ackMessages(); // 표시 성공 후 읽음 처리(삭제)
 }
 
@@ -3124,7 +3124,7 @@ async function openSeason() {
     $("season-lastresult").innerHTML =
       t("<div class=\"season-result-title\">📦 직전 시즌(${lr.monthId}) 결과</div>", {"lr.monthId": lr.monthId}) +
       t("<div class=\"season-result-row\">${lr.tier} · 레이팅 ${lr.rating}</div>", {"lr.tier": t(lr.tier), "lr.rating": lr.rating}) +
-      t("<div class=\"season-result-row\">보상: 🪙 ${coins}${titlePart}${claimedNote}</div>", { coins: lr.coins, titlePart: lr.title ? t(" · 칭호 ${tt}", { tt: lr.title }) : "", claimedNote });
+      t("<div class=\"season-result-row\">보상: 🪙 ${coins}${titlePart}${claimedNote}</div>", { coins: lr.coins, titlePart: lr.title ? t(" · 칭호 ${tt}", { tt: t(lr.title) }) : "", claimedNote });
   } else {
     $("season-lastresult").innerHTML = t("<div class=\"muted\">직전 시즌 기록 없음</div>");
   }
@@ -3185,7 +3185,7 @@ async function refreshBoss() {
   }
   const myId = Online.status.playerId;
   startBossCountdown(data.endsAt);
-  $("boss-name").textContent = data.boss.name + (data.boss.element ? ` ${ELEM_LABEL[data.boss.element] || ""}` : "");
+  $("boss-name").textContent = t(data.boss.name) + (data.boss.element ? ` ${ELEM_LABEL[data.boss.element] || ""}` : "");
   $("boss-icon").textContent = data.boss.icon || "🐲";
   $("boss-target").textContent = data.boss.icon || "🐲";
   $("boss-total-dmg").textContent = (data.totalDamage || 0).toLocaleString();
@@ -3210,7 +3210,7 @@ async function refreshBoss() {
     $("boss-last-result").innerHTML =
       t("<div class=\"season-result-title\">📦 직전 주(${lr.weekId}) 결과</div>", {"lr.weekId": lr.weekId}) +
       t("<div class=\"season-result-row\">${icon} ${name} · ${rank}위 · 누적 ${damage} 데미지</div>", { icon: lr.bossIcon || "", name: t(lr.bossName || ""), rank: lr.rank, damage: lr.damage }) +
-      t("<div class=\"season-result-row\">보상: 🪙 ${coins}${titlePart}${claimedNote}</div>", { coins: lr.coins, titlePart: lr.title ? t(" · 칭호 ${tt}", { tt: lr.title }) : "", claimedNote });
+      t("<div class=\"season-result-row\">보상: 🪙 ${coins}${titlePart}${claimedNote}</div>", { coins: lr.coins, titlePart: lr.title ? t(" · 칭호 ${tt}", { tt: t(lr.title) }) : "", claimedNote });
   } else {
     $("boss-last-result").innerHTML = "";
   }
@@ -3456,7 +3456,7 @@ async function giftFriend(friendId, name) {
   await refreshFriends();
 }
 async function tauntFriend(friendId, name) {
-  const choice = await customSelect(`'${name}'에게 보낼 메시지`, TAUNTS.map((t) => ({ id: t.id, label: t.text })), "도발");
+  const choice = await customSelect(t("'${name}'에게 보낼 메시지", { name }), TAUNTS.map((tn) => ({ id: tn.id, label: t(tn.text) })), "도발");
   if (!choice) return;
   const ok = await Online.sendTaunt(friendId, choice.id);
   msg(ok ? "메시지를 보냈어요 📨" : "전송 실패", ok);
