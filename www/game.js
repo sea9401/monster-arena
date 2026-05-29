@@ -2027,9 +2027,6 @@ const COSMETIC_ITEMS = [
   { id: "head_crown",     slot: "head", icon: "👑", name: "왕관",       cost: 300 },
 ];
 function cosmeticById(id) { return COSMETIC_ITEMS.find((c) => c.id === id) || null; }
-// 되팔기(판매) — 환불 = 구매가의 5%(반올림, 최소 1). 손해가 커서 buy↔sell 파밍 불가(의도).
-const SELL_RATE = 0.05;
-const sellValue = (cost) => Math.max(1, Math.round((cost || 0) * SELL_RATE));
 // 폐기된 슬롯의 환불 단가 — migrateState에서 1회성 환불
 const OBSOLETE_COSMETICS = {
   back_wings: 200, back_cape: 120, back_star: 90,
@@ -2069,14 +2066,9 @@ function renderShop() {
     const equipped = state.cosmetics.equipped[c.slot] === c.id;
     const previewing = _shopPreviewHat === c.id;
     let btn;
-    if (owned) {
-      const eq = equipped
-        ? `<button class="shop-buy" data-cos-unequip="${c.slot}">${t("해제")}</button>`
-        : `<button class="shop-buy" data-cos-equip="${c.id}">${t("장착")}</button>`;
-      btn = `<span class="shop-btns">${eq}<button class="shop-sell" data-cos-sell="${c.id}">${t("판매")} +🪙${sellValue(c.cost)}</button></span>`;
-    } else {
-      btn = `<button class="shop-buy" data-cos-buy="${c.id}" ${state.coins < c.cost ? "disabled" : ""}>🪙${c.cost}</button>`;
-    }
+    if (equipped) btn = `<button class="shop-buy" data-cos-unequip="${c.slot}">${t("해제")}</button>`;
+    else if (owned) btn = `<button class="shop-buy" data-cos-equip="${c.id}">${t("장착")}</button>`;
+    else btn = `<button class="shop-buy" data-cos-buy="${c.id}" ${state.coins < c.cost ? "disabled" : ""}>🪙${c.cost}</button>`;
     return `<li class="shop-row${previewing ? " cos-active" : ""}" data-cos-preview="${c.id}">
       <span class="shop-icon">${c.icon}</span>
       <span class="shop-info"><b>${t(c.name)}</b>${owned ? ` <span class="shop-desc">· ${t("보유")}</span>` : ''}</span>
@@ -2089,14 +2081,9 @@ function renderShop() {
     const owned = (state.titles || []).includes(tt.text);
     const equipped = state.title === tt.text;
     let btn;
-    if (owned) {
-      const eq = equipped
-        ? `<button class="shop-buy" data-unequip="1">${t("해제")}</button>`
-        : `<button class="shop-buy" data-equip="${tt.text}">${t("장착")}</button>`;
-      btn = `<span class="shop-btns">${eq}<button class="shop-sell" data-title-sell="${tt.text}">${t("판매")} +🪙${sellValue(tt.cost)}</button></span>`;
-    } else {
-      btn = `<button class="shop-buy" data-title="${tt.text}" data-cost="${tt.cost}" ${state.coins < tt.cost ? "disabled" : ""}>🪙${tt.cost}</button>`;
-    }
+    if (equipped) btn = `<button class="shop-buy" data-unequip="1">${t("해제")}</button>`;
+    else if (owned) btn = `<button class="shop-buy" data-equip="${tt.text}">${t("장착")}</button>`;
+    else btn = `<button class="shop-buy" data-title="${tt.text}" data-cost="${tt.cost}" ${state.coins < tt.cost ? "disabled" : ""}>🪙${tt.cost}</button>`;
     return `<li class="shop-row">
       <span class="shop-icon">👑</span>
       <span class="shop-info"><b>${t(tt.text)}</b>${owned ? ` <span class="shop-desc">(${t("보유")})</span>` : ""}</span>
@@ -2142,25 +2129,6 @@ function equipTitle(text) {
   save();
   renderShop();
   renderHome();
-}
-// 칭호 판매 — 상점에서 구매한 칭호만(획득 칭호는 구매가가 없어 제외). 환불 5%.
-async function sellTitle(text) {
-  const def = SHOP_TITLES.find((x) => x.text === text);
-  if (!def || !(state.titles || []).includes(text)) return;
-  const refund = sellValue(def.cost);
-  const ok = await customConfirm(
-    t("'${name}'을(를) 판매할까요? 환불은 구매가의 5%(🪙${n})뿐이에요.", { name: t(text), n: refund }),
-    t("판매")
-  );
-  if (!ok || !(state.titles || []).includes(text)) return;
-  state.titles = state.titles.filter((x) => x !== text);
-  if (state.title === text) state.title = "";
-  addCoins(refund);
-  save();
-  renderShop();
-  renderHome();
-  msg(t("${name} 판매 완료 (+🪙${n})", { name: t(text), n: refund }), true);
-  playFx("playTick");
 }
 
 // ---------- 코스메틱 장비 ----------
@@ -2252,25 +2220,6 @@ function unequipCosmetic(slot) {
   save();
   renderShop();
   renderHome();
-}
-// 모자 판매 — 보유 해제 + 5% 환불(장착 중이면 자동 해제). 판매 후 다시 구매 가능.
-async function sellCosmetic(id) {
-  const c = cosmeticById(id);
-  if (!c || !(state.cosmetics.owned || []).includes(id)) return;
-  const refund = sellValue(c.cost);
-  const ok = await customConfirm(
-    t("'${name}'을(를) 판매할까요? 환불은 구매가의 5%(🪙${n})뿐이에요.", { name: t(c.name), n: refund }),
-    t("판매")
-  );
-  if (!ok || !(state.cosmetics.owned || []).includes(id)) return;
-  state.cosmetics.owned = state.cosmetics.owned.filter((x) => x !== id);
-  if (state.cosmetics.equipped[c.slot] === id) state.cosmetics.equipped[c.slot] = null;
-  addCoins(refund);
-  save();
-  renderShop();
-  renderHome();
-  msg(t("${name} 판매 완료 (+🪙${n})", { name: t(c.name), n: refund }), true);
-  playFx("playTick");
 }
 // 상점 미리보기 — 현재 종/단계 펫에 임시로 모자 얹어보기
 function renderShopPreview() {
@@ -3009,13 +2958,11 @@ $("shop-screen").addEventListener("click", (e) => {
   if (b) {
     if (b.dataset.buy) buyItem(b.dataset.buy);
     else if (b.dataset.title) buyTitle(b.dataset.title, Number(b.dataset.cost));
-    else if (b.dataset.titleSell) sellTitle(b.dataset.titleSell);
     else if (b.dataset.equip) equipTitle(b.dataset.equip);
     else if (b.dataset.unequip) equipTitle("");
     else if (b.dataset.cosBuy) buyCosmetic(b.dataset.cosBuy);
     else if (b.dataset.cosEquip) equipCosmetic(b.dataset.cosEquip);
     else if (b.dataset.cosUnequip) unequipCosmetic(b.dataset.cosUnequip);
-    else if (b.dataset.cosSell) sellCosmetic(b.dataset.cosSell);
     return;
   }
   // 버튼 외 영역 클릭 — 모자 행이면 미리보기로 전환(같은 행 재탭 시 해제)
