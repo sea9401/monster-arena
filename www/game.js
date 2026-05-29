@@ -4,6 +4,8 @@
 const SAVE_KEY = "monster-arena-save-v1";
 const APP_VERSION = "1.0.0"; // 릴리스마다 갱신(package.json versionName과 동기화 권장)
 const STAMINA_MAX = 10;
+const STAMINA_AD_REWARD = 5;      // 보상형 광고 1회 시청 시 스태미너 회복량
+const STAMINA_AD_DAILY_MAX = 10;  // 하루 광고 시청 한도(밸런스/남용 방지)
 const STAMINA_OVERFILL_MAX = 20;
 const STAMINA_REGEN_MS = 15 * 60 * 1000;
 
@@ -610,6 +612,8 @@ function migrateState() {
   if (!Number.isFinite(state.coins)) state.coins = 0;
   if (state.staminaBuyDate === undefined) state.staminaBuyDate = null;
   if (!Number.isFinite(state.staminaBuyCount)) state.staminaBuyCount = 0;
+  if (state.adStaminaDate === undefined) state.adStaminaDate = null;
+  if (!Number.isFinite(state.adStaminaCount)) state.adStaminaCount = 0;
   if (state.luckyRollDate === undefined) state.luckyRollDate = null;
   if (state.walkStart === undefined) state.walkStart = null;
   if (state.walkDur === undefined) state.walkDur = 0;
@@ -727,7 +731,57 @@ function renderStamina() {
   $("stamina-left").textContent = state.stamina;
   $("stamina-max").textContent = STAMINA_MAX;
   $("stamina-timer").textContent = staminaTimerText();
+  refreshAdButton();
   return changed;
+}
+
+// ---------- 보상형 광고(AdMob) — 광고 시청 시 스태미너 회복 ----------
+// 네이티브 앱(@capacitor-community/admob)에서만 동작. 웹에선 버튼 숨김.
+function adMobPlugin() { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) || null; }
+let _adMobReady = false;
+async function initAds() {
+  const AdMob = adMobPlugin();
+  if (!IS_NATIVE || !AdMob) return;
+  try { await AdMob.initialize(); _adMobReady = true; } catch (e) { _adMobReady = false; }
+}
+function adStaminaToday() {
+  return state.adStaminaDate === todayStr() ? (state.adStaminaCount || 0) : 0;
+}
+function adStaminaRemaining() {
+  return Math.max(0, STAMINA_AD_DAILY_MAX - adStaminaToday());
+}
+function refreshAdButton() {
+  const btn = $("ad-stamina-btn");
+  if (!btn || !state) return;
+  // 네이티브 + 플러그인 + 오늘 한도 남음일 때만 노출
+  const show = IS_NATIVE && adMobPlugin() && adStaminaRemaining() > 0;
+  btn.classList.toggle("hidden", !show);
+  if (show) btn.textContent = t("📺 광고 보고 ⚡+${n} (오늘 ${left}회 남음)", { n: STAMINA_AD_REWARD, left: adStaminaRemaining() });
+}
+let _adBusy = false;
+async function watchAdForStamina() {
+  const AdMob = adMobPlugin();
+  if (!IS_NATIVE || !AdMob) { customAlert(t("광고는 앱에서만 볼 수 있어요."), t("알림")); return; }
+  if (_adBusy) return;
+  if (adStaminaRemaining() <= 0) { msg(t("오늘 광고 보상을 모두 받았어요."), false); return; }
+  _adBusy = true;
+  try {
+    if (!_adMobReady) await initAds();
+    await AdMob.prepareRewardVideoAd({ adId: (window.APP_CONFIG && window.APP_CONFIG.ADMOB_REWARDED_ID) || "" });
+    await AdMob.showRewardVideoAd(); // 보상 조건 충족 시 resolve
+    // 보상 지급
+    state.adStaminaDate = todayStr();
+    state.adStaminaCount = adStaminaToday() + 1;
+    addStamina(STAMINA_AD_REWARD);
+    save();
+    renderHome();
+    msg(t("광고 시청 완료! 스태미너 +${n}", { n: STAMINA_AD_REWARD }), true);
+    playFx("playReward");
+  } catch (e) {
+    msg(t("광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."), false);
+  } finally {
+    _adBusy = false;
+  }
 }
 
 // ---------- 파생 스탯 ----------
@@ -821,6 +875,7 @@ async function hatch(speciesKey) {
       claimedChampionWeek: null, claimedSeasonMonth: null,
       onboarded: false, tutorialDone: false,
       staminaBuyDate: null, staminaBuyCount: 0,
+      adStaminaDate: null, adStaminaCount: 0,
       cosmetics: { owned: [], equipped: { head: null } },
     }, carry || {}, newPet, {
       pets: [newPet], activePetIdx: 0, lifetime,
@@ -3009,6 +3064,7 @@ $("set-sound").addEventListener("click", () => {
 $("set-push").addEventListener("click", togglePush);
 $("set-logout").addEventListener("click", () => { closeSettings(); doLogout(); });
 $("set-lang").addEventListener("change", (e) => { I18N.setLocale(e.target.value); });
+$("ad-stamina-btn").addEventListener("click", watchAdForStamina);
 
 // ---------- 리더보드 ----------
 async function openLeaderboard() {
@@ -3567,6 +3623,7 @@ async function init() {
   state = load();
   I18N.applyStaticI18n();
   I18N.onLocaleChange(rerenderForLocale);
+  initAds();
   updateMuteButton();
   await Online.init();        // 토큰 복원 → 로그인 상태 결정
   updateOnlineStatus();

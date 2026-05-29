@@ -458,6 +458,7 @@ button:disabled,
   content: "✓"; position: absolute; top: 2px; right: 5px; color: var(--good); font-weight: 900; font-size: 12px;
 }
 .att-claim { width: 100%; margin-top: 12px; padding: 12px; font-size: 15px; color: var(--gold); }
+.ad-stamina-btn { width: 100%; margin-top: 8px; padding: 10px; font-size: 13px; color: var(--gold); }
 
 .quests { padding: 14px 16px; margin-top: 16px; }
 .quests-title { margin: 0 0 10px; font-size: 16px; color: var(--accent2); }

@@ -12,9 +12,12 @@
   "devDependencies": {
     "@capacitor/android": "^7.0.0",
     "@capacitor/app": "^7.0.0",
+    "@capacitor/assets": "^3.0.0",
     "@capacitor/cli": "^7.0.0",
     "@capacitor/core": "^7.0.0",
-    "@capacitor/assets": "^3.0.0",
     "@capacitor/screen-orientation": "^7.0.0"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^7.2.0"
   }
 }

@@ -630,4 +630,9 @@
   "🪙 코인": "🪙 Coins",
   "칭호": "Titles",
   "${icon} ${name} 정산!\n순위 ${rank}위 · 누적 ${dmg} 데미지\n보상: 🪙 ${coins}${titlePart}": "${icon} ${name} results!\nRank #${rank} · ${dmg} total damage\nReward: 🪙 ${coins}${titlePart}",
+  "📺 광고 보고 ⚡+${n} (오늘 ${left}회 남음)": "📺 Watch ad for ⚡+${n} (${left} left today)",
+  "광고는 앱에서만 볼 수 있어요.": "Ads are only available in the app.",
+  "오늘 광고 보상을 모두 받았어요.": "You've claimed all ad rewards for today.",
+  "광고 시청 완료! 스태미너 +${n}": "Ad watched! Stamina +${n}",
+  "광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.": "Couldn't load the ad. Please try again shortly.",
 };
