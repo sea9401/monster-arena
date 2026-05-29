@@ -767,8 +767,8 @@ async function watchAdForStamina() {
   _adBusy = true;
   try {
     if (!_adMobReady) await initAds();
-    await AdMob.prepareRewardVideoAd({ adId: (window.APP_CONFIG && window.APP_CONFIG.ADMOB_REWARDED_ID) || "" });
-    await AdMob.showRewardVideoAd(); // 보상 조건 충족 시 resolve
+    await AdMob.prepareRewardInterstitialAd({ adId: (window.APP_CONFIG && window.APP_CONFIG.ADMOB_REWARDED_INTERSTITIAL_ID) || "" });
+    await AdMob.showRewardInterstitialAd(); // 보상형 전면 — 보상 조건 충족 시 resolve
     // 보상 지급
     state.adStaminaDate = todayStr();
     state.adStaminaCount = adStaminaToday() + 1;
