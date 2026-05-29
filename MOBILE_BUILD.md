@@ -43,8 +43,21 @@ npm run cap:sync         # = npx cap sync
 - `IS_NATIVE`(window.Capacitor 감지)로 분기:
   - 서비스워커/버전 자동-새로고침 배너는 **웹 전용** → 앱에선 스킵(번들 자산이라 무의미).
   - 안드로이드 **하드웨어 뒤로가기** → 앱 종료 대신 모달 닫기/홈 이동(@capacitor/app `backButton`).
+  - **세로 모드 고정** → 시작 시 `@capacitor/screen-orientation`로 portrait 잠금(런타임 보강).
 - 웹 푸시(🔔 알림)는 네이티브 웹뷰에서 `PushManager` 미지원 → 설정에서 "미지원"으로 표시(정상).
   네이티브 푸시가 필요하면 `@capacitor/push-notifications` + FCM 별도 작업.
+
+## 세로 모드 고정 (1차 방어 — AndroidManifest)
+런타임 잠금만으로도 동작하지만, 회전 순간의 깜빡임을 없애려면 `android/` 생성 후
+`android/app/src/main/AndroidManifest.xml`의 `<activity ... android:name=".MainActivity">`에 추가:
+```
+android:screenOrientation="portrait"
+```
+
+## 버전 표기
+- 앱 내 표기: ⚙️ 설정 하단 `Monster Arena v1.0.0 · App`.
+- 값은 `www/game.js`의 `APP_VERSION` 상수. **릴리스마다 갱신**하고,
+  `android/app/build.gradle`의 `versionName`/`versionCode`(Play 업로드용)과 동기화 권장.
 
 ## Play Store 배포(요약)
 1. Android Studio → Build > Generate Signed Bundle/APK → **Android App Bundle(.aab)**

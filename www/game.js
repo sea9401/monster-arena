@@ -2,6 +2,7 @@
 // 서버 없이 localStorage에 저장. "다음 날로" 버튼으로 날짜 경과를 시뮬레이션해 테스트 가능.
 
 const SAVE_KEY = "monster-arena-save-v1";
+const APP_VERSION = "1.0.0"; // 릴리스마다 갱신(package.json versionName과 동기화 권장)
 const STAMINA_MAX = 10;
 const STAMINA_OVERFILL_MAX = 20;
 const STAMINA_REGEN_MS = 15 * 60 * 1000;
@@ -1944,6 +1945,9 @@ function renderSettings() {
   } else {
     row.classList.add("hidden");
   }
+  // 버전 표기 (앱/웹 구분)
+  const ver = $("settings-version");
+  if (ver) ver.textContent = `Monster Arena v${APP_VERSION}` + (IS_NATIVE ? " · App" : "");
 }
 
 // ---------- 복귀 보상 ----------
@@ -3650,6 +3654,12 @@ if (!IS_NATIVE && "serviceWorker" in navigator && location.protocol.startsWith("
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
+}
+
+// 세로 모드 고정 — 게임 UI가 세로 전용. @capacitor/screen-orientation 있을 때 잠금.
+// (AndroidManifest의 android:screenOrientation="portrait"가 1차 방어, 이건 런타임 보강.)
+if (IS_NATIVE && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenOrientation) {
+  window.Capacitor.Plugins.ScreenOrientation.lock({ orientation: "portrait" }).catch(() => {});
 }
 
 // 안드로이드 하드웨어 뒤로가기 — 앱 종료 대신 게임 내 뒤로/홈 이동.
