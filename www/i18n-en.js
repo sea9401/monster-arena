@@ -608,4 +608,5 @@
   "행복도": "Happiness",
   "행복도와 함께 성장 배율을 올립니다. 스탯 훈련을 하면 8 감소하고, 날짜가 지나면 자연 감소합니다.": "Raises your growth rate along with Happiness. Drops 8 per stat training, and decreases naturally as days pass.",
   "포만감과 함께 성장 배율을 올립니다. 스탯 훈련을 하면 5 감소하고, 연속 접속을 놓치거나 날짜가 지나면 감소합니다.": "Raises your growth rate along with Fullness. Drops 5 per stat training, and decreases if you miss a daily login or as days pass.",
+  "신규": "New",
 };
