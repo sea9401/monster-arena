@@ -3636,12 +3636,36 @@ function showUpdateBanner() {
     }, 1000);
   }
 }
-setInterval(checkAppVersion, 30 * 1000);
-checkAppVersion(); // 부팅 시 1회 — 현재 빌드 기록
+// 네이티브(Capacitor) 앱 여부 — 앱은 자산이 번들돼 있어 SW/버전-리로드가 불필요/유해.
+const IS_NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
 
-// 서비스워커 등록 (PWA 설치 가능) — 정적 자산 캐시 + 오프라인 fallback
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+// 버전 자동 새로고침은 웹 전용(앱은 번들 자산이라 리로드해도 갱신 안 됨 → 배너만 거슬림).
+if (!IS_NATIVE) {
+  setInterval(checkAppVersion, 30 * 1000);
+  checkAppVersion(); // 부팅 시 1회 — 현재 빌드 기록
+}
+
+// 서비스워커 등록 (PWA 설치 가능) — 정적 자산 캐시 + 오프라인 fallback. 네이티브 앱에선 스킵.
+if (!IS_NATIVE && "serviceWorker" in navigator && location.protocol.startsWith("http")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
+// 안드로이드 하드웨어 뒤로가기 — 앱 종료 대신 게임 내 뒤로/홈 이동.
+// @capacitor/app 플러그인이 있을 때만 동작(없으면 무시).
+if (IS_NATIVE && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+  window.Capacitor.Plugins.App.addListener("backButton", () => {
+    // 열려 있는 모달 우선 닫기
+    const openModal = document.querySelector(
+      ".welcome-backdrop:not(.hidden), .coach-overlay:not(.hidden)"
+    );
+    if (openModal) { openModal.classList.add("hidden"); return; }
+    // 홈이 아니면 홈으로, 홈이면 종료
+    if (screens.home && screens.home.classList.contains("hidden")) {
+      if (state) { renderHome(); showHomeTab(activeHomeTab || "grow"); show("home"); }
+    } else {
+      window.Capacitor.Plugins.App.exitApp();
+    }
   });
 }

@@ -1,59 +1,61 @@
-# Monster Arena — 모바일 빌드 가이드
+# Monster Arena — 모바일 앱 빌드 가이드 (Capacitor / Android)
+
+웹 자산(`www/`)을 그대로 네이티브 앱으로 감싼다. 서버는 이미 https://arena.msmsge.com 에
+배포돼 있고, `www/config.js`의 `API_BASE`가 그 주소로 설정돼 있어 **앱은 첫 실행부터 라이브
+서버(PvP·랭킹·친구·보스)에 붙는다.** 언어도 기기 설정에 따라 한/영/일/중 자동 선택된다.
 
 ## 환경
-- WSL2(Linux): npm, npx까지 가능. Android SDK 없어 네이티브 빌드 불가.
-- 네이티브 빌드는 Windows/Mac의 Android Studio에서 진행.
+- 코드 작성/동기화(npm·npx)는 어디서든 가능. **네이티브 빌드는 Android Studio(Windows/Mac)** 필요.
+- WSL에는 Android SDK/Java/gradle가 없어 빌드 불가 — `android/` 생성·동기화까지만 하고 빌드는 Studio에서.
+- (WSL은 npm registry 접근이 막혀 있을 수 있음 → 인터넷 되는 환경에서 `npm install` 수행.)
 
-## WSL에서 준비(이미 완료된 경우 skip)
+## 1. 의존성 설치 + Android 프로젝트 생성 (인터넷 되는 PC에서)
 ```
 npm install
-npx cap add android
-npx cap sync
+npx cap add android      # android/ gradle 프로젝트 생성 (SDK 없어도 생성은 됨)
+npx cap sync             # www/ + 플러그인을 android/로 복사
 ```
-npx cap add android 는 SDK 없이도 android/ gradle 프로젝트를 생성한다. 빌드는 Studio에서.
 
-## Android Studio 빌드
-1. Android Studio 실행
-2. File > Open > android/ 폴더 선택
-3. Gradle Sync 완료 대기
-4. 기기/에뮬레이터 선택 후 Run
-
-## 온라인 PvP 서버 설정
-www/config.js의 API_BASE를 수정:
-- 오프라인(AI): API_BASE: ""
-- 로컬 서버: API_BASE: "http://192.168.0.10:3000"
-- 배포 서버: API_BASE: "https://your-server.example.com"
-
-http 서버 접근 시 android/app/src/main/AndroidManifest.xml에 아래 속성 필요:
-android:usesCleartextTraffic="true"
-
-## 파일 구조
-- www/          웹 자산 (Capacitor webDir)
-- server/       Node http 서버 (개발/셀프호스팅용)
-- android/      Capacitor Android 프로젝트 (Android Studio로 빌드)
-- capacitor.config.json
-- www/config.js API_BASE 설정
-
-## 추천 빌드 경로
-로컬 Android Studio. android/ 폴더 열면 즉시 빌드 가능.
-
-## 앱 아이콘 / 스플래시
-소스 이미지는 `assets/icon.png`(1024) `assets/splash.png`(2732)에 있다.
-(재생성: `node scripts/generate-icons.js`)
-android/ 생성 후 전 해상도 자동 적용:
+## 2. 앱 아이콘 / 스플래시 (전 해상도 자동 생성)
+소스 이미지: `assets/icon.png`(1024) · `assets/splash.png`(2732). (재생성: `node scripts/generate-icons.js`)
 ```
-npm i -D @capacitor/assets
 npx @capacitor/assets generate --android
 ```
 
-## cap sync
-웹 자산 수정 후 반드시 실행:
-npm run cap:sync
+## 3. Android Studio에서 빌드/실행
+1. Android Studio → File > Open → `android/` 폴더 선택
+2. Gradle Sync 완료 대기
+3. 기기/에뮬레이터 선택 후 Run ▶
 
-## 이번 스캐폴딩 실행 기록
-- `npm install`: 현재 샌드박스의 네트워크 제한으로 120초 동안 응답이 없어 타임아웃됨.
-- `npx cap add android`: 실패.
-  - 오류: `EAI_AGAIN getaddrinfo registry.npmjs.org`
-  - 원인: npm registry DNS 조회 실패.
-- `npx cap sync`: `android/` 폴더가 생성되지 않아 스킵.
-- `android/app/src/main/AndroidManifest.xml`: 파일이 없어 자동 수정 스킵. Android 프로젝트 생성 후 `<application>` 태그에 `android:usesCleartextTraffic="true"`를 수동 확인.
+## 4. 웹 자산 수정 후
+`www/` 내용을 바꿨으면 반드시 동기화:
+```
+npm run cap:sync         # = npx cap sync
+```
+
+## 서버 주소(API_BASE)
+- 기본값: `www/config.js` → `https://arena.msmsge.com` (라이브). **그대로 두면 됨.**
+- 셀프호스팅: 이 값만 본인 서버 https 주소로 변경.
+- **HTTPS라 cleartext 설정 불필요.** (만약 `http://` 평문 서버를 쓴다면 그때만
+  `android/app/src/main/AndroidManifest.xml`의 `<application>`에 `android:usesCleartextTraffic="true"` 추가.)
+
+## 네이티브 동작(웹과 다른 점, 이미 코드에 반영됨)
+- `IS_NATIVE`(window.Capacitor 감지)로 분기:
+  - 서비스워커/버전 자동-새로고침 배너는 **웹 전용** → 앱에선 스킵(번들 자산이라 무의미).
+  - 안드로이드 **하드웨어 뒤로가기** → 앱 종료 대신 모달 닫기/홈 이동(@capacitor/app `backButton`).
+- 웹 푸시(🔔 알림)는 네이티브 웹뷰에서 `PushManager` 미지원 → 설정에서 "미지원"으로 표시(정상).
+  네이티브 푸시가 필요하면 `@capacitor/push-notifications` + FCM 별도 작업.
+
+## Play Store 배포(요약)
+1. Android Studio → Build > Generate Signed Bundle/APK → **Android App Bundle(.aab)**
+2. 업로드 키스토어 생성·보관(분실 시 업데이트 불가).
+3. Play Console에서 앱 생성 → .aab 업로드 → 스토어 등록정보(스크린샷/설명/개인정보처리방침) 작성.
+4. `appId`(패키지명): `com.monstera.arena` — 한 번 정하면 변경 불가.
+5. iOS는 Mac + Xcode 필요(`npx cap add ios`).
+
+## 파일 구조
+- `www/`            웹 자산 (Capacitor webDir)
+- `www/config.js`   API_BASE (= https://arena.msmsge.com)
+- `server/`         Node http 서버 (셀프호스팅/개발용)
+- `android/`        Capacitor Android 프로젝트 (Studio로 빌드)
+- `capacitor.config.json`  appId/appName/webDir/배경색
