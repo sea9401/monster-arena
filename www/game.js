@@ -5,7 +5,7 @@ const SAVE_KEY = "monster-arena-save-v1";
 const APP_VERSION = "1.0.0"; // 릴리스마다 갱신(package.json versionName과 동기화 권장)
 const STAMINA_MAX = 10;
 const STAMINA_AD_REWARD = 5;      // 보상형 광고 1회 시청 시 스태미너 회복량
-const STAMINA_AD_DAILY_MAX = 10;  // 하루 광고 시청 한도(밸런스/남용 방지)
+const STAMINA_AD_DAILY_MAX = 15;  // 하루 광고 시청 한도(밸런스/남용 방지)
 const STAMINA_OVERFILL_MAX = 20;
 const STAMINA_REGEN_MS = 15 * 60 * 1000;
 
