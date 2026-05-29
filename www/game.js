@@ -412,7 +412,7 @@ function show(name) {
 })();
 
 function tooltipTitle(el) {
-  return el.dataset.tipTitle || el.textContent.trim().replace("ⓘ", "").slice(0, 24);
+  return t(el.dataset.tipTitle || el.textContent.trim().replace("ⓘ", "").slice(0, 24));
 }
 
 function openTooltip(el) {
@@ -423,7 +423,7 @@ function openTooltip(el) {
   tooltipEl.innerHTML = `
     <button class="tip-close" type="button" aria-label="설명 닫기">×</button>
     <div class="tip-title">${tooltipTitle(el)}</div>
-    <div class="tip-body">${el.dataset.tip}</div>
+    <div class="tip-body">${t(el.dataset.tip)}</div>
   `;
   document.body.appendChild(tooltipEl);
   requestAnimationFrame(() => tooltipEl.classList.add("open"));
@@ -1246,7 +1246,7 @@ function renderStatChart() {
   const log = state.statLog || [];
   if (log.length === 0) {
     el.innerHTML = "";
-    if (note) note.textContent = "훈련하면 전투력 추이가 쌓여요";
+    if (note) note.textContent = t("훈련하면 전투력 추이가 쌓여요");
     return;
   }
   const W = 300, H = 110, padX = 8, padY = 14;
@@ -1353,7 +1353,7 @@ function renderArenaLobby() {
   if (!state) return;
   renderAccount();
   refreshInbox();
-  $("lobby-rank").textContent = rankOf(state.rating);
+  $("lobby-rank").textContent = t(rankOf(state.rating));
   $("lobby-rating").textContent = state.rating;
   $("lobby-record").textContent = t("${state.wins}승 ${state.losses}패", {"state.wins": state.wins, "state.losses": state.losses});
 
@@ -1482,7 +1482,7 @@ function isUpsetTarget(o) {
 
 function enterArena() {
   $("rating").textContent = state.rating;
-  $("rank-tier").textContent = rankOf(state.rating);
+  $("rank-tier").textContent = t(rankOf(state.rating));
   $("record").textContent = t("${state.wins}승 ${state.losses}패", {"state.wins": state.wins, "state.losses": state.losses});
   Online.uploadSnapshot(mySnapshot()); // 내 고스트를 최신으로
   freshMatch(); // 첫 매칭 = 리롤 리셋
@@ -1725,7 +1725,7 @@ async function resolve(won) {
     $("match-battle").classList.add("hidden");
     $("match-result").classList.remove("hidden");
     $("result-title").textContent = won ? "🏆 친선 승리!" : "💪 친선 패배";
-    $("result-detail").textContent = "친선전 — 기록·보상 없음";
+    $("result-detail").textContent = t("친선전 — 기록·보상 없음");
     tauntTarget = currentOpponent && currentOpponent.ghost ? { playerId: currentOpponent.playerId, name: currentOpponent.name } : null;
     renderResultSocial();
     return;
@@ -1742,7 +1742,7 @@ async function resolve(won) {
   $("match-battle").classList.add("hidden");
   $("match-result").classList.remove("hidden");
   $("result-title").textContent = won ? "🏆 승리!" : "💀 패배";
-  $("result-detail").textContent = "레이팅 반영 중...";
+  $("result-detail").textContent = t("레이팅 반영 중...");
 
   // 온라인 매치면 서버가 Elo 계산 → 서버 레이팅 신뢰. 아니면 로컬 계산.
   let delta = null, newRating = null, tp = null;
@@ -1766,9 +1766,9 @@ async function resolve(won) {
 
   const sign = delta > 0 ? "+" : "";
   const tpText = tp ? t(" · 🏅 +${tp}점", {"tp": tp}) : "";
-  $("result-detail").textContent = t("${sign}${delta} 레이팅 (현재 ${rating}, ${rank})${tpText} · 🪙 +${coinGain}", { sign, delta, rating: state.rating, rank: rankOf(state.rating), tpText, coinGain });
+  $("result-detail").textContent = t("${sign}${delta} 레이팅 (현재 ${rating}, ${rank})${tpText} · 🪙 +${coinGain}", { sign, delta, rating: state.rating, rank: t(rankOf(state.rating)), tpText, coinGain });
   $("rating").textContent = state.rating;
-  $("rank-tier").textContent = rankOf(state.rating);
+  $("rank-tier").textContent = t(rankOf(state.rating));
   $("record").textContent = t("${state.wins}승 ${state.losses}패", {"state.wins": state.wins, "state.losses": state.losses});
   // 결과화면 유지 — 실제 플레이어 상대면 도발/친선 재대결 노출
   tauntTarget = currentOpponent && currentOpponent.ghost ? { playerId: currentOpponent.playerId, name: currentOpponent.name } : null;
@@ -1864,13 +1864,13 @@ async function refreshPushButton() {
   const btn = $("set-push");
   if (!btn) return;
   if (!pushSupported() || !Online.status.reachable) {
-    btn.textContent = "미지원";
+    btn.textContent = t("미지원");
     btn.classList.remove("on"); btn.classList.add("off");
     btn.disabled = true;
     return;
   }
   if (Notification.permission === "denied") {
-    btn.textContent = "차단됨";
+    btn.textContent = t("차단됨");
     btn.classList.remove("on"); btn.classList.add("off");
     btn.disabled = true;
     return;
@@ -2243,7 +2243,7 @@ function renderShopPreview() {
   } else if (state.cosmetics.equipped.head) {
     labelEl.textContent = c ? t("현재 장착: ${c.name}", {"c.name": c.name}) : "장식 없음";
   } else {
-    labelEl.textContent = "행을 탭하면 미리 써볼 수 있어요";
+    labelEl.textContent = t("행을 탭하면 미리 써볼 수 있어요");
   }
 }
 
@@ -2677,7 +2677,7 @@ function spinLucky() {
     save();
     renderLuckyButton();
     $("lucky-result").textContent = t("🎉 ${r.label} 획득!", {"r.label": r.label});
-    $("lucky-spin").textContent = "오늘 완료";
+    $("lucky-spin").textContent = t("오늘 완료");
     playFx("playReward");
     haptic(20);
     _luckySpinning = false;
@@ -3081,7 +3081,7 @@ function startTourneyCountdown(endsAt) {
   const el = $("tourney-countdown");
   const tick = () => {
     const ms = endsAt - Date.now();
-    if (ms <= 0) { el.textContent = "⏰ 곧 새로운 주가 시작돼요!"; clearInterval(tourneyTimer); return; }
+    if (ms <= 0) { el.textContent = t("⏰ 곧 새로운 주가 시작돼요!"); clearInterval(tourneyTimer); return; }
     const d = Math.floor(ms / 86400000);
     const h = Math.floor((ms % 86400000) / 3600000);
     const mn = Math.floor((ms % 3600000) / 60000);
@@ -3115,7 +3115,7 @@ async function openSeason() {
   $("season-lastresult").innerHTML = "";
   const data = await Online.season();
   if (!data) {
-    $("season-monthid").textContent = "오프라인";
+    $("season-monthid").textContent = t("오프라인");
     $("season-mytier").textContent = "";
     return;
   }
@@ -3139,7 +3139,7 @@ function startSeasonCountdown(endsAt) {
   const el = $("season-countdown");
   const tick = () => {
     const ms = endsAt - Date.now();
-    if (ms <= 0) { el.textContent = "⏰ 곧 다음 시즌이 시작돼요!"; clearInterval(seasonTimer); return; }
+    if (ms <= 0) { el.textContent = t("⏰ 곧 다음 시즌이 시작돼요!"); clearInterval(seasonTimer); return; }
     const d = Math.floor(ms / 86400000);
     const h = Math.floor((ms % 86400000) / 3600000);
     el.textContent = t("⏳ 시즌 종료까지 ${d}일 ${h}시간", {"d": d, "h": h});
@@ -3183,7 +3183,7 @@ async function openBoss() {
 async function refreshBoss() {
   const data = await Online.bossState();
   if (!data) {
-    $("boss-name").textContent = "오프라인";
+    $("boss-name").textContent = t("오프라인");
     $("boss-top").innerHTML = t("<li class=\"muted\">접속 후 다시 시도해 주세요.</li>");
     return;
   }
@@ -3199,7 +3199,7 @@ async function refreshBoss() {
   $("boss-me").textContent = t("${rankTxt} · 남은 공격 ${data.attacksLeft}회", {"rankTxt": rankTxt, "data.attacksLeft": data.attacksLeft});
   const attackable = !bossBusy && data.attacksLeft > 0 && Online.status.reachable;
   $("boss-attack-btn").disabled = !attackable;
-  if (data.attacksLeft <= 0) $("boss-attack-btn").textContent = "이번 주 공격 한도 ⛔";
+  if (data.attacksLeft <= 0) $("boss-attack-btn").textContent = t("이번 주 공격 한도 ⛔");
   else $("boss-attack-btn").textContent = t("⚔️ 보스 공격 (스태미너 1)");
   const target = $("boss-target");
   if (target) {
@@ -3291,7 +3291,7 @@ function startBossCountdown(endsAt) {
   const el = $("boss-countdown");
   const tick = () => {
     const ms = endsAt - Date.now();
-    if (ms <= 0) { el.textContent = "⏰ 주간 정산이 곧 진행돼요!"; clearInterval(bossTimer); return; }
+    if (ms <= 0) { el.textContent = t("⏰ 주간 정산이 곧 진행돼요!"); clearInterval(bossTimer); return; }
     const d = Math.floor(ms / 86400000);
     const h = Math.floor((ms % 86400000) / 3600000);
     const mn = Math.floor((ms % 3600000) / 60000);
@@ -3394,10 +3394,10 @@ async function removeFriendClick(friendId, name) {
 let _visitFriendId = null;
 async function visitFriend(friendId) {
   // 로딩 즉시 표시 — 네트워크 대기 동안 빈 모달 방지
-  $("visit-title").textContent = "불러오는 중...";
+  $("visit-title").textContent = t("불러오는 중...");
   $("visit-pet").innerHTML = t("<div class=\"loading-row\"><span class=\"spinner\"></span>친구 펫 정보 불러오는 중</div>");
   $("visit-pat").disabled = true;
-  $("visit-pat").textContent = "🤲 쓰다듬기";
+  $("visit-pat").textContent = t("🤲 쓰다듬기");
   $("visit-backdrop").classList.remove("hidden");
   const snap = await Online.getPlayer(friendId);
   if (!snap) { closeVisit(); msg("친구 정보를 가져올 수 없어요", false); return; }
@@ -3440,7 +3440,7 @@ async function patVisit() {
   playFx("playPat");
   const btn = $("visit-pat");
   btn.disabled = true;
-  btn.textContent = "오늘 이미 쓰다듬음";
+  btn.textContent = t("오늘 이미 쓰다듬음");
 }
 
 async function giftFriend(friendId, name) {

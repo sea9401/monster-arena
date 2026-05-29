@@ -70,11 +70,11 @@
             <span id="exp-text">0/100</span>
           </div>
           <div class="bar-row" data-tip-title="포만감" data-tip="행복도와 함께 성장 배율을 올립니다. 스탯 훈련을 하면 8 감소하고, 날짜가 지나면 자연 감소합니다.">
-            <span>😋 포만감</span>
+            <span data-i18n>😋 포만감</span>
             <div class="minibar"><div class="minifill food" id="food-fill"></div></div>
           </div>
           <div class="bar-row" data-tip-title="행복도" data-tip="포만감과 함께 성장 배율을 올립니다. 스탯 훈련을 하면 5 감소하고, 연속 접속을 놓치거나 날짜가 지나면 감소합니다.">
-            <span>💛 행복도</span>
+            <span data-i18n>💛 행복도</span>
             <div class="minibar"><div class="minifill happy" id="happy-fill"></div></div>
           </div>
 
@@ -89,9 +89,9 @@
           </div>
 
           <div class="streak-line">
-            <span>🔥 연속 출석 <b id="streak">1</b>일</span>
+            <span>🔥 <span data-i18n>연속 출석</span> <b id="streak">1</b><span data-i18n>일</span></span>
             ·
-            <span>전투력 <b id="power">0</b></span>
+            <span><span data-i18n>전투력</span> <b id="power">0</b></span>
             ·
             <span>🪙 <b class="coin-balance">0</b></span>
           </div>
@@ -99,7 +99,7 @@
         </div>
 
         <div class="training">
-          <p class="muted">스태미너: <b id="stamina-left">10</b>/<b id="stamina-max">10</b> · 다음 충전 <b id="stamina-timer">15:00</b></p>
+          <p class="muted"><span data-i18n>스태미너:</span> <b id="stamina-left">10</b>/<b id="stamina-max">10</b> <span data-i18n>· 다음 충전</span> <b id="stamina-timer">15:00</b></p>
           <div class="train-grid" id="train-grid">
             <button data-train="feed" data-i18n>🍖 먹이주기</button>
             <button data-train="atk" data-i18n>🗡️ 근력훈련</button>
@@ -190,7 +190,7 @@
 
         <div class="arena-lobby-card">
           <div class="lobby-rank" id="lobby-rank">🥉 브론즈</div>
-          <div class="lobby-rating">레이팅 <b id="lobby-rating">1000</b></div>
+          <div class="lobby-rating"><span data-i18n>레이팅</span> <b id="lobby-rating">1000</b></div>
           <div class="lobby-record" id="lobby-record">0승 0패</div>
           <div id="lobby-online-status" class="online-status off">⚪ 오프라인</div>
           <div class="lobby-account" id="lobby-account"></div>
@@ -214,7 +214,7 @@
       </div>
       <div class="rank-banner">
         <span id="rank-tier">🥉 브론즈</span>
-        <span>레이팅 <b id="rating">1000</b></span>
+        <span><span data-i18n>레이팅</span> <b id="rating">1000</b></span>
         <span id="record">0승 0패</span>
         <span id="online-status" class="online-status off">⚪ 오프라인</span>
       </div>
@@ -349,7 +349,7 @@
       </div>
       <div class="boss-target-wrap">
         <div class="boss-target" id="boss-target" role="button" aria-label="보스 공격">🐲</div>
-        <div class="boss-tap-hint hidden" id="boss-tap-hint">👆 탭하여 공격</div>
+        <div class="boss-tap-hint hidden" id="boss-tap-hint" data-i18n>👆 탭하여 공격</div>
         <div id="boss-float-area" class="boss-float-area"></div>
       </div>
       <div class="boss-stats">
