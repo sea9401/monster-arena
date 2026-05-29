@@ -54,6 +54,16 @@ npm run cap:sync         # = npx cap sync
 android:screenOrientation="portrait"
 ```
 
+## 광고 (AdMob 보상형 — 광고 시청 시 스태미너 +5)
+- 플러그인 `@capacitor-community/admob` 통합됨. 훈련 화면 "📺 광고 보고 ⚡+5" 버튼(네이티브 전용, 하루 10회).
+- **테스트 ID로 즉시 동작**(구글 공식 테스트 광고). 출시 전 **2곳을 본인 실제 ID로 교체**:
+  1. `android/app/src/main/AndroidManifest.xml` 의 `com.google.android.gms.ads.APPLICATION_ID` → 본인 **AdMob 앱 ID**(`ca-app-pub-XXXX~YYYY`)
+  2. `www/config.js` 의 `ADMOB_REWARDED_ID` → 본인 **보상형 광고 단위 ID**(`ca-app-pub-XXXX/ZZZZ`) → 바꾼 뒤 `npx cap sync`
+- AdMob 계정: https://admob.google.com (Play 계정과 별개) → 앱 등록 → 보상형 광고 단위 생성.
+- ⚠️ 출시 빌드에서 **본인 광고를 클릭하지 말 것**(정책 위반). 테스트는 테스트 ID로만.
+- 광고 추가에 따라 `www/privacy.html` 에 AdMob/광고ID 공개 반영됨. Play 데이터 안전 폼에서 "기기 ID(광고)" 수집을 신고할 것.
+- 새로 `npx cap add android` 하면 AndroidManifest의 AdMob meta-data가 사라지니 다시 추가 필요.
+
 ## 버전 표기
 - 앱 내 표기: ⚙️ 설정 하단 `Monster Arena v1.0.0 · App`.
 - 값은 `www/game.js`의 `APP_VERSION` 상수. **릴리스마다 갱신**하고,
