@@ -229,7 +229,7 @@ body {
   background: var(--panel); border: 2px solid var(--bg); cursor: pointer;
   box-shadow: 2px 2px 0 #0f380f; font-family: inherit;
 }
-.pet-slot.active { background: var(--gold); border-color: var(--gold); }
+.pet-slot.active { background: var(--gold); border-color: var(--gold); text-shadow: none; }
 .pet-slot.active .pet-slot-name { color: var(--bg); }
 .pet-slot .pet-slot-emoji { font-size: 28px; line-height: 1; }
 .pet-slot .pet-slot-name { font-size: 10px; color: var(--accent2); margin-top: 2px; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
