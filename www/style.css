@@ -48,10 +48,11 @@ body {
   );
 }
 
-#app { max-width: 640px; margin: 0 auto; padding: 52px 16px 30px; }
+/* 상단/하단 세이프 에어리어(모바일 상태바·노치·제스처바) 만큼 여백 — 웹은 0 */
+#app { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 52px) 16px calc(env(safe-area-inset-bottom, 0px) + 30px); }
 
 .mute-btn {
-  position: fixed; top: 10px; right: 10px; z-index: 60;
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); right: 10px; z-index: 60;
   width: 36px; height: 36px; border: 2px solid var(--accent); border-radius: 0;
   background: var(--panel); color: var(--accent2); font-size: 17px;
   cursor: pointer; box-shadow: 3px 3px 0 #0f380f;
@@ -144,7 +145,7 @@ body {
 #home-screen { padding-bottom: 0; }
 .home-tab-content { animation: fade 0ms linear; }
 .home-tabbar {
-  position: sticky; top: 50px; z-index: 40;
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 50px); z-index: 40;
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
   margin: 0 0 14px; padding: 0;
   background: var(--bg);
