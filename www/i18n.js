@@ -28,7 +28,7 @@
       if (p === "ko") return "ko";
       if (TRANS[p]) return p; // 사전 보유 언어면 채택
     }
-    return "ko";
+    return "en"; // 지원(ko/en/ja/zh) 외 기기는 영어로 폴백(글로벌 기본값)
   }
 
   let LOCALE = detectLocale();
