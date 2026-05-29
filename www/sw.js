@@ -12,6 +12,8 @@ const SHELL = [
   "/config.js",
   "/i18n.js",
   "/i18n-en.js",
+  "/i18n-ja.js",
+  "/i18n-zh.js",
   "/manifest.json",
   "/assets/icon.png",
 ];
