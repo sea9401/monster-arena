@@ -448,14 +448,14 @@ function updateMuteButton() {
   const sBtn = $("set-sound");
   if (sBtn && SFX.isMuted) {
     const muted = SFX.isMuted();
-    sBtn.textContent = muted ? "꺼짐" : "켜짐";
+    sBtn.textContent = t(muted ? "꺼짐" : "켜짐");
     sBtn.classList.toggle("on", !muted);
     sBtn.classList.toggle("off", muted);
   }
   const hBtn = $("set-haptic");
   if (hBtn && SFX.isHapticMuted) {
     const off = SFX.isHapticMuted();
-    hBtn.textContent = off ? "꺼짐" : "켜짐";
+    hBtn.textContent = t(off ? "꺼짐" : "켜짐");
     hBtn.classList.toggle("on", !off);
     hBtn.classList.toggle("off", off);
   }
@@ -479,7 +479,7 @@ function floatBattleText(who, text, cls) {
   if (!parent) return;
   const el = document.createElement("div");
   el.className = cls;
-  el.textContent = text;
+  el.textContent = t(text);
   parent.appendChild(el);
   setTimeout(() => el.remove(), 850);
 }
@@ -714,7 +714,7 @@ function addStamina(amount) {
 }
 
 function staminaTimerText() {
-  if (state.stamina >= STAMINA_MAX) return state.stamina > STAMINA_MAX ? "보너스 충전됨" : "충전 완료";
+  if (state.stamina >= STAMINA_MAX) return t(state.stamina > STAMINA_MAX ? "보너스 충전됨" : "충전 완료");
   const remain = Math.max(0, STAMINA_REGEN_MS - (gameNow() - state.staminaAt));
   const totalSec = Math.ceil(remain / 1000);
   const min = String(Math.floor(totalSec / 60)).padStart(2, "0");
@@ -786,7 +786,7 @@ function renderEggs() {
 
 async function hatch(speciesKey) {
   const sp = SPECIES[speciesKey];
-  const named = await customPrompt(`${sp.name}이(가) 부화했어요!\n이름을 지어주세요:`, sp.name, "이름 짓기");
+  const named = await customPrompt(t("${sp.name}이(가) 부화했어요!\n이름을 지어주세요:", { "sp.name": sp.name }), sp.name, "이름 짓기");
   const name = ((named && named.trim()) || sp.name).slice(0, 12);
   // 활성 펫 데이터(현재 키우는 몬스터의 사진)
   const newPet = {
@@ -981,6 +981,7 @@ function floatNumber(rect, text, color, big) {
 }
 function floatNumberFromSelector(sel, text, color, big) {
   // 화면에 보이는 첫 요소를 대상으로 — 여러 같은 셀렉터(예: .coin-balance) 케이스 처리
+  text = t(text);
   const list = document.querySelectorAll(sel);
   for (const el of list) {
     const r = el.getBoundingClientRect();
@@ -1020,7 +1021,7 @@ function applyAttendanceReward(r) {
   if (r.stat)   {
     state.atk += r.stat.atk || 0; state.def += r.stat.def || 0;
     state.spd += r.stat.spd || 0; state.hp += r.stat.hp || 0;
-    parts.push("영구 스탯 상승!");
+    parts.push(t("영구 스탯 상승!"));
   }
   return parts.join(", ");
 }
@@ -1057,16 +1058,16 @@ function renderAttendance() {
     if (n === day) cell.classList.add("today");
     if (n <= claimedThrough) cell.classList.add("done");
     cell.innerHTML = `
-      <div class="att-day">${n}일</div>
+      <div class="att-day">${t("${n}일", { n })}</div>
       <div class="att-icon">${r.icon}</div>
-      <div class="att-amt">${r.short}</div>
+      <div class="att-amt">${t(r.short)}</div>
     `;
     cal.appendChild(cell);
   });
 
   const btn = $("att-claim");
   btn.disabled = !claimable;
-  btn.textContent = claimable ? t("오늘의 출석 보상 받기 (${day}일차)", {"day": day}) : "오늘 출석 완료 ✓";
+  btn.textContent = t(claimable ? t("오늘의 출석 보상 받기 (${day}일차)", {"day": day}) : "오늘 출석 완료 ✓");
 }
 
 // ---------- 데일리 퀘스트 ----------
@@ -1179,7 +1180,7 @@ function renderQuests() {
   const total = state.quests.length;
   const cleared = state.quests.filter((q) => q.claimed).length;
   const progEl = $("quest-progress");
-  if (progEl) progEl.textContent = total ? t("(${cleared}/${total} 완료)", { cleared, total }) : "";
+  if (progEl) progEl.textContent = t(total ? t("(${cleared}/${total} 완료)", { cleared, total }) : "");
   state.quests.forEach((q, idx) => {
     const done = q.progress >= q.target;
     const li = document.createElement("li");
@@ -1357,7 +1358,7 @@ function renderArenaLobby() {
   $("lobby-rating").textContent = state.rating;
   $("lobby-record").textContent = t("${state.wins}승 ${state.losses}패", {"state.wins": state.wins, "state.losses": state.losses});
 
-  const onlineText = Online.status.reachable ? "🟢 온라인" : "⚪ 오프라인(AI)";
+  const onlineText = t(Online.status.reachable ? "🟢 온라인" : "⚪ 오프라인(AI)");
   const onlineClass = "online-status " + (Online.status.reachable ? "on" : "off");
   const lobbyOnline = $("lobby-online-status");
   if (lobbyOnline) {
@@ -1377,7 +1378,7 @@ function renderArenaLobby() {
     const delta = h.ratingDelta > 0 ? `+${h.ratingDelta}` : `${h.ratingDelta}`;
     const date = new Date(h.timestamp).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" });
     return `<li class="history-row ${h.result}">
-      <span class="history-result">${h.result === "win" ? "승" : "패"}</span>
+      <span class="history-result">${t(h.result === "win" ? "승" : "패")}</span>
       <span class="history-main">${el.icon} ${h.opponentName}</span>
       <span class="history-delta">${delta}</span>
       <span class="history-rating">${h.resultRating}</span>
@@ -1390,7 +1391,7 @@ function addBattleHistory(won, delta, newRating) {
   if (!state.history) state.history = [];
   const foe = currentOpponent || {};
   state.history.unshift({
-    opponentName: foe.name || "상대",
+    opponentName: foe.name || t("상대"),
     opponentElement: foe.type || "fire",
     result: won ? "win" : "loss",
     ratingDelta: delta,
@@ -1510,12 +1511,12 @@ function updateRerollBtn() {
   if (!b) return;
   const left = REROLL_MAX - rerolls;
   b.disabled = left <= 0;
-  b.textContent = left > 0 ? t("🔄 다른 상대 (${left}회 남음)", {"left": left}) : "🚫 다른 상대 (소진)";
+  b.textContent = t(left > 0 ? t("🔄 다른 상대 (${left}회 남음)", {"left": left}) : "🚫 다른 상대 (소진)");
 }
 
 function updateOnlineStatus() {
   const el = $("online-status");
-  const text = Online.status.reachable ? "🟢 온라인" : "⚪ 오프라인(AI)";
+  const text = t(Online.status.reachable ? "🟢 온라인" : "⚪ 오프라인(AI)");
   const cls = "online-status " + (Online.status.reachable ? "on" : "off");
   if (el) {
     el.textContent = text;
@@ -1701,7 +1702,7 @@ function blog(text, type) {
   _battleEvents.push({ text, type });
   const el = document.createElement("p");
   el.className = "entry " + (type === "me" ? "me" : type === "foe" ? "foe" : "system");
-  el.textContent = text;
+  el.textContent = t(text);
   const box = $("battle-log");
   box.appendChild(el); box.scrollTop = box.scrollHeight;
 }
@@ -1712,7 +1713,7 @@ async function resolve(won) {
     state.lastReplay = {
       events: _battleEvents.slice(),
       won, friendly: friendlyMode,
-      meName: state.name, foeName: currentOpponent?.name || "상대",
+      meName: state.name, foeName: currentOpponent?.name || t("상대"),
       foeEmoji: currentOpponent?.emoji || "👹",
       at: Date.now(),
     };
@@ -1724,7 +1725,7 @@ async function resolve(won) {
     resultOverlay(won);
     $("match-battle").classList.add("hidden");
     $("match-result").classList.remove("hidden");
-    $("result-title").textContent = won ? "🏆 친선 승리!" : "💪 친선 패배";
+    $("result-title").textContent = t(won ? "🏆 친선 승리!" : "💪 친선 패배");
     $("result-detail").textContent = t("친선전 — 기록·보상 없음");
     tauntTarget = currentOpponent && currentOpponent.ghost ? { playerId: currentOpponent.playerId, name: currentOpponent.name } : null;
     renderResultSocial();
@@ -1741,7 +1742,7 @@ async function resolve(won) {
 
   $("match-battle").classList.add("hidden");
   $("match-result").classList.remove("hidden");
-  $("result-title").textContent = won ? "🏆 승리!" : "💀 패배";
+  $("result-title").textContent = t(won ? "🏆 승리!" : "💀 패배");
   $("result-detail").textContent = t("레이팅 반영 중...");
 
   // 온라인 매치면 서버가 Elo 계산 → 서버 레이팅 신뢰. 아니면 로컬 계산.
@@ -1807,9 +1808,9 @@ function renderCoachStep() {
   const el = document.querySelector(step.sel);
   if (!el) { coachIdx++; return renderCoachStep(); } // 요소 없으면 건너뜀
   el.scrollIntoView({ block: "center", behavior: "smooth" });
-  $("coach-text").innerHTML = step.text;
+  $("coach-text").innerHTML = t(step.text);
   $("coach-progress").textContent = `${coachIdx + 1} / ${COACH_STEPS.length}`;
-  $("coach-next").textContent = coachIdx === COACH_STEPS.length - 1 ? "시작하기 🎮" : "다음";
+  $("coach-next").textContent = t(coachIdx === COACH_STEPS.length - 1 ? "시작하기 🎮" : "다음");
   setTimeout(() => positionCoach(el), 280); // 스크롤 정착 후 위치 계산
 }
 function positionCoach(el) {
@@ -1877,7 +1878,7 @@ async function refreshPushButton() {
   }
   btn.disabled = false;
   const sub = await currentPushSub();
-  btn.textContent = sub ? "켜짐" : "꺼짐";
+  btn.textContent = t(sub ? "켜짐" : "꺼짐");
   btn.classList.toggle("on", !!sub);
   btn.classList.toggle("off", !sub);
 }
@@ -1941,7 +1942,7 @@ function renderSettings() {
   const row = $("set-logout-row");
   if (Online.status.loggedIn) {
     row.classList.remove("hidden");
-    $("set-account-name").textContent = Online.status.username || "계정";
+    $("set-account-name").textContent = Online.status.username || t("계정");
   } else {
     row.classList.add("hidden");
   }
@@ -2239,9 +2240,9 @@ function renderShopPreview() {
   const c = previewId ? cosmeticById(previewId) : null;
   hatEl.textContent = c ? c.icon : "";
   if (_shopPreviewHat) {
-    labelEl.textContent = c ? t("미리보기: ${c.name}", {"c.name": c.name}) : "미리보기";
+    labelEl.textContent = t(c ? t("미리보기: ${c.name}", {"c.name": c.name}) : "미리보기");
   } else if (state.cosmetics.equipped.head) {
-    labelEl.textContent = c ? t("현재 장착: ${c.name}", {"c.name": c.name}) : "장식 없음";
+    labelEl.textContent = t(c ? t("현재 장착: ${c.name}", {"c.name": c.name}) : "장식 없음");
   } else {
     labelEl.textContent = t("행을 탭하면 미리 써볼 수 있어요");
   }
@@ -2259,7 +2260,7 @@ async function tryClaimChampion() {
   checkAchievements();
   save();
   Online.uploadSnapshot(mySnapshot());
-  customAlert(`🏆 지난주 토너먼트 챔피언!\n보상: 🪙${reward.coins} + 칭호 "${reward.title}"`, "챔피언");
+  customAlert(t("🏆 지난주 토너먼트 챔피언!\n보상: 🪙${coins} + 칭호 ${title}", { coins: reward.coins, title: t(reward.title) }), "챔피언");
 }
 
 // ---------- 소셜: 도발 / 받은함 / 친선 재대결 ----------
@@ -2382,7 +2383,7 @@ function generateShareCard() {
   // 상단 타이틀
   ctx.fillStyle = "#9bbc0f";
   ctx.font = "bold 22px sans-serif";
-  ctx.fillText("🐲 몬스터 아레나", W / 2, 56);
+  ctx.fillText(t("🐲 몬스터 아레나"), W / 2, 56);
 
   // 펫 (큰 이모지)
   ctx.font = "180px sans-serif";
@@ -2398,13 +2399,13 @@ function generateShareCard() {
   // 메타 (레벨/속성/레이팅)
   ctx.fillStyle = "#9bbc0f";
   ctx.font = "18px sans-serif";
-  ctx.fillText(`Lv ${state.level} · ${el.icon} ${el.label} · 레이팅 ${state.rating}`, W / 2, 425);
+  ctx.fillText(t("Lv ${lv} · ${icon} ${elabel} · 레이팅 ${rating}", { lv: state.level, icon: el.icon, elabel: t(el.label), rating: state.rating }), W / 2, 425);
 
   // 칭호
   if (state.title) {
     ctx.fillStyle = "#f0c040";
     ctx.font = "16px sans-serif";
-    ctx.fillText(state.title, W / 2, 455);
+    ctx.fillText(t(state.title), W / 2, 455);
   }
 
   // 스탯 박스
@@ -2416,7 +2417,7 @@ function generateShareCard() {
   // 시그니처 스킬
   if (sig) {
     ctx.fillStyle = "#f0c040"; ctx.font = "16px sans-serif";
-    ctx.fillText(`⭐ 시그니처: ${sig.name}`, W / 2, 575);
+    ctx.fillText(t("⭐ 시그니처: ${name}", { name: t(sig.name) }), W / 2, 575);
   }
 
   // 전적
@@ -2474,48 +2475,48 @@ async function renderProfile() {
   const pct = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
   body.innerHTML = `
     <div class="nav" style="margin: 0 0 8px;">
-      <button id="profile-share" class="primary">📤 펫 자랑 카드</button>
+      <button id="profile-share" class="primary">${t("📤 펫 자랑 카드")}</button>
     </div>
     <div class="profile-section">
-      <h3>🐲 펫 컬렉션 <b>${seenN}/${totalSpecies}</b></h3>
+      <h3>${t("🐲 펫 컬렉션")} <b>${seenN}/${totalSpecies}</b></h3>
       <div class="profile-bar"><div style="width:${pct(seenN, totalSpecies)}%"></div></div>
-      <div class="profile-title-row">현재 로스터: <b>${(state.pets || []).length}/${MAX_PETS}</b> · ${(state.pets || []).map((p) => SPECIES[p.species]?.stages[stageIndex(p.level)] || "🥚").join(" ")}</div>
+      <div class="profile-title-row">${t("현재 로스터:")} <b>${(state.pets || []).length}/${MAX_PETS}</b> · ${(state.pets || []).map((p) => SPECIES[p.species]?.stages[stageIndex(p.level)] || "🥚").join(" ")}</div>
     </div>
     <div class="profile-section">
-      <h3>🏆 업적 <b>${achUnlocked}/${achTotal}</b></h3>
+      <h3>${t("🏆 업적")} <b>${achUnlocked}/${achTotal}</b></h3>
       <div class="profile-bar"><div style="width:${pct(achUnlocked, achTotal)}%"></div></div>
     </div>
     <div class="profile-section">
-      <h3>🎩 모자 <b>${hatOwned}/${hatTotal}</b></h3>
+      <h3>${t("🎩 모자")} <b>${hatOwned}/${hatTotal}</b></h3>
       <div class="profile-bar"><div style="width:${pct(hatOwned, hatTotal)}%"></div></div>
-      <div class="profile-title-row">착용: ${state.cosmetics.equipped.head ? cosmeticById(state.cosmetics.equipped.head)?.icon + " " + cosmeticById(state.cosmetics.equipped.head)?.name : "<span class='muted'>없음</span>"}</div>
+      <div class="profile-title-row">${t("착용:")} ${state.cosmetics.equipped.head ? cosmeticById(state.cosmetics.equipped.head)?.icon + " " + t(cosmeticById(state.cosmetics.equipped.head)?.name) : "<span class='muted'>" + t("없음") + "</span>"}</div>
     </div>
     <div class="profile-section">
-      <h3>👥 친구 <b>${friendCount}</b></h3>
-      <div class="profile-title-row">친구 화면에서 코드 공유로 추가</div>
+      <h3>${t("👥 친구")} <b>${friendCount}</b></h3>
+      <div class="profile-title-row">${t("친구 화면에서 코드 공유로 추가")}</div>
     </div>
     <div class="profile-section">
-      <h3>⚔️ 아레나 전적 <b>${wins}승 ${losses}패</b></h3>
-      <div class="profile-title-row">레이팅 <b>${state.rating}</b> · 승률 ${winRate}% · 자이언트킬 ${state.lifetime.upsets || 0}회</div>
+      <h3>${t("⚔️ 아레나 전적")} <b>${t("${state.wins}승 ${state.losses}패", { "state.wins": wins, "state.losses": losses })}</b></h3>
+      <div class="profile-title-row">${t("레이팅")} <b>${state.rating}</b> · ${t("승률")} ${winRate}% · ${t("자이언트킬 ${n}회", { n: state.lifetime.upsets || 0 })}</div>
     </div>
     <div class="profile-section">
-      <h3>📈 평생 통계</h3>
+      <h3>${t("📈 평생 통계")}</h3>
       <div class="profile-stats">
-        <div><b>${state.lifetime.trains || 0}</b>훈련</div>
-        <div><b>${state.lifetime.feeds || 0}</b>먹이</div>
-        <div><b>${state.lifetime.plays || 0}</b>놀이</div>
+        <div><b>${state.lifetime.trains || 0}</b>${t("훈련")}</div>
+        <div><b>${state.lifetime.feeds || 0}</b>${t("먹이")}</div>
+        <div><b>${state.lifetime.plays || 0}</b>${t("놀이")}</div>
         <div><b>${state.lifetime.pvp || 0}</b>PvP</div>
-        <div><b>${state.dayCount || 1}</b>일차</div>
-        <div><b>${state.streak || 1}</b>연속</div>
+        <div><b>${state.dayCount || 1}</b>${t("일차")}</div>
+        <div><b>${state.streak || 1}</b>${t("연속")}</div>
       </div>
     </div>
     <div class="profile-section">
-      <h3>💰 자산</h3>
+      <h3>${t("💰 자산")}</h3>
       <div class="profile-stats">
-        <div><b>${state.coins || 0}</b>🪙 코인</div>
-        <div><b>${(state.titles || []).length}</b>칭호</div>
+        <div><b>${state.coins || 0}</b>${t("🪙 코인")}</div>
+        <div><b>${(state.titles || []).length}</b>${t("칭호")}</div>
       </div>
-      ${state.title ? t("<div class=\"profile-title-row\">착용 칭호: <b>${state.title}</b></div>", {"state.title": state.title}) : ""}
+      ${state.title ? t("<div class=\"profile-title-row\">착용 칭호: <b>${state.title}</b></div>", {"state.title": t(state.title)}) : ""}
     </div>
   `;
 }
@@ -2601,7 +2602,7 @@ function renderWalk() {
   if (phase === "idle") {
     body.innerHTML = `<div class="walk-options">` + WALK_OPTIONS.map((o) => {
       const hm = o.min < 60 ? t("${o.min}분", {"o.min": o.min}) : t("${h}시간", { h: o.min/60 });
-      return `<button data-walk-min="${o.min}"><b>${o.label} · ${hm}</b>🪙${o.coins} · 🍖+${o.food} 💛+${o.happy}</button>`;
+      return `<button data-walk-min="${o.min}"><b>${t(o.label)} · ${hm}</b>🪙${o.coins} · 🍖+${o.food} 💛+${o.happy}</button>`;
     }).join("") + `</div>`;
   } else if (phase === "walking") {
     const remain = state.walkStart + state.walkDur - Date.now();
@@ -2637,7 +2638,7 @@ function renderLuckyButton() {
   if (!btn) return;
   const avail = luckyAvailable();
   btn.classList.toggle("done", !avail);
-  $("lucky-status").textContent = avail ? "오늘 1회" : "내일 다시";
+  $("lucky-status").textContent = t(avail ? "오늘 1회" : "내일 다시");
 }
 function openLucky() {
   const ring = $("lucky-ring");
@@ -2654,7 +2655,7 @@ function openLucky() {
   }
   $("lucky-result").textContent = "";
   $("lucky-spin").disabled = !luckyAvailable() || _luckySpinning;
-  $("lucky-spin").textContent = luckyAvailable() ? "🎲 돌리기" : "오늘 완료";
+  $("lucky-spin").textContent = t(luckyAvailable() ? "🎲 돌리기" : "오늘 완료");
   $("lucky-backdrop").classList.remove("hidden");
 }
 function closeLucky() { $("lucky-backdrop").classList.add("hidden"); }
@@ -3057,7 +3058,7 @@ async function openTournament() {
   }
   $("tourney-me").textContent = data.me
     ? t("내 순위 ${data.me.rank}위 · ${data.me.points}점 (${data.me.wins}승)", {"data.me.rank": data.me.rank, "data.me.points": data.me.points, "data.me.wins": data.me.wins})
-    : "이번 주 기록 없음 — 아레나에서 이기면 점수가 쌓여요!";
+    : t("이번 주 기록 없음 — 아레나에서 이기면 점수가 쌓여요!");
   const myId = Online.status.playerId;
   if (!data.rows.length) {
     list.innerHTML = t("<li class=\"muted\">아직 참가자가 없어요. 첫 주자가 되어보세요!</li>");
@@ -3160,7 +3161,7 @@ async function tryClaimBoss() {
   if (reward.title && !state.titles.includes(reward.title)) state.titles.push(reward.title);
   save();
   Online.uploadSnapshot(mySnapshot());
-  customAlert(`${reward.bossIcon || "🐲"} ${reward.bossName || "보스"} 정산!\n순위 ${reward.rank}위 · 누적 ${reward.damage} 데미지\n보상: 🪙 ${reward.coins}${reward.title ? "\n칭호: " + reward.title : ""}`, "보스 보상");
+  customAlert(t("${icon} ${name} 정산!\n순위 ${rank}위 · 누적 ${dmg} 데미지\n보상: 🪙 ${coins}${titlePart}", { icon: reward.bossIcon || "🐲", name: t(reward.bossName || "보스"), rank: reward.rank, dmg: reward.damage, coins: reward.coins, titlePart: reward.title ? t("\n칭호: ${title}", { title: t(reward.title) }) : "" }), "보스 보상");
 }
 
 async function openBoss() {
@@ -3195,7 +3196,7 @@ async function refreshBoss() {
   $("boss-total-dmg").textContent = (data.totalDamage || 0).toLocaleString();
   $("boss-participants").textContent = (data.participants || 0);
   $("boss-my-dmg").textContent = (data.myDamage || 0).toLocaleString();
-  const rankTxt = data.myRank > 0 ? t("${data.myRank}위", {"data.myRank": data.myRank}) : "순위권 외";
+  const rankTxt = data.myRank > 0 ? t("${data.myRank}위", {"data.myRank": data.myRank}) : t("순위권 외");
   $("boss-me").textContent = t("${rankTxt} · 남은 공격 ${data.attacksLeft}회", {"rankTxt": rankTxt, "data.attacksLeft": data.attacksLeft});
   const attackable = !bossBusy && data.attacksLeft > 0 && Online.status.reachable;
   $("boss-attack-btn").disabled = !attackable;
@@ -3308,7 +3309,7 @@ async function openFriends() {
   $("friend-list").innerHTML = t("<li class=\"loading-row\"><span class=\"spinner\"></span>불러오는 중...</li>");
   $("friend-count").textContent = "";
   const code = await Online.myCode();
-  $("my-friend-code").textContent = code || "오프라인";
+  $("my-friend-code").textContent = code || t("오프라인");
   $("copy-code-btn").disabled = !code;
   await refreshFriends();
 }
@@ -3324,7 +3325,7 @@ async function refreshFriends() {
   const mySp = SPECIES[state.species] || SPECIES.ember;
   const meRow = {
     playerId: Online.status.playerId,
-    name: state.name + " (나)",
+    name: state.name + t(" (나)"),
     species: state.species,
     level: state.level,
     rating: state.rating,
@@ -3419,7 +3420,7 @@ async function visitFriend(friendId) {
   const already = today.includes(friendId);
   const btn = $("visit-pat");
   btn.disabled = already;
-  btn.textContent = already ? "오늘 이미 쓰다듬음" : "🤲 쓰다듬기 (+🪙5)";
+  btn.textContent = t(already ? "오늘 이미 쓰다듬음" : "🤲 쓰다듬기 (+🪙5)");
   $("visit-backdrop").classList.remove("hidden");
 }
 function closeVisit() { $("visit-backdrop").classList.add("hidden"); _visitFriendId = null; }
@@ -3489,7 +3490,7 @@ function renderAccount() {
 }
 function authMsg(text, ok) {
   const el = $("auth-msg");
-  el.textContent = text;
+  el.textContent = t(text);
   el.style.color = ok ? "var(--good)" : "var(--bad)";
 }
 const AUTH_ERR = {
@@ -3545,7 +3546,7 @@ async function enterGameFromState() {
     const r = state.cosmeticRefundPending;
     delete state.cosmeticRefundPending;
     save();
-    setTimeout(() => customAlert(`등/꼬리 장식은 머리(모자) 슬롯으로 통합됐어요.\n기존에 구매하신 등/꼬리 아이템 가격은 모두 환불됐습니다: 🪙 +${r}`, "장식 슬롯 통합"), 400);
+    setTimeout(() => customAlert(t("등/꼬리 장식은 머리(모자) 슬롯으로 통합됐어요.\n기존에 구매하신 등/꼬리 아이템 가격은 모두 환불됐습니다: 🪙 +${r}", { r }), "장식 슬롯 통합"), 400);
   }
 }
 
