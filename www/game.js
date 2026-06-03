@@ -713,8 +713,11 @@ function regenStamina() {
 
 function addStamina(amount) {
   regenStamina();
+  // 충전 중이었다면 다음 충전까지의 진행도를 그대로 유지 (광고/충전으로 타이머가 15:00로 리셋되지 않게).
+  // 가득 찬 상태에서만 새 사이클 시작점을 찍는다 — consumeStamina의 wasFull 처리와 동일한 규칙.
+  const wasFull = state.stamina >= STAMINA_MAX;
   state.stamina = clamp(state.stamina + amount, 0, STAMINA_OVERFILL_MAX);
-  state.staminaAt = gameNow();
+  if (wasFull) state.staminaAt = gameNow();
 }
 
 function staminaTimerText() {
@@ -2719,8 +2722,8 @@ function spinLucky() {
   _luckySpinning = true;
   $("lucky-spin").disabled = true;
   const idx = Math.floor(Math.random() * LUCKY_REWARDS.length);
-  // 화살표를 5바퀴 + idx 각도만큼 시계방향 회전(CW) → idx 섹터 가리킴
-  _luckyRotation += 360 * 5 + idx * 45;
+  // 화살표를 6바퀴 + idx 각도만큼 시계방향 회전(CW) → idx 섹터 가리킴. (CSS transition 4s와 맞춤)
+  _luckyRotation += 360 * 6 + idx * 45;
   const arrow = $("lucky-arrow");
   arrow.style.transform = `rotate(${_luckyRotation}deg)`;
   state.luckyRollDate = todayStr();
@@ -2738,7 +2741,7 @@ function spinLucky() {
     haptic(20);
     _luckySpinning = false;
     renderHome();
-  }, 3100);
+  }, 4100);
 }
 
 // ---------- 전투 리플레이 ----------

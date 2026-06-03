@@ -30,7 +30,6 @@ body {
   text-transform: uppercase;
   background: var(--bg);
   color: var(--text);
-  text-shadow: 2px 2px 0 #0f380f;
 }
 
 #scanlines {
@@ -65,8 +64,11 @@ body {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 10px 12px; border: 2px solid var(--bg); background: var(--panel2);
 }
-.settings-label { font-size: 13px; font-weight: 700; }
-.settings-toggle {
+.settings-label { font-size: 13px; font-weight: 700; white-space: nowrap; }
+/* .settings-sheet 셀렉터로 specificity를 높여 .welcome-sheet button(width:100%) 규칙을 덮어쓴다.
+   그러지 않으면 토글이 가로 전체로 늘어나 라벨이 "사운드→사/운드"처럼 줄밀림됨. */
+.settings-sheet .settings-toggle {
+  flex: 0 0 auto; width: auto;
   min-width: 96px; padding: 8px 12px; font-size: 12px; font-weight: 900;
   border: 2px solid var(--accent); border-radius: 0; cursor: pointer;
   background: var(--panel); color: var(--accent2); box-shadow: 2px 2px 0 #0f380f;
@@ -403,7 +405,6 @@ button.ghost {
   box-shadow: 3px 3px 0 #0f380f;
   font: inherit;
   cursor: pointer;
-  text-shadow: 2px 2px 0 #0f380f;
 }
 .train-grid button { padding: 14px 8px; font-size: 15px; }
 button:hover,
@@ -615,7 +616,6 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .boss-tap-hint {
   position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
   font-size: 11px; color: var(--gold); font-weight: 700;
-  text-shadow: 1px 1px 0 #000;
   white-space: nowrap; pointer-events: none;
   animation: tap-hint 1.6s ease-in-out infinite;
 }
@@ -635,7 +635,6 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .boss-float-dmg {
   position: absolute; left: 50%; top: 30%;
   color: var(--gold); font-weight: 900; font-size: 26px;
-  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
   animation: dmg-float 1s cubic-bezier(.2,.7,.2,1) forwards;
   white-space: nowrap;
 }
@@ -756,7 +755,6 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 .float-num {
   position: fixed; left: 0; top: 0;
   font-weight: 900; font-size: 16px;
-  text-shadow: 2px 2px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
   pointer-events: none; white-space: nowrap;
   animation: float-up 1.2s ease-out forwards;
   z-index: 200;
@@ -895,7 +893,6 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   position: absolute; left: 50%; top: 50%;
   transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y)));
   font-size: 13px; font-weight: 900; color: var(--gold);
-  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
   white-space: nowrap; padding: 0 2px;
 }
 /* 중심에서 위로 뻗은 화살표 — 회전 대상 */
@@ -905,7 +902,9 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
   margin-left: -4px; margin-top: -80px;
   background: linear-gradient(to top, transparent, var(--bad) 30%);
   transform-origin: 50% 100%; /* 회전 중심 = 휠 중앙 */
-  transition: transform 3s cubic-bezier(.18,.7,.2,1);
+  /* 전역 *{transition:none!important}를 이 요소에서만 무력화 — 룰렛은 회전 연출이 핵심이라 예외.
+     easeOutQuart로 고르게 돌다 부드럽게 감속(앞쪽 쏠림 없이). game.js의 회전수/대기시간과 맞춤. */
+  transition: transform 4s cubic-bezier(0.25, 1, 0.5, 1) !important;
   z-index: 2;
 }
 .lucky-arrow::before {
@@ -1006,7 +1005,7 @@ button.ghost { padding: 14px 16px; font-size: 14px; color: var(--accent); backgr
 }
 .dmg-float, .dodge-float {
   position: absolute; left: 50%; top: 16px; transform: translateX(-50%);
-  pointer-events: none; z-index: 5; font-weight: 900; text-shadow: 2px 2px 0 #0f380f;
+  pointer-events: none; z-index: 5; font-weight: 900;
   animation: floatUp .8s steps(5, end) forwards;
 }
 .dmg-float { color: var(--bad); font-size: 22px; }
