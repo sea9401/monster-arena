@@ -52,6 +52,7 @@ const Online = (() => {
     }
     // 익명 플레이어 레코드 보장(매칭/리더보드용)
     await call("/players/register", { method: "POST", body: JSON.stringify({ playerId: status.playerId }) });
+    flushPending(); // 오프라인 중 쌓인 AI 매치 결과 반영 (백그라운드 — 시작 막지 않음)
     return true;
   }
 
@@ -102,6 +103,36 @@ const Online = (() => {
     const r = await call(`/matches/${matchId}/result`, { method: "POST", body: JSON.stringify({ playerId: status.playerId, winner: won ? "player" : "opponent", rounds }) });
     if (!r || r._error) return null;
     return r;
+  }
+  // 서버 매치ID 없는 로컬/AI 매치(upset 대체·오프라인 폴백)도 본인 정산만 서버에 반영.
+  // nonce는 멱등키 — 연결 시 즉시 제출과 오프라인 큐 재시도가 같은 nonce를 써서 중복 집계 방지.
+  async function submitSoloResult(won, opponentRating, nonce) {
+    if (!status.reachable || !status.playerId) return null;
+    const r = await call("/matches/solo-result", { method: "POST", body: JSON.stringify({ playerId: status.playerId, winner: won ? "player" : "opponent", opponentRating, nonce }) });
+    if (!r || r._error || !r.ok) return null;
+    return r;
+  }
+  // ----- 오프라인 매치 큐 (재접속 시 집계) -----
+  const PENDING_KEY = "monster-arena-pending";
+  function loadPending() { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); } catch { return []; } }
+  function savePending(arr) { try { localStorage.setItem(PENDING_KEY, JSON.stringify(arr.slice(-100))); } catch {} }
+  // 오프라인이라 즉시 제출 못 한 AI 매치를 적재. 레이팅은 로컬에서 이미 반영됨 → 플러시 때 noRating으로 점수·전적만.
+  function queueSoloResult(won, opponentRating, nonce) {
+    const arr = loadPending();
+    arr.push({ won: !!won, opponentRating: opponentRating == null ? null : opponentRating, nonce: nonce || null, at: Date.now() });
+    savePending(arr);
+  }
+  // 재접속 시 큐 플러시. 멱등(nonce) + 실패분만 보존 → 다음 접속에 재시도. 백그라운드 호출(블로킹 X).
+  async function flushPending() {
+    if (!status.reachable || !status.playerId) return;
+    const arr = loadPending();
+    if (!arr.length) return;
+    const remain = [];
+    for (const it of arr) {
+      const r = await call("/matches/solo-result", { method: "POST", body: JSON.stringify({ playerId: status.playerId, winner: it.won ? "player" : "opponent", opponentRating: it.opponentRating, nonce: it.nonce, noRating: true }) });
+      if (!(r && !r._error && r.ok)) remain.push(it);
+    }
+    savePending(remain);
   }
   async function leaderboard(limit = 20) {
     if (!status.reachable) return null;
@@ -236,7 +267,7 @@ const Online = (() => {
   }
 
   return { status, init, register, login, logout, loadCloudSave, pushCloudSave,
-    uploadSnapshot, findMatch, submitResult, leaderboard, tournament, event,
+    uploadSnapshot, findMatch, submitResult, submitSoloResult, queueSoloResult, leaderboard, tournament, event,
     claimChampion, sendTaunt, getMessages, ackMessages, season, claimSeason,
     bossState, bossAttack, bossClaim,
     myCode, friendsList, addFriend, removeFriend, getPlayer,

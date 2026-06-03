@@ -1808,6 +1808,14 @@ async function resolve(won) {
   if (currentMatchId) {
     const r = await Online.submitResult(currentMatchId, won, 0);
     if (r) { newRating = r.newRating; delta = r.delta; tp = r.tp; }
+  } else {
+    // 로컬/AI 매치(upset 대체·오프라인 폴백)도 본인 정산만 서버에 반영.
+    // 연결돼 있으면 즉시(서버 레이팅 신뢰), 오프라인이면 같은 nonce로 큐 적재 → 재접속 시 점수·전적 반영.
+    const nonce = "s-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const oppR = currentOpponent ? currentOpponent.rating : null;
+    const r = await Online.submitSoloResult(won, oppR, nonce);
+    if (r) { newRating = r.newRating; delta = r.delta; tp = r.tp; }
+    else Online.queueSoloResult(won, oppR, nonce);
   }
   currentMatchId = null;
   if (newRating == null) {

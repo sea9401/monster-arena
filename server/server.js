@@ -573,6 +573,37 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { ok: true, oldRating, newRating: me.rating, delta: me.rating - oldRating, tp: won ? 10 : 3 });
   }
 
+  // 로컬/AI 매치 결과(서버 매치ID 없음) — 제출자 본인만 정산. 실제 상대 고스트는 건드리지 않음.
+  // upset 퀘스트 대체 상대·오프라인 폴백 매치도 토너먼트/랭킹에 반영하기 위함.
+  // nonce로 멱등 처리 — 타임아웃 후 재시도(클라 큐 플러시)가 중복 집계되지 않도록.
+  // noRating: 오프라인 중 로컬에서 이미 레이팅을 정한 매치 → 점수·전적만 적립(레이팅은 이후 스냅샷이 재조정).
+  if (url === "/matches/solo-result" && method === "POST") {
+    const b = await readBody(req);
+    const me = db.players[b.playerId];
+    if (!me) return send(res, 200, { ok: false }); // 스냅샷 등록 전 → 클라가 로컬 폴백/재시도
+    const nonce = String(b.nonce || "");
+    if (!Array.isArray(me.soloNonces)) me.soloNonces = [];
+    if (nonce && me.soloNonces.includes(nonce)) {
+      return send(res, 200, { ok: true, dup: true, oldRating: me.rating, newRating: me.rating, delta: 0, tp: 0 });
+    }
+    const won = b.winner === "player";
+    const oppRating = Math.max(0, Math.min(5000, Number(b.opponentRating) || me.rating));
+    const oldRating = me.rating;
+    if (!b.noRating) me.rating = elo(oldRating, oppRating, won);
+    if (won) me.wins++; else me.losses++;
+    me.updatedAt = now();
+    me.lastPvpAt = now();
+    if (nonce) { me.soloNonces.push(nonce); if (me.soloNonces.length > 30) me.soloNonces.shift(); }
+    rolloverTournament();
+    const sc = db.tournament.scores[b.playerId] || { playerId: b.playerId, points: 0, wins: 0 };
+    sc.points += won ? 10 : 3;
+    if (won) sc.wins += 1;
+    sc.name = me.name; sc.species = me.species; sc.title = me.title || "";
+    db.tournament.scores[b.playerId] = sc;
+    save();
+    return send(res, 200, { ok: true, oldRating, newRating: me.rating, delta: me.rating - oldRating, tp: won ? 10 : 3 });
+  }
+
   if (url === "/leaderboard" && method === "GET") {
     weeklyDecayAndShuffle();
     const limit = Math.min(Number(query.limit) || 50, 100);
